@@ -72,8 +72,9 @@ static const uint8_t hid_report_map[] = {
 static uint8_t raw_adv_data[] = {
     0x02, 0x01, 0x06,           // Flags: LE General Discoverable + BR/EDR not supported
     0x03, 0x03, 0x12, 0x18,     // Complete List of 16-bit UUIDs: HID (0x1812)
-    0x13, 0x09,                 // Complete Local Name (18 chars)
-    'E','S','P','3','2',' ','B','L','E',' ','K','e','y','b','o','a','r','d'
+    0x03, 0x19, 0xC1, 0x03,     // Appearance: HID Keyboard (0x03C1)
+    0x0D, 0x09,                 // Complete Local Name (12 chars)
+    'E','S','P','3','2',' ','B','L','E',' ','K','B'
 };
 
 static esp_ble_adv_params_t adv_params = {
@@ -278,7 +279,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
         case ESP_GATTS_REG_EVT:
             s_gatts_if = gatts_if;
             ESP_LOGI(TAG, "GATTS: Registered");
-            esp_ble_gap_set_device_name("ESP32 BLE Keyboard");
+            esp_ble_gap_set_device_name("ESP32 BLE KB");
             esp_ble_gatts_create_attr_tab(hid_attr_db, gatts_if, HID_IDX_NB, 0);
             break;
         case ESP_GATTS_CREAT_ATTR_TAB_EVT:
