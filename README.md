@@ -78,7 +78,7 @@ external_components:
 espidf_ble_keyboard:
   id: my_keyboard
   # Optional: Set a 6-digit pairing code.
-  # If omitted, the device will use "Just Works" (no PIN) pairing.
+  # If omitted, the device will use "Just Works" (no PIN) pairing..
   passkey: 123456
 
 button:
