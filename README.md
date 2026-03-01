@@ -39,8 +39,6 @@ esp32:
   board: esp32dev
   framework:
     type: esp-idf
-    # Version 5.5.2 is standard now in PlatformIO for ESP-IDF
-    version: 5.5.2
     sdkconfig_options:
       # These are the essential ones for HID/Keyboard stability
       CONFIG_BT_ENABLED: y
