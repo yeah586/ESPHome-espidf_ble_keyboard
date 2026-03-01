@@ -72,10 +72,6 @@ static const uint8_t hid_report_map[] = {
 static uint8_t raw_adv_data[] = {
     0x02, 0x01, 0x06,           // Flags: LE General Discoverable + BR/EDR not supported
     0x03, 0x03, 0x12, 0x18,     // Complete List of 16-bit UUIDs: HID (0x1812)
-    0x03, 0x19, 0xC1, 0x03      // Appearance: HID Keyboard (0x03C1)
-};
-
-static uint8_t raw_scan_rsp_data[] = {
     0x13, 0x09,                 // Complete Local Name (18 chars)
     'E','S','P','3','2',' ','B','L','E',' ','K','e','y','b','o','a','r','d'
 };
@@ -96,17 +92,13 @@ static bool s_scan_rsp_data_set = false;
 
 static void do_start_advertising() {
     s_adv_data_set = false;
-    s_scan_rsp_data_set = false;
+    // No scan response payload required; keep advertising self-contained.
+    s_scan_rsp_data_set = true;
     esp_err_t adv_ret = esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
-    esp_err_t scan_ret = esp_ble_gap_config_scan_rsp_data_raw(raw_scan_rsp_data, sizeof(raw_scan_rsp_data));
 
     if (adv_ret != ESP_OK) {
         ESP_LOGE(TAG, "GAP: Failed to config adv data (%d)", adv_ret);
         s_adv_data_set = true;
-    }
-    if (scan_ret != ESP_OK) {
-        ESP_LOGE(TAG, "GAP: Failed to config scan rsp data (%d)", scan_ret);
-        s_scan_rsp_data_set = true;
     }
     if (s_adv_data_set && s_scan_rsp_data_set) {
         esp_ble_gap_start_advertising(&adv_params);
