@@ -337,6 +337,7 @@ After the first successful bond, reconnect behavior is typically stable.
 * **Android says "can't connect":** Android often keeps stale BLE bonds. Remove the device from Bluetooth settings, reboot the ESP32, then pair again. If still failing, toggle phone Bluetooth off/on and retry.
 * **Android shows the wrong pairing code:** Ensure `passkey` is set in YAML and old bonds are removed before pairing. If Android still shows a host-generated code, remove all existing bonds and pair from a clean state. The component will automatically fall back to Just Works mode after repeated `0x51` auth failures.
 * **iOS/macOS with passkey not pairing:** Set `passkey_mode: secure_connections`, remove old Bluetooth bonds on both devices, then pair again.
+* **iOS/macOS pairs but no typing/control:** Remove the bond on both devices and pair again with the latest firmware. The component now selects the active subscribed keyboard input report (boot/report mode) per connection to avoid stale post-pair control state.
 * **Typing speed:** The component includes a 20ms delay between keypresses to ensure the host OS registers them correctly. This can be adjusted in `espidf_ble_keyboard.cpp` if needed.
 * **Hibernate not working:** Hibernate uses the Windows Run dialog. Ensure the PC is not in a state where it is blocked (e.g., fullscreen app or UAC prompt). Also ensure hibernate is enabled: run `powercfg /hibernate on` in an admin command prompt.
 * **PC not waking from sleep:** Check that **USB Wake Support** (or similar) is enabled in your BIOS/UEFI Power Management settings.

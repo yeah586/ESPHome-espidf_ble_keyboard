@@ -276,6 +276,9 @@ static uint16_t s_hid_report_handle = 0;
 static uint16_t s_hid_output_report_handle = 0;
 static uint16_t s_boot_kb_input_handle = 0;
 static uint16_t s_boot_kb_output_handle = 0;
+static uint16_t s_proto_mode_handle = 0;
+static uint16_t s_boot_kb_input_ccc_handle = 0;
+static uint16_t s_hid_report_ccc_handle = 0;
 static uint16_t s_consumer_report_handle = 0;
 static uint16_t s_system_report_handle = 0;
 
@@ -362,9 +365,12 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             break;
         case ESP_GATTS_CREAT_ATTR_TAB_EVT:
             memcpy(hid_handle_table, param->add_attr_tab.handles, sizeof(hid_handle_table));
+            s_proto_mode_handle = hid_handle_table[IDX_CHAR_PROTO_MODE_VAL];
             s_boot_kb_input_handle = hid_handle_table[IDX_CHAR_BOOT_KB_IN_VAL];
+            s_boot_kb_input_ccc_handle = hid_handle_table[IDX_CHAR_BOOT_KB_IN_CCC];
             s_boot_kb_output_handle = hid_handle_table[IDX_CHAR_BOOT_KB_OUT_VAL];
             s_hid_report_handle = hid_handle_table[IDX_CHAR_REPORT_VAL];
+            s_hid_report_ccc_handle = hid_handle_table[IDX_CHAR_REPORT_CCC];
             s_hid_output_report_handle = hid_handle_table[IDX_CHAR_REPORT_OUT_VAL];
             s_consumer_report_handle = hid_handle_table[IDX_CHAR_CONSUMER_VAL];
             s_system_report_handle = hid_handle_table[IDX_CHAR_SYSTEM_VAL];
@@ -377,6 +383,9 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
         case ESP_GATTS_CONNECT_EVT: {
             ESP_LOGI(TAG, "GATTS: Connected");
             if (s_instance) s_instance->set_connected(true, param->connect.conn_id);
+            proto_mode_val = 0x01;
+            report_ccc_val = 0;
+            boot_kb_in_ccc_val = 0;
             request_host_friendly_conn_params(param->connect.remote_bda);
             // Trigger encryption with security level matching configured pairing mode
             esp_ble_sec_act_t sec_act = s_require_mitm ? ESP_BLE_SEC_ENCRYPT_MITM : ESP_BLE_SEC_ENCRYPT_NO_MITM;
@@ -387,9 +396,26 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             ESP_LOGI(TAG, "GATTS: Disconnected");
             ESP_LOGD(TAG, "GATTS: Disconnect reason 0x%02X", param->disconnect.reason);
             if (s_instance) s_instance->set_connected(false, 0);
+            proto_mode_val = 0x01;
+            report_ccc_val = 0;
+            boot_kb_in_ccc_val = 0;
             esp_ble_gap_start_advertising(&adv_params);
             break;
         case ESP_GATTS_WRITE_EVT:
+            if (param->write.handle == s_proto_mode_handle && param->write.len > 0) {
+                proto_mode_val = param->write.value[0];
+                ESP_LOGD(TAG, "GATTS: Protocol mode set to 0x%02X", proto_mode_val);
+            }
+            if (param->write.handle == s_hid_report_ccc_handle && param->write.len >= 2) {
+                report_ccc_val = static_cast<uint16_t>(param->write.value[0]) |
+                                 (static_cast<uint16_t>(param->write.value[1]) << 8);
+                ESP_LOGD(TAG, "GATTS: Report input CCC=0x%04X", report_ccc_val);
+            }
+            if (param->write.handle == s_boot_kb_input_ccc_handle && param->write.len >= 2) {
+                boot_kb_in_ccc_val = static_cast<uint16_t>(param->write.value[0]) |
+                                     (static_cast<uint16_t>(param->write.value[1]) << 8);
+                ESP_LOGD(TAG, "GATTS: Boot KB input CCC=0x%04X", boot_kb_in_ccc_val);
+            }
             if ((param->write.handle == s_hid_output_report_handle || param->write.handle == s_boot_kb_output_handle) &&
                 param->write.len > 0) {
                 ESP_LOGD(TAG, "GATTS: Keyboard LED report 0x%02X", param->write.value[0]);
@@ -426,10 +452,29 @@ void EspidfBleKeyboard::setup() {
 void EspidfBleKeyboard::loop() {}
 
 static uint16_t get_keyboard_input_handle() {
-    if (proto_mode_val == 0x00 && s_boot_kb_input_handle != 0) {
-        return s_boot_kb_input_handle;
+    const bool report_notify_enabled = (report_ccc_val & 0x0001) != 0;
+    const bool boot_notify_enabled = (boot_kb_in_ccc_val & 0x0001) != 0;
+
+    if (proto_mode_val == 0x00) {
+        if (boot_notify_enabled && s_boot_kb_input_handle != 0) {
+            return s_boot_kb_input_handle;
+        }
+        if (report_notify_enabled && s_hid_report_handle != 0) {
+            return s_hid_report_handle;
+        }
+    } else {
+        if (report_notify_enabled && s_hid_report_handle != 0) {
+            return s_hid_report_handle;
+        }
+        if (boot_notify_enabled && s_boot_kb_input_handle != 0) {
+            return s_boot_kb_input_handle;
+        }
     }
-    return s_hid_report_handle;
+
+    if (s_hid_report_handle != 0) {
+        return s_hid_report_handle;
+    }
+    return s_boot_kb_input_handle;
 }
 
 void EspidfBleKeyboard::send_string(const std::string &str) {
