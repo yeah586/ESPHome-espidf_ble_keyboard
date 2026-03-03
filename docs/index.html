@@ -362,6 +362,27 @@
     <span class="yaml-key">action</span><span class="yaml-val">:</span> <span class="yaml-str">"shutdown"</span></pre>
   </div>
 
+  <p class="section-title">Validated ESP-IDF sdkconfig_options</p>
+  <div class="code-section">
+    <div class="code-header"><div class="dot"></div><span>esp32.framework.sdkconfig_options</span></div>
+    <pre><span class="yaml-key">esp32</span><span class="yaml-val">:</span>
+  <span class="yaml-key">framework</span><span class="yaml-val">:</span>
+    <span class="yaml-key">type</span><span class="yaml-val">:</span> <span class="yaml-str">esp-idf</span>
+    <span class="yaml-key">sdkconfig_options</span><span class="yaml-val">:</span>
+      <span class="yaml-key">CONFIG_BT_ENABLED</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_CONTROLLER_ENABLED</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_BLUEDROID_ENABLED</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_NIMBLE_ENABLED</span><span class="yaml-val">:</span> <span class="yaml-str">n</span>
+      <span class="yaml-key">CONFIG_BT_BLE_ENABLED</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_GATTS_ENABLE</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_BLE_42_FEATURES_SUPPORTED</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_BLE_50_FEATURES_SUPPORTED</span><span class="yaml-val">:</span> <span class="yaml-str">n</span>
+      <span class="yaml-key">CONFIG_BT_BLE_42_ADV_EN</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_BLE_42_SCAN_EN</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_BLE_SMP_ENABLE</span><span class="yaml-val">:</span> <span class="yaml-str">y</span>
+      <span class="yaml-key">CONFIG_BT_ACL_CONNECTIONS</span><span class="yaml-val">:</span> <span class="yaml-str">"4"</span></pre>
+  </div>
+
   <p class="section-title">Built-in Actions</p>
   <div class="actions-section">
     <table>
