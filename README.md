@@ -36,7 +36,7 @@ esphome:
   friendly_name: ${friendly_name}
 
 esp32:
-  board: esp32dev   # Only tested on this board
+  board: esp32dev   # Tested with esp32dev and esp32-c6-devkitm-1
   framework:
     type: esp-idf
     sdkconfig_options:
