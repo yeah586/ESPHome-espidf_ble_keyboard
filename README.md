@@ -36,17 +36,21 @@ esphome:
   friendly_name: ${friendly_name}
 
 esp32:
-  board: esp32dev   # Only tested on this board
+  board: esp32dev   # Tested with esp32dev and esp32-c6-devkitm-1
   framework:
-    type: esp-idf  
+    type: esp-idf
     sdkconfig_options:
-      # These are the essential ones for HID/Keyboard stability
       CONFIG_BT_ENABLED: y
-      CONFIG_BT_BLE_ENABLED: y
+      CONFIG_BT_CONTROLLER_ENABLED: y
       CONFIG_BT_BLUEDROID_ENABLED: y
-      CONFIG_GATTS_ENABLE: y
-      # Windows requires a higher security level for HID devices
-      CONFIG_BT_SMP_ENABLE: y
+      CONFIG_BT_NIMBLE_ENABLED: n
+      CONFIG_BT_BLE_ENABLED: y
+      CONFIG_BT_GATTS_ENABLE: y
+      CONFIG_BT_BLE_42_FEATURES_SUPPORTED: y
+      CONFIG_BT_BLE_50_FEATURES_SUPPORTED: n
+      CONFIG_BT_BLE_42_ADV_EN: y
+      CONFIG_BT_BLE_42_SCAN_EN: y
+      CONFIG_BT_BLE_SMP_ENABLE: y
       CONFIG_BT_ACL_CONNECTIONS: "4"
 
 logger:
