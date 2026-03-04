@@ -8,8 +8,10 @@
 #include "freertos/task.h"
 #include "esp_gatt_defs.h"
 #include "esp_bt_defs.h"
+#include "nvs.h"
 #include <cstring>
 #include <cstdio>
+#include <vector>
 
 namespace esphome {
 namespace espidf_ble_keyboard {
@@ -89,6 +91,70 @@ static bool s_adv_data_set = false;
 static bool s_scan_rsp_data_set = false;
 static bool s_use_static_passkey = false;
 static bool s_require_mitm = false;
+
+static void maybe_reset_bonds_after_security_config_change() {
+    if (s_instance == nullptr) {
+        return;
+    }
+
+    const bool has_passkey = s_instance->has_passkey();
+    const uint8_t current_has_passkey = has_passkey ? 1 : 0;
+    const uint32_t current_passkey = has_passkey ? s_instance->passkey() : 0;
+    const uint8_t current_sc_mode = s_instance->passkey_secure_connections() ? 1 : 0;
+
+    nvs_handle_t handle;
+    esp_err_t open_ret = nvs_open("espidf_ble_kb", NVS_READWRITE, &handle);
+    if (open_ret != ESP_OK) {
+        ESP_LOGW(TAG, "NVS: Failed to open espidf_ble_kb namespace (%d)", open_ret);
+        return;
+    }
+
+    uint8_t stored_has_passkey = 0;
+    uint32_t stored_passkey = 0;
+    uint8_t stored_sc_mode = 0;
+    bool has_stored_security_cfg = false;
+
+    esp_err_t has_pk_ret = nvs_get_u8(handle, "has_pk", &stored_has_passkey);
+    esp_err_t passkey_ret = nvs_get_u32(handle, "passkey", &stored_passkey);
+    esp_err_t sc_ret = nvs_get_u8(handle, "pk_sc", &stored_sc_mode);
+
+    if (has_pk_ret == ESP_OK || passkey_ret == ESP_OK || sc_ret == ESP_OK) {
+        has_stored_security_cfg = true;
+    }
+
+    bool security_cfg_changed = false;
+    if (has_stored_security_cfg) {
+        security_cfg_changed = (stored_has_passkey != current_has_passkey) ||
+                               (stored_sc_mode != current_sc_mode) ||
+                               ((current_has_passkey == 1) && (stored_passkey != current_passkey));
+    }
+
+    if (security_cfg_changed) {
+        ESP_LOGW(TAG, "Security config changed (passkey/mode). Clearing stored BLE bonds.");
+        int dev_num = esp_ble_get_bond_device_num();
+        if (dev_num > 0) {
+            std::vector<esp_ble_bond_dev_t> bonded(static_cast<size_t>(dev_num));
+            int query_num = dev_num;
+            esp_err_t list_ret = esp_ble_get_bond_device_list(&query_num, bonded.data());
+            if (list_ret == ESP_OK) {
+                for (int i = 0; i < query_num; i++) {
+                    esp_err_t rm_ret = esp_ble_remove_bond_device(bonded[static_cast<size_t>(i)].bd_addr);
+                    if (rm_ret != ESP_OK) {
+                        ESP_LOGW(TAG, "Failed to remove bond #%d (%d)", i, rm_ret);
+                    }
+                }
+            } else {
+                ESP_LOGW(TAG, "Failed to read bonded device list (%d)", list_ret);
+            }
+        }
+    }
+
+    nvs_set_u8(handle, "has_pk", current_has_passkey);
+    nvs_set_u32(handle, "passkey", current_passkey);
+    nvs_set_u8(handle, "pk_sc", current_sc_mode);
+    nvs_commit(handle);
+    nvs_close(handle);
+}
 
 static void request_host_friendly_conn_params(const esp_bd_addr_t bda) {
     esp_ble_conn_update_params_t conn_params = {};
@@ -222,7 +288,11 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             } else {
                 uint8_t fail_reason = param->ble_security.auth_cmpl.fail_reason;
                 ESP_LOGE(TAG, "GAP: Pairing Failed (0x%x)", fail_reason);
-                if (s_instance && s_instance->has_passkey() && s_use_static_passkey && fail_reason == 0x51) {
+                if (s_instance &&
+                    s_instance->has_passkey() &&
+                    s_use_static_passkey &&
+                    !s_instance->passkey_secure_connections() &&
+                    fail_reason == 0x51) {
                     ESP_LOGW(TAG, "GAP: Static passkey rejected by peer (0x51), falling back to Just Works mode");
                     apply_security_params(false);
                     esp_ble_remove_bond_device(param->ble_security.auth_cmpl.bd_addr);
@@ -440,6 +510,8 @@ void EspidfBleKeyboard::setup() {
     esp_bt_controller_enable(ESP_BT_MODE_BLE);
     esp_bluedroid_init();
     esp_bluedroid_enable();
+
+    maybe_reset_bonds_after_security_config_change();
 
     // Configure security for BLE HID pairing.
     apply_security_params(this->has_passkey_);
