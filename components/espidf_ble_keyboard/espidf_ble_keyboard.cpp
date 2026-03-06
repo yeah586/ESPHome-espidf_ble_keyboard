@@ -355,7 +355,11 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
         case ESP_GATTS_DISCONNECT_EVT:
             ESP_LOGI(TAG, "GATTS: Disconnected");
             ESP_LOGD(TAG, "GATTS: Disconnect reason 0x%02X", param->disconnect.reason);
-            if (s_instance) s_instance->set_connected(false, 0);
+            if (s_instance) {
+                s_instance->set_connected(false, 0);
+                // Host-side unpair often appears only as a disconnect event.
+                s_instance->queue_paired_state(false);
+            }
             esp_ble_gap_start_advertising(&adv_params);
             break;
         case ESP_GATTS_WRITE_EVT:
