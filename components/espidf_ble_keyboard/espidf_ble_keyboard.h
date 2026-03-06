@@ -44,6 +44,9 @@ class EspidfBleKeyboard : public Component {
 
   void set_paired_binary_sensor(binary_sensor::BinarySensor *sensor) {
     paired_binary_sensor_ = sensor;
+    if (paired_binary_sensor_ != nullptr) {
+      paired_binary_sensor_->publish_state(is_paired_);
+    }
   }
 
   void set_paired(bool paired) {

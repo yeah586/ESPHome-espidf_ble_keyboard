@@ -196,8 +196,8 @@ binary_sensor:
 
 State behavior:
 
-* **ON** = keyboard has at least one bonded (paired) host.
-* **OFF** = keyboard has no bonded hosts.
+* **ON** = a `GAP: Pairing Successful` event has occurred since boot.
+* **OFF** = no successful pairing event yet (or bond was removed).
 
 #### Action Types
 

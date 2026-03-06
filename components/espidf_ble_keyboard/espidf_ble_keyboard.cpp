@@ -89,13 +89,7 @@ static bool s_adv_data_set = false;
 static bool s_scan_rsp_data_set = false;
 static bool s_use_static_passkey = false;
 static bool s_require_mitm = false;
-
-static void update_paired_state_from_bond_db() {
-    if (s_instance == nullptr) {
-        return;
-    }
-    s_instance->set_paired(esp_ble_get_bond_device_num() > 0);
-}
+static int s_bond_count_baseline = 0;
 
 static void apply_security_params(bool use_static_passkey) {
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_BOND;
@@ -195,7 +189,13 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         case ESP_GAP_BLE_AUTH_CMPL_EVT:
             if (param->ble_security.auth_cmpl.success) {
                 ESP_LOGI(TAG, "GAP: Pairing Successful");
-                update_paired_state_from_bond_db();
+                if (s_instance) {
+                    const int bond_count = esp_ble_get_bond_device_num();
+                    if (bond_count > s_bond_count_baseline) {
+                        s_instance->set_paired(true);
+                    }
+                    s_bond_count_baseline = bond_count;
+                }
             } else {
                 uint8_t fail_reason = param->ble_security.auth_cmpl.fail_reason;
                 ESP_LOGE(TAG, "GAP: Pairing Failed (0x%x)", fail_reason);
@@ -208,7 +208,12 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             }
             break;
         case ESP_GAP_BLE_REMOVE_BOND_DEV_COMPLETE_EVT:
-            update_paired_state_from_bond_db();
+            if (s_instance) {
+                s_bond_count_baseline = esp_ble_get_bond_device_num();
+                if (s_bond_count_baseline == 0) {
+                    s_instance->set_paired(false);
+                }
+            }
             break;
         default:
             break;
@@ -396,8 +401,9 @@ void EspidfBleKeyboard::setup() {
 
     // Initial runtime connection state.
     set_connected(false, 0);
-    // Initial pairing state from stored BLE bond database.
-    update_paired_state_from_bond_db();
+    // Pairing sensor is event-driven for new pair operations.
+    s_bond_count_baseline = esp_ble_get_bond_device_num();
+    set_paired(false);
 }
 
 void EspidfBleKeyboard::loop() {}
