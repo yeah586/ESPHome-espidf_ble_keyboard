@@ -172,6 +172,10 @@ text:
     optimistic: true
 
 binary_sensor:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "BLE Keyboard Paired"
+
   - platform: status
     name: ${friendly_name}
 ```
@@ -188,6 +192,16 @@ binary_sensor:
 
 * **keyboard_id** (Required, ID): The ID of the `espidf_ble_keyboard` component.
 * **action** (Required, string or mapping): The action to perform when the button is pressed. Accepts either a string or a dict with `type` key (see below).
+
+### `binary_sensor` (Platform: `espidf_ble_keyboard`)
+
+* **keyboard_id** (Required, ID): The ID of the `espidf_ble_keyboard` component.
+* **name** (Optional, string): Friendly entity name shown in Home Assistant.
+
+State behavior:
+
+* **ON** = at least one BLE bond (paired host) is stored.
+* **OFF** = no BLE bonds are stored.
 
 #### Action Types
 

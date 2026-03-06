@@ -1,6 +1,7 @@
 #pragma once
 #include "esphome/core/component.h"
 #include "esphome/components/button/button.h"
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include <string>
 
 #include "esp_bt.h"
@@ -43,6 +44,18 @@ class EspidfBleKeyboard : public Component {
   uint32_t passkey() const { return passkey_; }
   bool passkey_secure_connections() const { return passkey_secure_connections_; }
 
+  void set_paired_binary_sensor(binary_sensor::BinarySensor *sensor) {
+    paired_binary_sensor_ = sensor;
+  }
+
+  void set_paired(bool paired) {
+    is_paired_ = paired;
+    if (paired_binary_sensor_ != nullptr) {
+      paired_binary_sensor_->publish_state(paired);
+    }
+  }
+  bool is_paired() const { return is_paired_; }
+
   void set_connected(bool connected, uint16_t conn_id) {
     is_connected_ = connected;
     conn_id_ = conn_id;
@@ -53,6 +66,8 @@ class EspidfBleKeyboard : public Component {
  protected:
   bool is_connected_{false};
   uint16_t conn_id_{0};
+  bool is_paired_{false};
+  binary_sensor::BinarySensor *paired_binary_sensor_{nullptr};
   
   uint32_t passkey_{0};
   bool has_passkey_{false};
