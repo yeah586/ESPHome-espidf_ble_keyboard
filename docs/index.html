@@ -326,7 +326,7 @@
     <div class="feature">
       <div class="feature-icon">📶</div>
       <h3>Pairing State Sensor</h3>
-      <p>Optional binary sensor reports live keyboard connection state to Home Assistant.</p>
+      <p>Optional binary sensor reports whether the keyboard currently has at least one bonded host.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">✏️</div>
@@ -375,8 +375,8 @@
     <span class="yaml-key">keyboard_id</span><span class="yaml-val">:</span> <span class="yaml-str">my_keyboard</span>
     <span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">"BLE Keyboard Paired"</span>
 
-<span class="yaml-comment"># ON  = keyboard is connected</span>
-<span class="yaml-comment"># OFF = keyboard is disconnected</span></pre>
+<span class="yaml-comment"># ON  = keyboard has at least one bonded host</span>
+<span class="yaml-comment"># OFF = keyboard has no bonded hosts</span></pre>
   </div>
 
   <p class="section-title">Validated ESP-IDF sdkconfig_options</p>

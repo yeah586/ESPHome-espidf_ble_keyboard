@@ -196,8 +196,8 @@ binary_sensor:
 
 State behavior:
 
-* **ON** = keyboard is currently connected to a host.
-* **OFF** = keyboard is not connected.
+* **ON** = keyboard has at least one bonded (paired) host.
+* **OFF** = keyboard has no bonded hosts.
 
 #### Action Types
 
