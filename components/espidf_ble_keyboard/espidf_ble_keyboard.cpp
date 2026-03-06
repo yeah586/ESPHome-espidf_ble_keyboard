@@ -90,6 +90,14 @@ static bool s_scan_rsp_data_set = false;
 static bool s_use_static_passkey = false;
 static bool s_require_mitm = false;
 
+static void update_paired_state_from_bond_db() {
+    if (s_instance == nullptr) {
+        return;
+    }
+    int bonded = esp_ble_get_bond_device_num();
+    s_instance->set_paired(bonded > 0);
+}
+
 static void apply_security_params(bool use_static_passkey) {
     esp_ble_auth_req_t auth_req = ESP_LE_AUTH_BOND;
     esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;
@@ -188,6 +196,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         case ESP_GAP_BLE_AUTH_CMPL_EVT:
             if (param->ble_security.auth_cmpl.success) {
                 ESP_LOGI(TAG, "GAP: Pairing Successful");
+                update_paired_state_from_bond_db();
             } else {
                 uint8_t fail_reason = param->ble_security.auth_cmpl.fail_reason;
                 ESP_LOGE(TAG, "GAP: Pairing Failed (0x%x)", fail_reason);
@@ -198,6 +207,9 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 }
                 // Advertising restart is handled in DISCONNECT_EVT to avoid duplicate restarts.
             }
+            break;
+        case ESP_GAP_BLE_REMOVE_BOND_DEV_COMPLETE_EVT:
+            update_paired_state_from_bond_db();
             break;
         default:
             break;
@@ -382,6 +394,11 @@ void EspidfBleKeyboard::setup() {
     esp_ble_gap_register_callback(gap_event_handler);
     esp_ble_gatts_register_callback(gatts_event_handler);
     esp_ble_gatts_app_register(GATTS_APP_ID);
+
+    // Initial runtime connection state.
+    set_connected(false, 0);
+    // Initial bond state from stored BLE bonds.
+    update_paired_state_from_bond_db();
 }
 
 void EspidfBleKeyboard::loop() {}

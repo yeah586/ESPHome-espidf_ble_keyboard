@@ -324,6 +324,11 @@
       <p>Each button appears as an entity in Home Assistant. Trigger from automations, dashboards or scripts.</p>
     </div>
     <div class="feature">
+      <div class="feature-icon">📶</div>
+      <h3>Pairing State Sensor</h3>
+      <p>Optional binary sensor reports BLE bond status to Home Assistant. ON means at least one paired host is stored.</p>
+    </div>
+    <div class="feature">
       <div class="feature-icon">✏️</div>
       <h3>Custom Text Input</h3>
       <p>Type any text in Home Assistant and send it directly to the paired host device. Drive it manually or from automations.</p>
@@ -360,6 +365,18 @@
     <span class="yaml-key">keyboard_id</span><span class="yaml-val">:</span> <span class="yaml-str">my_keyboard</span>
     <span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">"Shutdown PC"</span>
     <span class="yaml-key">action</span><span class="yaml-val">:</span> <span class="yaml-str">"shutdown"</span></pre>
+  </div>
+
+  <p class="section-title">Pairing State Sensor</p>
+  <div class="code-section">
+    <div class="code-header"><div class="dot"></div><span>binary_sensor</span></div>
+    <pre><span class="yaml-key">binary_sensor</span><span class="yaml-val">:</span>
+  <span class="yaml-val">- </span><span class="yaml-key">platform</span><span class="yaml-val">:</span> <span class="yaml-str">espidf_ble_keyboard</span>
+    <span class="yaml-key">keyboard_id</span><span class="yaml-val">:</span> <span class="yaml-str">my_keyboard</span>
+    <span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">"BLE Keyboard Paired"</span>
+
+<span class="yaml-comment"># ON  = at least one BLE bond is stored</span>
+<span class="yaml-comment"># OFF = no BLE bonds are stored</span></pre>
   </div>
 
   <p class="section-title">Validated ESP-IDF sdkconfig_options</p>
