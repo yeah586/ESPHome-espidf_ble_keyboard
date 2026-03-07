@@ -569,9 +569,54 @@ static uint16_t get_keyboard_input_handle() {
     return s_boot_kb_input_handle;
 }
 
+static uint16_t get_alternate_keyboard_input_handle(uint16_t primary) {
+    if (primary == s_hid_report_handle) {
+        return s_boot_kb_input_handle;
+    }
+    if (primary == s_boot_kb_input_handle) {
+        return s_hid_report_handle;
+    }
+    if (s_hid_report_handle != 0) {
+        return s_hid_report_handle;
+    }
+    return s_boot_kb_input_handle;
+}
+
+static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *report, uint16_t len) {
+    const uint16_t primary_handle = get_keyboard_input_handle();
+    if (primary_handle == 0) {
+        ESP_LOGW(TAG, "No keyboard input handle available");
+        return ESP_FAIL;
+    }
+
+    esp_err_t ret = esp_ble_gatts_send_indicate(s_gatts_if, conn_id, primary_handle, len, const_cast<uint8_t *>(report), false);
+    if (ret == ESP_OK) {
+        return ESP_OK;
+    }
+
+    const uint16_t fallback_handle = get_alternate_keyboard_input_handle(primary_handle);
+    if (fallback_handle == 0 || fallback_handle == primary_handle) {
+        ESP_LOGW(TAG, "Keyboard report send failed on handle 0x%04X (%d), no fallback handle", primary_handle, ret);
+        return ret;
+    }
+
+    ESP_LOGW(TAG,
+             "Keyboard report send failed on handle 0x%04X (%d), retrying 0x%04X [proto=0x%02X report_ccc=0x%04X boot_ccc=0x%04X]",
+             primary_handle,
+             ret,
+             fallback_handle,
+             proto_mode_val,
+             report_ccc_val,
+             boot_kb_in_ccc_val);
+    esp_err_t fallback_ret = esp_ble_gatts_send_indicate(s_gatts_if, conn_id, fallback_handle, len, const_cast<uint8_t *>(report), false);
+    if (fallback_ret != ESP_OK) {
+        ESP_LOGW(TAG, "Fallback keyboard report send also failed on handle 0x%04X (%d)", fallback_handle, fallback_ret);
+    }
+    return fallback_ret;
+}
+
 void EspidfBleKeyboard::send_string(const std::string &str) {
     if (!is_connected_) return;
-    const uint16_t keyboard_handle = get_keyboard_input_handle();
     uint8_t report[8] = {0};
     for (char c : str) {
         report[0] = 0; report[2] = 0;
@@ -594,35 +639,33 @@ void EspidfBleKeyboard::send_string(const std::string &str) {
         else if (c == ':')  { report[0] = 0x02; report[2] = 0x33; }
         else continue;
 
-        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, keyboard_handle, 8, report, false);
+        send_keyboard_input_report(conn_id_, report, 8);
         vTaskDelay(pdMS_TO_TICKS(20));
         memset(report, 0, 8);
-        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, keyboard_handle, 8, report, false);
+        send_keyboard_input_report(conn_id_, report, 8);
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 
 void EspidfBleKeyboard::send_key_combo(uint8_t modifiers, uint8_t keycode) {
     if (!is_connected_) return;
-    const uint16_t keyboard_handle = get_keyboard_input_handle();
     uint8_t report[8] = {0};
     report[0] = modifiers;
     report[2] = keycode;
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, keyboard_handle, 8, report, false);
+    send_keyboard_input_report(conn_id_, report, 8);
     vTaskDelay(pdMS_TO_TICKS(30));
     memset(report, 0, 8);
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, keyboard_handle, 8, report, false);
+    send_keyboard_input_report(conn_id_, report, 8);
 }
 
 void EspidfBleKeyboard::send_ctrl_alt_del() {
     if (!is_connected_) return;
-    const uint16_t keyboard_handle = get_keyboard_input_handle();
     uint8_t report[8] = {0};
     report[0] = 0x05; report[2] = 0x4C;
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, keyboard_handle, 8, report, false);
+    send_keyboard_input_report(conn_id_, report, 8);
     vTaskDelay(pdMS_TO_TICKS(50));
     memset(report, 0, 8);
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, keyboard_handle, 8, report, false);
+    send_keyboard_input_report(conn_id_, report, 8);
 }
 
 void EspidfBleKeyboard::send_sleep() {

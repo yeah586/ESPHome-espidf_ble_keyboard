@@ -4,8 +4,8 @@ This is a custom ESPHome component that transforms an ESP32 into a Bluetooth Low
 
 ## Features
 
-* **Standard HID Keyboard:** Recognized as a native keyboard by Windows and Android.
-* **Secure Pairing:** Supports a configurable 6-digit static passkey (PIN) for secure bonding, with automatic Android compatibility fallback when needed.
+* **Standard HID Keyboard:** Recognized as a native keyboard by Windows and Android, with iOS/macOS support via `passkey_mode: secure_connections`.
+* **Secure Pairing:** Supports a configurable 6-digit static passkey (PIN) for secure bonding, with automatic Android compatibility fallback in `passkey_mode: legacy`.
 * **Efficient Memory Usage:** Direct API implementation ensures stability even with complex ESPHome configurations.
 * **Key Combos:** Send any modifier + key combination using hex keycodes (e.g. Win+R, Ctrl+C).
 * **String Typing:** Type any string directly including letters, numbers and punctuation.
@@ -319,9 +319,24 @@ Android is stricter about BLE HID security than Windows. For best results:
 
 If Android shows a different host-generated code instead of your configured passkey, remove old bonds on both Android and the ESP32 side (reboot/reflash), then pair again.
 
-If pairing repeatedly fails with auth error `0x51`, this component now automatically falls back from static passkey mode to Just Works mode for compatibility on the next attempt.
+If pairing repeatedly fails with auth error `0x51` in `passkey_mode: legacy`, this component automatically falls back from static passkey mode to Just Works mode for compatibility on the next attempt.
 
 If pairing fails with "can't connect", remove the old bond on Android and pair again after rebooting the ESP32.
+
+---
+
+## Pairing with iOS/macOS
+
+For Apple hosts using passkey pairing:
+
+1. Set `passkey` and `passkey_mode: secure_connections` in `espidf_ble_keyboard`.
+2. Remove any previous **ESP32 BLE KB** bond from iOS/macOS Bluetooth settings.
+3. Reboot the ESP32 (or reflash), then pair again from iOS/macOS.
+
+Notes:
+
+* `passkey_mode: secure_connections` is the recommended mode for iOS/macOS passkey pairing.
+* The automatic `0x51` fallback to Just Works is intended for `passkey_mode: legacy` compatibility flows.
 
 ---
 
@@ -353,7 +368,7 @@ After the first successful bond, reconnect behavior is typically stable.
 * **PIN prompt not appearing:** Windows often caches old security profiles. Fully "Remove" the device from Windows Bluetooth settings and try again.
 * **Windows needs multiple pairing attempts:** Remove old Bluetooth entries first, then retry pairing after the first failed attempt. The component now avoids duplicate advertising restarts and keeps existing bonds unless the auth failure is a known `0x51` mismatch.
 * **Android says "can't connect":** Android often keeps stale BLE bonds. Remove the device from Bluetooth settings, reboot the ESP32, then pair again. If still failing, toggle phone Bluetooth off/on and retry.
-* **Android shows the wrong pairing code:** Ensure `passkey` is set in YAML and old bonds are removed before pairing. If Android still shows a host-generated code, remove all existing bonds and pair from a clean state. The component will automatically fall back to Just Works mode after repeated `0x51` auth failures.
+* **Android shows the wrong pairing code:** Ensure `passkey` is set in YAML and old bonds are removed before pairing. If Android still shows a host-generated code, remove all existing bonds and pair from a clean state. In `passkey_mode: legacy`, the component can automatically fall back to Just Works mode after repeated `0x51` auth failures.
 * **iOS/macOS with passkey not pairing:** Set `passkey_mode: secure_connections`, remove old Bluetooth bonds on both devices, then pair again.
 * **iOS/macOS pairs but no typing/control:** Remove the bond on both devices and pair again with the latest firmware. The component now selects the active subscribed keyboard input report (boot/report mode) per connection to avoid stale post-pair control state.
 * **Typing speed:** The component includes a 20ms delay between keypresses to ensure the host OS registers them correctly. This can be adjusted in `espidf_ble_keyboard.cpp` if needed.
