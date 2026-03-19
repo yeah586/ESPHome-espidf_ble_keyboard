@@ -83,11 +83,12 @@ class EspidfBleKeyboard : public Component {
   bool passkey_secure_connections_{false};
 };
 
-class EspidfBleKeyboardButton : public button::Button {
+class EspidfBleKeyboardButton : public button::Button, public Component {
  public:
   void set_parent(EspidfBleKeyboard *parent) { parent_ = parent; }
   void press_action() override;
   void set_action(const std::string &action) { action_ = action; }
+  float get_setup_priority() const override { return -200.0f; }
  protected:
   EspidfBleKeyboard *parent_{nullptr};
   std::string action_;
