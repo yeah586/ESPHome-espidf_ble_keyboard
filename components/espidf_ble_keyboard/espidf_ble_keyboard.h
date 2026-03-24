@@ -47,6 +47,9 @@ class EspidfBleKeyboard : public Component {
   void set_device_name(const std::string &name) { device_name_ = name; }
   const std::string &device_name() const { return device_name_; }
 
+  void set_key_delay_ms(uint32_t ms) { key_delay_ms_ = ms; }
+  uint32_t key_delay_ms() const { return key_delay_ms_; }
+
   void set_paired_binary_sensor(binary_sensor::BinarySensor *sensor) {
     paired_binary_sensor_ = sensor;
     if (paired_binary_sensor_ != nullptr) {
@@ -85,6 +88,7 @@ class EspidfBleKeyboard : public Component {
   bool has_passkey_{false};
   bool passkey_secure_connections_{false};
   std::string device_name_{"ESP32 BLE KB"};
+  uint32_t key_delay_ms_{80};
 };
 
 class EspidfBleKeyboardButton : public button::Button, public Component {

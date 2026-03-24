@@ -6,6 +6,7 @@ DEPENDENCIES = ["esp32"]
 
 # Define configuration keys
 CONF_DEVICE_NAME = "device_name"
+CONF_KEY_DELAY_MS = "key_delay_ms"
 CONF_PASSKEY = "passkey"
 CONF_PASSKEY_MODE = "passkey_mode"
 PASSKEY_MODE_LEGACY = "legacy"
@@ -17,6 +18,7 @@ EspidfBleKeyboard = espidf_ble_keyboard_ns.class_("EspidfBleKeyboard", cg.Compon
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(EspidfBleKeyboard),
     cv.Optional(CONF_DEVICE_NAME, default="ESP32 BLE KB"): cv.All(cv.string, cv.Length(max=29)),
+    cv.Optional(CONF_KEY_DELAY_MS, default=80): cv.int_range(min=2, max=10000),
     cv.Optional(CONF_PASSKEY): cv.int_range(min=0, max=999999),
     cv.Optional(CONF_PASSKEY_MODE, default=PASSKEY_MODE_LEGACY): cv.one_of(
         PASSKEY_MODE_LEGACY,
@@ -30,6 +32,7 @@ async def to_code(config):
     await cg.register_component(var, config)
 
     cg.add(var.set_device_name(config[CONF_DEVICE_NAME]))
+    cg.add(var.set_key_delay_ms(config[CONF_KEY_DELAY_MS]))
 
     if CONF_PASSKEY in config:
         cg.add(var.set_passkey(config[CONF_PASSKEY]))
