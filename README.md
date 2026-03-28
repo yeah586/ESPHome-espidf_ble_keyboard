@@ -372,6 +372,76 @@ Features:
 
 ---
 
+## Keyboard Control Card for Home Assistant
+
+A custom Lovelace card that provides a full on-screen QWERTY keyboard. It requires ESPHome services to be defined so Home Assistant can send keystrokes and text.
+
+### 1. Add ESPHome services
+
+Add the following services to your ESPHome device YAML (alongside any existing mouse services):
+
+```yaml
+api:
+  encryption:
+    key: ${api_encryption_key}
+  services:
+    - service: send_string
+      variables:
+        text: string
+      then:
+        - lambda: |-
+            id(my_keyboard).send_string(text);
+    - service: send_key
+      variables:
+        modifier: int
+        keycode: int
+      then:
+        - lambda: |-
+            id(my_keyboard).send_key_combo(modifier, keycode);
+```
+
+### 2. Install the card
+
+1. Copy `docs/keyboard-card.js` to your Home Assistant `config/www/` folder.
+2. In Home Assistant: **Settings -> Dashboards -> Resources -> Add Resource**
+   - URL: `/local/keyboard-card.js`
+   - Type: **JavaScript Module**
+
+### 3. Add to a dashboard
+
+```yaml
+type: custom:ble-keyboard-card
+device: bluetooth_keyboard    # your ESPHome device name (underscored)
+```
+
+Example with all optional overrides:
+
+```yaml
+type: custom:ble-keyboard-card
+device: bluetooth_keyboard
+name: Living Room Keyboard    # card title (default: "BLE Keyboard")
+show_fkeys: false             # hide F1-F12 row (default: true)
+```
+
+Optional configuration:
+
+| Option | Default | Description |
+|---|---|---|
+| `name` | `BLE Keyboard` | Card title displayed in the header. |
+| `show_fkeys` | `true` | Show the F1–F12 function key row. |
+
+Features:
+- **Full QWERTY layout** — letters, numbers, punctuation, all standard keys.
+- **Modifier keys** — Ctrl, Alt, Win, Shift are sticky (toggle on, auto-release after next key).
+- **Caps Lock** — persistent toggle with visual indicator.
+- **Function keys** — F1–F12 (can be hidden with `show_fkeys: false`).
+- **Arrow keys** — Up, Down, Left, Right + Delete.
+- **Shift labels** — key labels update to show shifted characters when Shift is active.
+
+> **Note:** Caps Lock state is tracked locally in the card. If Caps Lock is toggled from another keyboard, the card indicator may be out of sync.
+
+---
+
 ## Custom Text Input
 
 You can send arbitrary text from Home Assistant to the paired host device without hardcoding it in the YAML. Add the following to your ESPHome config:
