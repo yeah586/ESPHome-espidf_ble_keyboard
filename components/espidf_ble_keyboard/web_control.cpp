@@ -346,14 +346,30 @@ class BleKbWebHandler : public AsyncWebHandler {
     }
 
     if (path == "buttons") {
+      // JSON-escape a string (handles \n, \r, \t, \, ")
+      auto json_escape = [](const std::string &s) -> std::string {
+        std::string out;
+        out.reserve(s.size() + 4);
+        for (char c : s) {
+          switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:   out += c; break;
+          }
+        }
+        return out;
+      };
       std::string json = "[";
       const auto &btns = kb_->get_buttons();
       for (size_t i = 0; i < btns.size(); i++) {
         if (i > 0) json += ",";
         json += "{\"name\":\"";
-        json += btns[i].name;
+        json += json_escape(btns[i].name);
         json += "\",\"action\":\"";
-        json += btns[i].action;
+        json += json_escape(btns[i].action);
         json += "\"}";
       }
       json += "]";
