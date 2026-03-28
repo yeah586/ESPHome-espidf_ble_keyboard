@@ -354,6 +354,11 @@
       <p>Built-in web page with full keyboard and mouse UI. Access from any browser — no Home Assistant needed. Enable with <code>web_control: true</code>.</p>
     </div>
     <div class="feature">
+      <div class="feature-icon">🔀</div>
+      <h3>Multi-Host Switching</h3>
+      <p>Pair with up to 4 hosts and switch between them with a button press. Uses directed advertising for fast reconnection. Slots persist across reboots.</p>
+    </div>
+    <div class="feature">
       <div class="feature-icon">⚡</div>
       <h3>Stable &amp; Efficient</h3>
       <p>Direct API implementation ensures reliability even with complex ESPHome configurations.</p>
@@ -377,6 +382,8 @@
   <span class="yaml-key">key_delay_ms</span><span class="yaml-val">:</span> <span class="yaml-str">80</span>  <span class="yaml-comment"># optional, increase if characters drop</span>
   <span class="yaml-key">passkey</span><span class="yaml-val">:</span> <span class="yaml-str">123456</span>  <span class="yaml-comment"># optional 6-digit PIN</span>
   <span class="yaml-key">passkey_mode</span><span class="yaml-val">:</span> <span class="yaml-str">legacy</span>  <span class="yaml-comment"># use secure_connections for iOS/macOS</span>
+  <span class="yaml-key">web_control</span><span class="yaml-val">:</span> <span class="yaml-str">true</span>  <span class="yaml-comment"># optional, built-in web UI</span>
+  <span class="yaml-key">host_slots</span><span class="yaml-val">:</span> <span class="yaml-str">4</span>  <span class="yaml-comment"># optional, multi-host switching (1–4)</span>
 
 <span class="yaml-key">button</span><span class="yaml-val">:</span>
   <span class="yaml-val">- </span><span class="yaml-key">platform</span><span class="yaml-val">:</span> <span class="yaml-str">espidf_ble_keyboard</span>
@@ -430,6 +437,8 @@
       <tr><td><code>"mouse_scroll:3"</code></td><td class="desc">Scroll mouse wheel — positive = up, negative = down (-127 to 127).</td></tr>
       <tr><td><code>type: mouse_click</code></td><td class="desc">Dict format — <code>type: mouse_click</code>, <code>buttons: 0x01</code>. 0x01=left, 0x02=right, 0x04=middle.</td></tr>
       <tr><td><code>text entity</code></td><td class="desc">Type any text from Home Assistant and press Send Custom Text button. See README for setup.</td></tr>
+      <tr><td><code>"switch_host:0"</code></td><td class="desc">Switch to host slot 0–3. Reconnects to stored host or advertises for new pairing.</td></tr>
+      <tr><td><code>"forget_host:0"</code></td><td class="desc">Remove BLE bond for host slot 0–3 and clear the stored address.</td></tr>
     </table>
   </div>
 

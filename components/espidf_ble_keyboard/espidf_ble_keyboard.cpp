@@ -213,6 +213,11 @@ static bool s_scan_rsp_data_set = false;
 static bool s_use_static_passkey = false;
 static bool s_require_mitm = false;
 
+// Multi-host: when true, next advertising cycle uses directed advertising to target host
+static bool s_directed_adv_pending = false;
+static esp_bd_addr_t s_directed_addr = {};
+static esp_ble_addr_type_t s_directed_addr_type = BLE_ADDR_TYPE_PUBLIC;
+
 static void maybe_reset_bonds_after_security_config_change() {
     if (s_instance == nullptr) {
         return;
@@ -349,6 +354,38 @@ static void apply_security_params(bool use_static_passkey) {
 }
 
 static void do_start_advertising() {
+    // If directed advertising is requested, target the specific bonded host
+    if (s_directed_adv_pending) {
+        s_directed_adv_pending = false;
+        ESP_LOGI(TAG, "ADV: Directed advertising to %02X:%02X:%02X:%02X:%02X:%02X",
+                 s_directed_addr[0], s_directed_addr[1], s_directed_addr[2],
+                 s_directed_addr[3], s_directed_addr[4], s_directed_addr[5]);
+        esp_ble_adv_params_t dir_params = adv_params;
+        dir_params.adv_type = ADV_TYPE_DIRECT_IND_LOW;
+        memcpy(dir_params.peer_addr, s_directed_addr, sizeof(esp_bd_addr_t));
+        dir_params.peer_addr_type = s_directed_addr_type;
+        // Set adv data then start (directed low-duty still needs adv data on some stacks)
+        s_adv_data_set = false;
+        s_scan_rsp_data_set = false;
+        esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
+        std::string dev_name = (s_instance != nullptr) ? s_instance->device_name() : "ESP32 BLE KB";
+        std::vector<uint8_t> scan_rsp;
+        scan_rsp.push_back(static_cast<uint8_t>(dev_name.length() + 1));
+        scan_rsp.push_back(0x09);
+        for (char c : dev_name) scan_rsp.push_back(static_cast<uint8_t>(c));
+        esp_ble_gap_config_scan_rsp_data_raw(scan_rsp.data(), static_cast<uint16_t>(scan_rsp.size()));
+        // Override adv_params for this cycle — the GAP completion handler will use dir_params
+        adv_params.adv_type = ADV_TYPE_DIRECT_IND_LOW;
+        memcpy(adv_params.peer_addr, s_directed_addr, sizeof(esp_bd_addr_t));
+        adv_params.peer_addr_type = s_directed_addr_type;
+        return;
+    }
+
+    // Normal undirected advertising (pairing mode / default)
+    adv_params.adv_type = ADV_TYPE_IND;
+    memset(adv_params.peer_addr, 0, sizeof(esp_bd_addr_t));
+    adv_params.adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY;
+
     s_adv_data_set = false;
     s_scan_rsp_data_set = false;
     esp_err_t adv_ret = esp_ble_gap_config_adv_data_raw(raw_adv_data, sizeof(raw_adv_data));
@@ -413,6 +450,12 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 ESP_LOGI(TAG, "GAP: Pairing Successful");
                 if (s_instance) {
                     s_instance->queue_paired_state(true);
+                    // Auto-assign this host to the active slot
+                    s_instance->assign_host_slot_(
+                        s_instance->active_host_slot(),
+                        param->ble_security.auth_cmpl.bd_addr,
+                        (esp_ble_addr_type_t) param->ble_security.auth_cmpl.addr_type);
+                    s_instance->save_host_slots_();
                 }
             } else {
                 uint8_t fail_reason = param->ble_security.auth_cmpl.fail_reason;
@@ -702,7 +745,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             system_ccc_val = 0;
             mouse_ccc_val = 0;
             battery_ccc_val = 0;
-            esp_ble_gap_start_advertising(&adv_params);
+            do_start_advertising();
             break;
         case ESP_GATTS_WRITE_EVT:
             if (param->write.handle == s_proto_mode_handle && param->write.len > 0) {
@@ -744,6 +787,135 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
     }
 }
 
+// ── Multi-Host Slot Management ──────────────────────────────────────────────
+
+void EspidfBleKeyboard::load_host_slots_() {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+
+    uint8_t slot_count = 0;
+    if (nvs_get_u8(handle, "host_cnt", &slot_count) == ESP_OK) {
+        for (uint8_t i = 0; i < slot_count && i < MAX_HOST_SLOTS; i++) {
+            char key[12];
+            snprintf(key, sizeof(key), "host%u_addr", i);
+            size_t len = sizeof(esp_bd_addr_t);
+            if (nvs_get_blob(handle, key, hosts_[i].addr, &len) == ESP_OK) {
+                hosts_[i].occupied = true;
+                snprintf(key, sizeof(key), "host%u_type", i);
+                uint8_t addr_type = 0;
+                if (nvs_get_u8(handle, key, &addr_type) == ESP_OK) {
+                    hosts_[i].addr_type = (esp_ble_addr_type_t) addr_type;
+                }
+                ESP_LOGI(TAG, "Loaded host slot %u: %02X:%02X:%02X:%02X:%02X:%02X", i,
+                         hosts_[i].addr[0], hosts_[i].addr[1], hosts_[i].addr[2],
+                         hosts_[i].addr[3], hosts_[i].addr[4], hosts_[i].addr[5]);
+            }
+        }
+    }
+
+    uint8_t active = 0;
+    if (nvs_get_u8(handle, "host_act", &active) == ESP_OK && active < MAX_HOST_SLOTS) {
+        active_slot_ = active;
+    }
+
+    nvs_close(handle);
+}
+
+void EspidfBleKeyboard::save_host_slots_() {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+
+    uint8_t count = 0;
+    for (uint8_t i = 0; i < MAX_HOST_SLOTS; i++) {
+        char key[12];
+        if (hosts_[i].occupied) {
+            snprintf(key, sizeof(key), "host%u_addr", i);
+            nvs_set_blob(handle, key, hosts_[i].addr, sizeof(esp_bd_addr_t));
+            snprintf(key, sizeof(key), "host%u_type", i);
+            nvs_set_u8(handle, key, (uint8_t) hosts_[i].addr_type);
+            count = i + 1;
+        } else {
+            // Erase stale entries
+            snprintf(key, sizeof(key), "host%u_addr", i);
+            nvs_erase_key(handle, key);
+            snprintf(key, sizeof(key), "host%u_type", i);
+            nvs_erase_key(handle, key);
+        }
+    }
+    nvs_set_u8(handle, "host_cnt", count);
+    nvs_set_u8(handle, "host_act", active_slot_);
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
+void EspidfBleKeyboard::assign_host_slot_(uint8_t slot, const esp_bd_addr_t addr, esp_ble_addr_type_t addr_type) {
+    if (slot >= MAX_HOST_SLOTS) return;
+    // Check if this address is already in another slot
+    for (uint8_t i = 0; i < MAX_HOST_SLOTS; i++) {
+        if (hosts_[i].occupied && memcmp(hosts_[i].addr, addr, sizeof(esp_bd_addr_t)) == 0) {
+            if (i == slot) return;  // Already in the right slot
+            // Move from old slot to new slot
+            hosts_[i].occupied = false;
+            break;
+        }
+    }
+    memcpy(hosts_[slot].addr, addr, sizeof(esp_bd_addr_t));
+    hosts_[slot].addr_type = addr_type;
+    hosts_[slot].occupied = true;
+    ESP_LOGI(TAG, "Host slot %u assigned: %02X:%02X:%02X:%02X:%02X:%02X", slot,
+             addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+}
+
+void EspidfBleKeyboard::switch_host(uint8_t slot) {
+    if (slot >= host_slots_) {
+        ESP_LOGW(TAG, "Invalid host slot %u (max %u)", slot, host_slots_ - 1);
+        return;
+    }
+
+    active_slot_ = slot;
+    save_host_slots_();
+
+    ESP_LOGI(TAG, "Switching to host slot %u", slot);
+
+    if (hosts_[slot].occupied) {
+        // Directed advertising to the bonded host
+        s_directed_adv_pending = true;
+        memcpy(s_directed_addr, hosts_[slot].addr, sizeof(esp_bd_addr_t));
+        s_directed_addr_type = hosts_[slot].addr_type;
+    }
+    // else: empty slot — undirected advertising (pairing mode)
+
+    if (is_connected_) {
+        // Disconnect current host; DISCONNECT_EVT will trigger advertising
+        esp_ble_gatts_close(conn_id_);
+    } else {
+        // Not connected — stop current advertising and restart
+        esp_ble_gap_stop_advertising();
+        do_start_advertising();
+    }
+}
+
+void EspidfBleKeyboard::forget_host(uint8_t slot) {
+    if (slot >= MAX_HOST_SLOTS || !hosts_[slot].occupied) return;
+
+    ESP_LOGI(TAG, "Forgetting host slot %u", slot);
+
+    // Remove the BLE bond
+    esp_ble_remove_bond_device(hosts_[slot].addr);
+
+    // Clear the slot
+    hosts_[slot].occupied = false;
+    memset(hosts_[slot].addr, 0, sizeof(esp_bd_addr_t));
+    hosts_[slot].name.clear();
+
+    save_host_slots_();
+
+    // If this was the active slot and we're connected, disconnect
+    if (slot == active_slot_ && is_connected_) {
+        esp_ble_gatts_close(conn_id_);
+    }
+}
+
 // ── Component Setup ──────────────────────────────────────────────────────────
 void EspidfBleKeyboard::setup() {
     s_instance = this;
@@ -761,6 +933,15 @@ void EspidfBleKeyboard::setup() {
     esp_bluedroid_enable();
 
     maybe_reset_bonds_after_security_config_change();
+    load_host_slots_();
+
+    // If active slot has a bonded host, use directed advertising on startup
+    if (hosts_[active_slot_].occupied) {
+        s_directed_adv_pending = true;
+        memcpy(s_directed_addr, hosts_[active_slot_].addr, sizeof(esp_bd_addr_t));
+        s_directed_addr_type = hosts_[active_slot_].addr_type;
+        ESP_LOGI(TAG, "Startup: will direct-advertise to host slot %u", active_slot_);
+    }
 
     apply_security_params(this->has_passkey_);
 
@@ -1068,6 +1249,22 @@ void EspidfBleKeyboardButton::press_action() {
         int wheel;
         if (sscanf(action_.c_str(), "mouse_scroll:%i", &wheel) == 1) {
             parent_->send_mouse_scroll((int8_t)wheel);
+            return;
+        }
+    }
+
+    // Multi-host switching: "switch_host:N" or "forget_host:N"
+    if (action_.find("switch_host:") == 0) {
+        int slot;
+        if (sscanf(action_.c_str(), "switch_host:%i", &slot) == 1) {
+            parent_->switch_host((uint8_t)slot);
+            return;
+        }
+    }
+    if (action_.find("forget_host:") == 0) {
+        int slot;
+        if (sscanf(action_.c_str(), "forget_host:%i", &slot) == 1) {
+            parent_->forget_host((uint8_t)slot);
             return;
         }
     }

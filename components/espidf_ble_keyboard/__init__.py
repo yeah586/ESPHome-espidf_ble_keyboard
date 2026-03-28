@@ -10,6 +10,7 @@ CONF_KEY_DELAY_MS = "key_delay_ms"
 CONF_PASSKEY = "passkey"
 CONF_PASSKEY_MODE = "passkey_mode"
 CONF_WEB_CONTROL = "web_control"
+CONF_HOST_SLOTS = "host_slots"
 PASSKEY_MODE_LEGACY = "legacy"
 PASSKEY_MODE_SECURE_CONNECTIONS = "secure_connections"
 
@@ -42,6 +43,7 @@ CONFIG_SCHEMA = cv.All(
             lower=True,
         ),
         cv.Optional(CONF_WEB_CONTROL, default=False): cv.boolean,
+        cv.Optional(CONF_HOST_SLOTS, default=4): cv.int_range(min=1, max=4),
     }).extend(cv.COMPONENT_SCHEMA),
     _web_control_schema,
 )
@@ -60,6 +62,8 @@ async def to_code(config):
     cg.add(var.set_passkey_secure_connections(
         config[CONF_PASSKEY_MODE] == PASSKEY_MODE_SECURE_CONNECTIONS
     ))
+
+    cg.add(var.set_host_slots(config[CONF_HOST_SLOTS]))
 
     if config[CONF_WEB_CONTROL]:
         cg.add_define("USE_BLE_KEYBOARD_WEB_CONTROL")

@@ -64,6 +64,12 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .prog-btn{padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .1s}
 .prog-btn:active,.prog-btn.p{background:var(--active);color:#fff;border-color:var(--active)}
 .prog-empty{font-size:12px;color:var(--muted);padding:4px 0}
+.host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px}
+.host-btn{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s}
+.host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
+.host-btn.occupied{border-color:var(--accent)}
+.host-btn .slot-label{font-size:10px;color:var(--muted);display:block}
+.host-btn.active .slot-label{color:rgba(255,255,255,.7)}
 </style></head><body>
 
 <div class="toolbar">
@@ -81,6 +87,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="theme-btn" id="thm" title="Toggle light/dark">&#9788;</button>
 </div>
 </div>
+
+<div class="host-bar" id="host-bar" style="display:none"></div>
 
 <div id="scalable" class="scalable">
 <div class="card" id="keyboard"></div>
@@ -148,6 +156,32 @@ function pollStatus(){
 }
 pollStatus();
 setInterval(pollStatus,3000);
+
+// ── Host Switcher ──
+(function(){
+  const bar=document.getElementById('host-bar');
+  function loadHosts(){
+    fetch('/api/ble_keyboard/hosts').then(r=>r.json()).then(d=>{
+      if(!d.slots||d.slots.length<=1){bar.style.display='none';return}
+      bar.style.display='';
+      bar.innerHTML='';
+      d.slots.forEach(s=>{
+        const b=document.createElement('button');
+        b.className='host-btn'+(s.slot===d.active?' active':'')+(s.occupied?' occupied':'');
+        b.innerHTML='<span class="slot-label">Host '+(s.slot+1)+'</span>'+(s.occupied?s.addr.substring(9):'Empty');
+        b.addEventListener('pointerdown',e=>{
+          e.preventDefault();
+          api('switch_host',{slot:s.slot});
+          bar.querySelectorAll('.host-btn').forEach(x=>x.classList.remove('active'));
+          b.classList.add('active');
+        });
+        bar.appendChild(b);
+      });
+    }).catch(()=>{bar.style.display='none'});
+  }
+  loadHosts();
+  setInterval(loadHosts,5000);
+})();
 
 // ── Programmed Buttons ──
 (function(){
@@ -407,6 +441,32 @@ class BleKbWebHandler : public AsyncWebHandler {
       return;
     }
 
+    if (path == "hosts") {
+      std::string json = "{\"active\":";
+      json += std::to_string(kb_->active_host_slot());
+      json += ",\"slots\":[";
+      for (uint8_t i = 0; i < kb_->host_slots(); i++) {
+        if (i > 0) json += ",";
+        const auto &h = kb_->get_host_slot(i);
+        json += "{\"slot\":";
+        json += std::to_string(i);
+        json += ",\"occupied\":";
+        json += h.occupied ? "true" : "false";
+        if (h.occupied) {
+          char addr_str[18];
+          snprintf(addr_str, sizeof(addr_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+                   h.addr[0], h.addr[1], h.addr[2], h.addr[3], h.addr[4], h.addr[5]);
+          json += ",\"addr\":\"";
+          json += addr_str;
+          json += "\"";
+        }
+        json += "}";
+      }
+      json += "]}";
+      request->send(200, "application/json", json.c_str());
+      return;
+    }
+
     // Remaining endpoints — POST only
     if (request->method() != HTTP_POST) {
       request->send(405, "text/plain", "POST only");
@@ -471,8 +531,21 @@ class BleKbWebHandler : public AsyncWebHandler {
         else if (action == "left_click") kb_->send_mouse_click(0x01);
         else if (action == "right_click") kb_->send_mouse_click(0x02);
         else if (action == "middle_click") kb_->send_mouse_click(0x04);
-        else kb_->send_string(action);
+        else if (action.find("switch_host:") == 0) {
+          int slot = 0;
+          if (sscanf(action.c_str(), "switch_host:%i", &slot) == 1)
+            kb_->switch_host((uint8_t) slot);
+        } else if (action.find("forget_host:") == 0) {
+          int slot = 0;
+          if (sscanf(action.c_str(), "forget_host:%i", &slot) == 1)
+            kb_->forget_host((uint8_t) slot);
+        } else kb_->send_string(action);
       }
+      request->send(200);
+
+    } else if (path == "switch_host") {
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 0;
+      kb_->switch_host((uint8_t) slot);
       request->send(200);
 
     } else {

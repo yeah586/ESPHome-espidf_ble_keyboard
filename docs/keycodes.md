@@ -201,6 +201,27 @@ action:
 
 ---
 
+## Host Switching
+
+| Action | Description |
+|---|---|
+| `switch_host:N` | Switch to host slot N (0–3). Reconnects to stored host via directed advertising, or advertises for new pairing if slot is empty. |
+| `forget_host:N` | Remove BLE bond for host slot N and clear the stored address. Disconnects the host if currently active. |
+
+### Dict Format
+
+```yaml
+action:
+  type: switch_host
+  slot: 1
+
+action:
+  type: forget_host
+  slot: 2
+```
+
+---
+
 ## Full Button Example
 
 ```yaml

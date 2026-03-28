@@ -21,6 +21,9 @@
 namespace esphome {
 namespace espidf_ble_keyboard {
 
+// Maximum number of host slots for multi-host switching
+static const uint8_t MAX_HOST_SLOTS = 4;
+
 class EspidfBleKeyboard : public Component {
  public:
   void setup() override;
@@ -61,6 +64,7 @@ class EspidfBleKeyboard : public Component {
   uint32_t key_delay_ms() const { return key_delay_ms_; }
 
   void set_web_control(bool enabled) { web_control_enabled_ = enabled; }
+  void set_host_slots(uint8_t slots) { host_slots_ = slots > MAX_HOST_SLOTS ? MAX_HOST_SLOTS : slots; }
 
   struct ButtonInfo {
     std::string name;
@@ -102,6 +106,20 @@ class EspidfBleKeyboard : public Component {
   bool is_connected() const { return is_connected_; }
   uint16_t conn_id() const { return conn_id_; }
 
+  // Multi-host switching
+  void switch_host(uint8_t slot);
+  void forget_host(uint8_t slot);
+  uint8_t active_host_slot() const { return active_slot_; }
+  uint8_t host_slots() const { return host_slots_; }
+
+  struct HostSlot {
+    bool occupied{false};
+    esp_bd_addr_t addr{};
+    esp_ble_addr_type_t addr_type{BLE_ADDR_TYPE_PUBLIC};
+    std::string name;  // friendly label
+  };
+  const HostSlot &get_host_slot(uint8_t slot) const { return hosts_[slot]; }
+
  protected:
   bool is_connected_{false};
   uint16_t conn_id_{0};
@@ -117,6 +135,14 @@ class EspidfBleKeyboard : public Component {
 
   bool web_control_enabled_{false};
   std::vector<ButtonInfo> buttons_;
+
+  // Multi-host state
+  uint8_t host_slots_{MAX_HOST_SLOTS};
+  uint8_t active_slot_{0};
+  HostSlot hosts_[MAX_HOST_SLOTS];
+  void save_host_slots_();
+  void load_host_slots_();
+  void assign_host_slot_(uint8_t slot, const esp_bd_addr_t addr, esp_ble_addr_type_t addr_type);
 
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
   web_server_base::WebServerBase *web_server_base_{nullptr};
