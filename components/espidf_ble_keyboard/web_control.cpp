@@ -122,7 +122,7 @@ function pollStatus(){
     sdot.className='status-dot'+(p?' paired':c?' connected':'');
     stxt.className='status-text'+((c||p)?' on':'');
     stxt.textContent=p?'Paired':c?'Connected':'Disconnected';
-    if(d.device_name)dname.textContent='('+d.device_name+')';
+    if(d.device_name){dname.textContent='('+d.device_name+')';document.title=d.device_name+' — BLE Control'}
   }).catch(()=>{
     sdot.className='status-dot';
     stxt.className='status-text';

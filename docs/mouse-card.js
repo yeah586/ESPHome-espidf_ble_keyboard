@@ -44,7 +44,7 @@ class BleMouseCard extends HTMLElement {
     }
     this._config = {
       device: config.device,
-      name: config.name || 'Mouse Control',
+      name: config.name || null,
       sensitivity: config.sensitivity || 1.5,
       scroll_sensitivity: config.scroll_sensitivity || 2,
       tap_to_click: config.tap_to_click !== false,
@@ -163,7 +163,7 @@ class BleMouseCard extends HTMLElement {
       <div class="card">
         <div class="header">
           <svg viewBox="0 0 24 24"><path d="M11 1.5v8.5l4 4.5h3.5l-2-2.5L20 8.5 14 5.5V1.5l-3 0zm-1 0L7 1.5v4L3.5 8.5 7 12l-2 2.5H8.5l4-4.5V1.5z" opacity="0"/><path d="M12 2C8.14 2 5 5.14 5 9v6c0 3.86 3.14 7 7 7s7-3.14 7-7V9c0-3.86-3.14-7-7-7zm0 2c2.76 0 5 2.24 5 5v2h-4V5h-2v6H7V9c0-2.76 2.24-5 5-5z"/></svg>
-          ${this._config.name}
+          <span class="header-name">${this._config.name || 'Mouse Control'}</span>
         </div>
         <div class="touchpad" id="touchpad">
           <span class="touchpad-hint">Drag to move cursor</span>
@@ -183,6 +183,18 @@ class BleMouseCard extends HTMLElement {
     this._setupTouchpad();
     this._setupButtons();
     this._setupScroll();
+
+    // Auto-resolve device friendly name from HA if name not set
+    if (!this._config.name && this._hass) {
+      const nameSpan = shadow.querySelector('.header-name');
+      const slug = this._config.device.replace(/-/g, '_');
+      this._hass.callWS({ type: 'config/device_registry/list' }).then(devices => {
+        const dev = devices.find(d => d.name_by_user
+          ? d.name_by_user.replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug
+          : (d.name || '').replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug);
+        if (dev) nameSpan.textContent = dev.name_by_user || dev.name;
+      }).catch(() => { /* keep default */ });
+    }
   }
 
   _callService(service, data) {

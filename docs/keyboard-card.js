@@ -150,7 +150,7 @@ class BleKeyboardCard extends HTMLElement {
     }
     this._config = {
       device: config.device,
-      name: config.name || 'BLE Keyboard',
+      name: config.name || null,
       show_fkeys: config.show_fkeys !== false,
     };
   }
@@ -255,11 +255,23 @@ class BleKeyboardCard extends HTMLElement {
     // Header
     const header = document.createElement('div');
     header.className = 'header';
+    const defaultName = 'BLE Keyboard';
     header.innerHTML = `
       <svg viewBox="0 0 24 24"><path d="M19 10h-2V8h2v2zm0 4h-2v-2h2v2zm-4-4h-2V8h2v2zm0 4h-2v-2h2v2zm0 4H9v-2h6v2zm-8-8H5V8h2v2zm0 4H5v-2h2v2zM20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z"/></svg>
-      ${this._config.name}
+      <span class="header-name">${this._config.name || defaultName}</span>
     `;
     card.appendChild(header);
+    // Auto-resolve device friendly name from HA if name not set
+    if (!this._config.name && this._hass) {
+      const nameSpan = header.querySelector('.header-name');
+      const slug = this._config.device.replace(/-/g, '_');
+      this._hass.callWS({ type: 'config/device_registry/list' }).then(devices => {
+        const dev = devices.find(d => d.name_by_user
+          ? d.name_by_user.replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug
+          : (d.name || '').replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug);
+        if (dev) nameSpan.textContent = dev.name_by_user || dev.name;
+      }).catch(() => { /* keep default */ });
+    }
 
     // Store key elements for label updates
     this._charKeys = [];
