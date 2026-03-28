@@ -418,7 +418,7 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/mouse_move` | POST | `x` (int), `y` (int) | Move cursor |
 | `/api/ble_keyboard/mouse_click` | POST | `btn` (int) | Click button |
 | `/api/ble_keyboard/mouse_scroll` | POST | `amount` (int) | Scroll wheel |
-| `/api/ble_keyboard/status` | GET | — | Returns `{"connected":bool,"paired":bool}` |
+| `/api/ble_keyboard/status` | GET | — | Returns `{"connected":bool,"paired":bool,"device_name":"..."}` |
 | `/api/ble_keyboard/buttons` | GET | — | Returns JSON array of programmed buttons |
 | `/api/ble_keyboard/press` | POST | `action` (string) | Trigger a programmed button action |
 

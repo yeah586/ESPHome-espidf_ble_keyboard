@@ -31,6 +31,7 @@ h2 svg{width:18px;height:18px;fill:#00d4aa}
 .status-dot.paired{background:#03a9f4}
 .status-text{font-size:12px;color:#6b7a99}
 .status-text.on{color:#00d4aa}
+.dev-name{font-size:11px;color:#8892a8;margin-left:4px;font-weight:500}
 .zoom-controls{display:flex;align-items:center;gap:4px}
 .zoom-btn{width:30px;height:30px;border:1px solid #252a38;border-radius:6px;background:#1a1e28;color:#e2e8f0;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
 .zoom-btn:active{background:#03a9f4;color:#fff}
@@ -64,6 +65,7 @@ h2 svg{width:18px;height:18px;fill:#00d4aa}
 <div class="toolbar-left">
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
+<span class="dev-name" id="dname"></span>
 </div>
 <div class="zoom-controls">
 <button class="zoom-btn" id="zout">-</button>
@@ -113,12 +115,14 @@ document.getElementById('zout').addEventListener('click',()=>setZoom(zoom-10));
 // ── Status polling ──
 const sdot=document.getElementById('sdot');
 const stxt=document.getElementById('stxt');
+const dname=document.getElementById('dname');
 function pollStatus(){
   fetch('/api/ble_keyboard/status').then(r=>r.json()).then(d=>{
     const c=d.connected,p=d.paired;
     sdot.className='status-dot'+(p?' paired':c?' connected':'');
     stxt.className='status-text'+((c||p)?' on':'');
     stxt.textContent=p?'Paired':c?'Connected':'Disconnected';
+    if(d.device_name)dname.textContent='('+d.device_name+')';
   }).catch(()=>{
     sdot.className='status-dot';
     stxt.className='status-text';
@@ -330,11 +334,14 @@ class BleKbWebHandler : public AsyncWebHandler {
 
     // GET-only endpoints (read state)
     if (path == "status") {
-      char buf[64];
-      snprintf(buf, sizeof(buf), "{\"connected\":%s,\"paired\":%s}",
-               kb_->is_connected() ? "true" : "false",
-               kb_->is_paired() ? "true" : "false");
-      request->send(200, "application/json", buf);
+      std::string json = "{\"connected\":";
+      json += kb_->is_connected() ? "true" : "false";
+      json += ",\"paired\":";
+      json += kb_->is_paired() ? "true" : "false";
+      json += ",\"device_name\":\"";
+      json += kb_->device_name();
+      json += "\"}";
+      request->send(200, "application/json", json.c_str());
       return;
     }
 
