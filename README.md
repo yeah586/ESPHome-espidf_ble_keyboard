@@ -325,10 +325,10 @@ api:
             id(my_keyboard).send_mouse_scroll(amount);
     - service: mouse_click
       variables:
-        btn: int
+        buttons: int
       then:
         - lambda: |-
-            id(my_keyboard).send_mouse_click(btn);
+            id(my_keyboard).send_mouse_click(buttons);
 ```
 
 ### 2. Install the card
