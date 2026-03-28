@@ -229,7 +229,7 @@ class BleMouseCard extends HTMLElement {
       tracking = true;
       lastX = startSX = x;
       lastY = startSY = y;
-      lastTime = Date.now();
+      lastTime = startTime = Date.now();
       moved = false;
       accumX = 0;
       accumY = 0;
@@ -277,6 +277,11 @@ class BleMouseCard extends HTMLElement {
       if (!tracking) return;
       tracking = false;
       pad.classList.remove('active');
+
+      // Tap-to-click: short tap with no drag beyond dead zone
+      if (this._config.tap_to_click && !moved && (Date.now() - startTime) < 300) {
+        this._callService('mouse_click', { btn:1 });
+      }
     };
 
     // Pointer events for drag tracking
@@ -296,15 +301,6 @@ class BleMouseCard extends HTMLElement {
       pad.releasePointerCapture(e.pointerId);
       onEnd();
     });
-
-    // Tap-to-click via native click event (reliable in HA shadow DOM)
-    if (this._config.tap_to_click) {
-      pad.addEventListener('click', () => {
-        if (!moved) {
-          this._callService('mouse_click', { btn:1 });
-        }
-      });
-    }
 
     // Mouse wheel / trackpad scroll on desktop
     let wheelAccum = 0;
