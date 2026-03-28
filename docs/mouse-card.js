@@ -287,31 +287,23 @@ class BleMouseCard extends HTMLElement {
       }
     };
 
-    // Mouse events
-    pad.addEventListener('mousedown', (e) => {
+    // Pointer events (unified mouse + touch, works in shadow DOM)
+    pad.addEventListener('pointerdown', (e) => {
       e.preventDefault();
+      pad.setPointerCapture(e.pointerId);
       onStart(e.clientX, e.clientY);
     });
-    window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-    window.addEventListener('mouseup', () => onEnd());
-
-    // Touch events
-    pad.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const t = e.touches[0];
-      onStart(t.clientX, t.clientY);
-    }, { passive: false });
-
-    pad.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      const t = e.touches[0];
-      onMove(t.clientX, t.clientY);
-    }, { passive: false });
-
-    pad.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      if (e.touches.length === 0) onEnd();
-    }, { passive: false });
+    pad.addEventListener('pointermove', (e) => {
+      onMove(e.clientX, e.clientY);
+    });
+    pad.addEventListener('pointerup', (e) => {
+      pad.releasePointerCapture(e.pointerId);
+      onEnd();
+    });
+    pad.addEventListener('pointercancel', (e) => {
+      pad.releasePointerCapture(e.pointerId);
+      onEnd();
+    });
 
     // Mouse wheel / trackpad scroll on desktop
     let wheelAccum = 0;
