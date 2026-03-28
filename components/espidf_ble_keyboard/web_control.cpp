@@ -6,6 +6,7 @@
 #include "esphome/core/log.h"
 #include <cstdlib>
 #include <cstring>
+#include <span>
 
 namespace esphome {
 namespace espidf_ble_keyboard {
