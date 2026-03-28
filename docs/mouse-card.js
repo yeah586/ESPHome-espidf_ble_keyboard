@@ -86,7 +86,7 @@ class BleMouseCard extends HTMLElement {
         }
         .touchpad {
           width: 100%;
-          height: 200px;
+          aspect-ratio: 16/9;
           background: var(--secondary-background-color, #f0f0f0);
           border-radius: 12px;
           border: 2px solid var(--divider-color, #e0e0e0);
