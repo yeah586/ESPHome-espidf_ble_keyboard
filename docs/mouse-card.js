@@ -263,7 +263,7 @@ class BleMouseCard extends HTMLElement {
       if (this._config.tap_to_click && !moved) {
         const elapsed = Date.now() - startTime;
         if (elapsed < 250) {
-          this._callService('mouse_click', { button: 1 });
+          this._callService('mouse_click', { btn: 1 });
         }
       }
     };
@@ -310,7 +310,7 @@ class BleMouseCard extends HTMLElement {
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         el.classList.add('pressed');
-        this._callService('mouse_click', { button });
+        this._callService('mouse_click', { btn: button });
       });
       el.addEventListener('pointerup', () => el.classList.remove('pressed'));
       el.addEventListener('pointerleave', () => el.classList.remove('pressed'));
