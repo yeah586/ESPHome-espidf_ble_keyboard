@@ -334,11 +334,16 @@
       <p>Type any text in Home Assistant and send it directly to the paired host device. Drive it manually or from automations.</p>
     </div>
     <div class="feature">
+      <div class="feature-icon">🖱️</div>
+      <h3>Mouse Control</h3>
+      <p>Left, right and middle click, cursor movement, and scroll wheel via HID mouse reports. Drive from buttons or automations.</p>
+    </div>
+    <div class="feature">
       <div class="feature-icon">⚡</div>
       <h3>Stable &amp; Efficient</h3>
       <p>Direct API implementation ensures reliability even with complex ESPHome configurations.</p>
     </div>
-    
+
   </div>
 
   <p class="section-title">Quick Start</p>
@@ -403,6 +408,12 @@
       <tr><td><code>"prev_track"</code></td><td class="desc">Previous track.</td></tr>
       <tr><td><code>"stop"</code></td><td class="desc">Stop media playback.</td></tr>
       <tr><td><code>"consumer:0x0192"</code></td><td class="desc">Send any HID consumer control code — open apps, control brightness and more. See keycode reference.</td></tr>
+      <tr><td><code>"left_click"</code></td><td class="desc">Mouse left click.</td></tr>
+      <tr><td><code>"right_click"</code></td><td class="desc">Mouse right click.</td></tr>
+      <tr><td><code>"middle_click"</code></td><td class="desc">Mouse middle click.</td></tr>
+      <tr><td><code>"mouse_move:50:0"</code></td><td class="desc">Move mouse cursor — relative X:Y pixels (-127 to 127).</td></tr>
+      <tr><td><code>"mouse_scroll:3"</code></td><td class="desc">Scroll mouse wheel — positive = up, negative = down (-127 to 127).</td></tr>
+      <tr><td><code>type: mouse_click</code></td><td class="desc">Dict format — <code>type: mouse_click</code>, <code>buttons: 0x01</code>. 0x01=left, 0x02=right, 0x04=middle.</td></tr>
       <tr><td><code>text entity</code></td><td class="desc">Type any text from Home Assistant and press Send Custom Text button. See README for setup.</td></tr>
     </table>
   </div>

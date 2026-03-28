@@ -33,7 +33,19 @@ def validate_action(value):
             if isinstance(code, str):
                 code = int(code, 16) if code.startswith("0x") else int(code)
             return f"consumer:{hex(code)}"
-        raise cv.Invalid(f"Unknown action type '{action_type}'. Use 'combo' or 'consumer'.")
+        elif action_type == "mouse_click":
+            buttons = value.get("buttons", 1)
+            if isinstance(buttons, str):
+                buttons = int(buttons, 16) if buttons.startswith("0x") else int(buttons)
+            return f"mouse_click:{hex(buttons)}"
+        elif action_type == "mouse_move":
+            x = int(value.get("x", 0))
+            y = int(value.get("y", 0))
+            return f"mouse_move:{x}:{y}"
+        elif action_type == "mouse_scroll":
+            wheel = int(value.get("wheel", 0))
+            return f"mouse_scroll:{wheel}"
+        raise cv.Invalid(f"Unknown action type '{action_type}'. Use 'combo', 'consumer', 'mouse_click', 'mouse_move', or 'mouse_scroll'.")
     raise cv.Invalid("Action must be a string or a mapping with 'type' key.")
 
 

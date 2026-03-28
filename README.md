@@ -13,6 +13,7 @@ This is a custom ESPHome component that transforms an ESP32 into a Bluetooth Low
 * **Media Keys:** Control volume, playback, mute and more via HID consumer control.
 * **Power Button:** Native HID power/sleep signals — no Run dialog, clean OS-level control.
 * **Consumer Control:** Send any HID consumer code directly from YAML using `consumer:0xXXXX` syntax.
+* **Mouse Control:** Left, right, and middle click, cursor movement, and scroll wheel via HID mouse reports.
 * **Custom Text Input:** Send any text typed in Home Assistant directly to the paired host device.
 
 📖 [Keycode Reference](docs/keycodes.md) · [🌐 View Web Page](https://markusg1234.github.io/ESPHome-espidf_ble_keyboard)
@@ -159,6 +160,21 @@ button:
     name: "Open Calculator"
     action: "consumer:0x0192"
 
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Left Click"
+    action: "left_click"
+
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Move Mouse Right"
+    action: "mouse_move:50:0"
+
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Scroll Down"
+    action: "mouse_scroll:-3"
+
   - platform: template
     name: "Send Custom Text"
     on_press:
@@ -229,6 +245,12 @@ State behavior:
 | `"next_track"` | Skip to next track. |
 | `"prev_track"` | Previous track. |
 | `"stop"` | Stop media playback. |
+| `"left_click"` | Mouse left click. |
+| `"right_click"` | Mouse right click. |
+| `"middle_click"` | Mouse middle click. |
+| `"mouse_click:0x01"` | Mouse click with button mask. `0x01` = left, `0x02` = right, `0x04` = middle. Combine for simultaneous buttons. |
+| `"mouse_move:<x>:<y>"` | Move mouse cursor. Values -127 to 127 (relative, pixels). |
+| `"mouse_scroll:<wheel>"` | Scroll mouse wheel. Positive = up, negative = down (-127 to 127). |
 
 ---
 
@@ -253,6 +275,22 @@ action:
 action:
   type: consumer
   code: 0x0192     # Open Calculator
+
+# Mouse click
+action:
+  type: mouse_click
+  buttons: 0x01    # 0x01 = left, 0x02 = right, 0x04 = middle
+
+# Mouse move
+action:
+  type: mouse_move
+  x: 50            # move 50px right
+  y: -20           # move 20px up
+
+# Mouse scroll
+action:
+  type: mouse_scroll
+  wheel: 3         # scroll up 3 notches (negative = down)
 ```
 
 Both formats are equivalent — the dict format is converted to the string format at compile time so there is no runtime difference.

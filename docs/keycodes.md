@@ -160,6 +160,47 @@ action: "consumer:0x0223"   # Browser Home
 
 ---
 
+## Mouse Actions (Report ID 4)
+
+The component includes a 3-button relative mouse with scroll wheel.
+
+### Named Actions
+
+| Action | `action:` value |
+|---|---|
+| Left Click | `left_click` |
+| Right Click | `right_click` |
+| Middle Click | `middle_click` |
+
+### Parameterised Actions
+
+| Format | Example | Description |
+|---|---|---|
+| `mouse_click:<buttons_hex>` | `mouse_click:0x01` | Click with button mask. `0x01` = left, `0x02` = right, `0x04` = middle. Combine for simultaneous buttons. |
+| `mouse_move:<x>:<y>` | `mouse_move:50:-20` | Move cursor. Values -127 to 127 (relative, pixels). |
+| `mouse_scroll:<wheel>` | `mouse_scroll:3` | Scroll wheel. Positive = up, negative = down (-127 to 127). |
+
+### Dict Format
+
+```yaml
+action:
+  type: mouse_click
+  buttons: 0x01    # 0x01 = left, 0x02 = right, 0x04 = middle
+
+action:
+  type: mouse_move
+  x: 50
+  y: -20
+
+action:
+  type: mouse_scroll
+  wheel: 3
+```
+
+> **Note:** Mouse reports use HID Report ID 4. After adding mouse support, hosts that previously paired the keyboard will need to re-pair to discover the updated HID descriptor.
+
+---
+
 ## Full Button Example
 
 ```yaml
@@ -178,6 +219,16 @@ button:
     keyboard_id: ble_keyboard
     name: "Ctrl+Alt+Del"
     action: "ctrl_alt_del"
+
+  - platform: espidf_ble_keyboard
+    keyboard_id: ble_keyboard
+    name: "Left Click"
+    action: "left_click"
+
+  - platform: espidf_ble_keyboard
+    keyboard_id: ble_keyboard
+    name: "Move Mouse Right"
+    action: "mouse_move:50:0"
 ```
 
 > **Note:** Keycodes follow the [USB HID Usage Tables spec](https://www.usb.org/hid) (Keyboard/Keypad Page 0x07). The 8-byte report format is `[modifier, reserved, key1–key6]`. Currently one key per press is sent in the `key1` slot.

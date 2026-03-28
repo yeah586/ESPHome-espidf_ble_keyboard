@@ -27,6 +27,7 @@ static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *rep
 // Report ID 1: Standard keyboard (8 bytes)
 // Report ID 2: Consumer control — media keys (2 bytes)
 // Report ID 3: System control — power/sleep (1 byte)
+// Report ID 4: Mouse — buttons + X/Y + scroll (4 bytes)
 static const uint8_t hid_report_map[] = {
     // ---- Keyboard (Report ID 1) ----
     0x05, 0x01, 0x09, 0x06, 0xA1, 0x01,
@@ -64,7 +65,36 @@ static const uint8_t hid_report_map[] = {
     0x75, 0x08,        //   Report Size (8)
     0x95, 0x01,        //   Report Count (1)
     0x81, 0x00,        //   Input (Data, Array)
-    0xC0               // End Collection
+    0xC0,              // End Collection
+    // ---- Mouse (Report ID 4) — buttons + X/Y movement + scroll wheel ----
+    0x05, 0x01,        // Usage Page (Generic Desktop)
+    0x09, 0x02,        // Usage (Mouse)
+    0xA1, 0x01,        // Collection (Application)
+    0x85, 0x04,        //   Report ID (4)
+    0x09, 0x01,        //   Usage (Pointer)
+    0xA1, 0x00,        //   Collection (Physical)
+    0x05, 0x09,        //     Usage Page (Button)
+    0x19, 0x01,        //     Usage Minimum (Button 1 — Left)
+    0x29, 0x03,        //     Usage Maximum (Button 3 — Middle)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x01,        //     Logical Maximum (1)
+    0x75, 0x01,        //     Report Size (1)
+    0x95, 0x03,        //     Report Count (3)
+    0x81, 0x02,        //     Input (Data, Variable, Absolute)
+    0x75, 0x05,        //     Report Size (5) — padding
+    0x95, 0x01,        //     Report Count (1)
+    0x81, 0x01,        //     Input (Constant) — padding to byte boundary
+    0x05, 0x01,        //     Usage Page (Generic Desktop)
+    0x09, 0x30,        //     Usage (X)
+    0x09, 0x31,        //     Usage (Y)
+    0x09, 0x38,        //     Usage (Wheel)
+    0x15, 0x81,        //     Logical Minimum (-127)
+    0x25, 0x7F,        //     Logical Maximum (127)
+    0x75, 0x08,        //     Report Size (8)
+    0x95, 0x03,        //     Report Count (3)
+    0x81, 0x06,        //     Input (Data, Variable, Relative)
+    0xC0,              //   End Collection (Physical)
+    0xC0               // End Collection (Application)
 };
 
 // ── ASCII → USB HID Keycode Lookup Table (US keyboard layout) ───────────────
@@ -497,6 +527,9 @@ static uint8_t  consumer_ref_val[2]   = {0x02, 0x01};
 static uint8_t  system_val            = 0;
 static uint16_t system_ccc_val        = 0;
 static uint8_t  system_ref_val[2]     = {0x03, 0x01};
+static uint8_t  mouse_val[4]          = {0};  // buttons, X, Y, wheel
+static uint16_t mouse_ccc_val         = 0;
+static uint8_t  mouse_ref_val[2]      = {0x04, 0x01};
 
 enum {
     IDX_SVC,
@@ -518,6 +551,9 @@ enum {
     IDX_CHAR_SYSTEM,       IDX_CHAR_SYSTEM_VAL,
     IDX_CHAR_SYSTEM_CCC,
     IDX_CHAR_SYSTEM_REF,
+    IDX_CHAR_MOUSE,        IDX_CHAR_MOUSE_VAL,
+    IDX_CHAR_MOUSE_CCC,
+    IDX_CHAR_MOUSE_REF,
     HID_IDX_NB,
 };
 
@@ -534,6 +570,8 @@ static uint16_t s_consumer_report_handle = 0;
 static uint16_t s_consumer_ccc_handle = 0;
 static uint16_t s_system_report_handle = 0;
 static uint16_t s_system_ccc_handle = 0;
+static uint16_t s_mouse_report_handle = 0;
+static uint16_t s_mouse_ccc_handle = 0;
 
 static const esp_gatts_attr_db_t hid_attr_db[HID_IDX_NB] = {
     [IDX_SVC] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_PRI_SERVICE, PERM_R, sizeof(uint16_t), sizeof(uint16_t), (uint8_t *)&UUID_HID_SVC}},
@@ -569,6 +607,11 @@ static const esp_gatts_attr_db_t hid_attr_db[HID_IDX_NB] = {
     [IDX_CHAR_SYSTEM_VAL] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_HID_REPORT, PERM_R_ENC, sizeof(system_val), sizeof(system_val), &system_val}},
     [IDX_CHAR_SYSTEM_CCC] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_CHAR_CLIENT_CONFIG, PERM_RW_ENC, sizeof(system_ccc_val), sizeof(system_ccc_val), (uint8_t *)&system_ccc_val}},
     [IDX_CHAR_SYSTEM_REF] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_RPT_REF_DESCR, PERM_R_ENC, sizeof(system_ref_val), sizeof(system_ref_val), system_ref_val}},
+    // Mouse report (Report ID 4)
+    [IDX_CHAR_MOUSE] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_CHAR_DECLARE, PERM_R, 1, 1, (uint8_t *)&PROP_READ_NOTIFY}},
+    [IDX_CHAR_MOUSE_VAL] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_HID_REPORT, PERM_R_ENC, sizeof(mouse_val), sizeof(mouse_val), mouse_val}},
+    [IDX_CHAR_MOUSE_CCC] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_CHAR_CLIENT_CONFIG, PERM_RW_ENC, sizeof(mouse_ccc_val), sizeof(mouse_ccc_val), (uint8_t *)&mouse_ccc_val}},
+    [IDX_CHAR_MOUSE_REF] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_RPT_REF_DESCR, PERM_R_ENC, sizeof(mouse_ref_val), sizeof(mouse_ref_val), mouse_ref_val}},
 };
 
 // Service instance IDs for create_attr_tab
@@ -615,6 +658,8 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                 s_consumer_ccc_handle = hid_handle_table[IDX_CHAR_CONSUMER_CCC];
                 s_system_report_handle = hid_handle_table[IDX_CHAR_SYSTEM_VAL];
                 s_system_ccc_handle = hid_handle_table[IDX_CHAR_SYSTEM_CCC];
+                s_mouse_report_handle = hid_handle_table[IDX_CHAR_MOUSE_VAL];
+                s_mouse_ccc_handle = hid_handle_table[IDX_CHAR_MOUSE_CCC];
                 esp_ble_gatts_start_service(hid_handle_table[IDX_SVC]);
             }
             break;
@@ -634,6 +679,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             boot_kb_in_ccc_val = 0;
             consumer_ccc_val = 0;
             system_ccc_val = 0;
+            mouse_ccc_val = 0;
             battery_ccc_val = 0;
             request_host_friendly_conn_params(param->connect.remote_bda);
             // Trigger encryption with security level matching configured pairing mode
@@ -654,6 +700,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             boot_kb_in_ccc_val = 0;
             consumer_ccc_val = 0;
             system_ccc_val = 0;
+            mouse_ccc_val = 0;
             battery_ccc_val = 0;
             esp_ble_gap_start_advertising(&adv_params);
             break;
@@ -681,6 +728,11 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                 system_ccc_val = static_cast<uint16_t>(param->write.value[0]) |
                                  (static_cast<uint16_t>(param->write.value[1]) << 8);
                 ESP_LOGI(TAG, "GATTS: System CCC=0x%04X (power/sleep)", system_ccc_val);
+            }
+            if (param->write.handle == s_mouse_ccc_handle && param->write.len >= 2) {
+                mouse_ccc_val = static_cast<uint16_t>(param->write.value[0]) |
+                                (static_cast<uint16_t>(param->write.value[1]) << 8);
+                ESP_LOGI(TAG, "GATTS: Mouse CCC=0x%04X", mouse_ccc_val);
             }
             if ((param->write.handle == s_hid_output_report_handle || param->write.handle == s_boot_kb_output_handle) &&
                 param->write.len > 0) {
@@ -926,6 +978,36 @@ void EspidfBleKeyboard::send_volume_up()         { send_consumer(0x00E9); }
 void EspidfBleKeyboard::send_volume_down()       { send_consumer(0x00EA); }
 void EspidfBleKeyboard::send_mute()              { send_consumer(0x00E2); }
 
+void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
+    if (!is_connected_) return;
+    uint8_t report[4] = {buttons, 0, 0, 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    vTaskDelay(pdMS_TO_TICKS(50));
+    uint8_t release[4] = {0, 0, 0, 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    ESP_LOGI(TAG, "Mouse click sent: buttons=0x%02X", buttons);
+}
+
+void EspidfBleKeyboard::send_mouse_move(int8_t x, int8_t y) {
+    if (!is_connected_) return;
+    uint8_t report[4] = {0, static_cast<uint8_t>(x), static_cast<uint8_t>(y), 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    uint8_t release[4] = {0, 0, 0, 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    ESP_LOGD(TAG, "Mouse move sent: x=%d y=%d", x, y);
+}
+
+void EspidfBleKeyboard::send_mouse_scroll(int8_t wheel) {
+    if (!is_connected_) return;
+    uint8_t report[4] = {0, 0, 0, static_cast<uint8_t>(wheel)};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    uint8_t release[4] = {0, 0, 0, 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    ESP_LOGD(TAG, "Mouse scroll sent: wheel=%d", wheel);
+}
+
 void EspidfBleKeyboard::send_hibernate() {
     if (!is_connected_) return;
     // Win+R is a single blocking key combo (no watchdog risk).
@@ -956,6 +1038,33 @@ void EspidfBleKeyboardButton::press_action() {
         }
     }
 
+    // Check if the action string starts with "mouse_click:"
+    if (action_.find("mouse_click:") == 0) {
+        int buttons;
+        if (sscanf(action_.c_str(), "mouse_click:%i", &buttons) == 1) {
+            parent_->send_mouse_click((uint8_t)buttons);
+            return;
+        }
+    }
+
+    // Check if the action string starts with "mouse_move:"
+    if (action_.find("mouse_move:") == 0) {
+        int x, y;
+        if (sscanf(action_.c_str(), "mouse_move:%i:%i", &x, &y) == 2) {
+            parent_->send_mouse_move((int8_t)x, (int8_t)y);
+            return;
+        }
+    }
+
+    // Check if the action string starts with "mouse_scroll:"
+    if (action_.find("mouse_scroll:") == 0) {
+        int wheel;
+        if (sscanf(action_.c_str(), "mouse_scroll:%i", &wheel) == 1) {
+            parent_->send_mouse_scroll((int8_t)wheel);
+            return;
+        }
+    }
+
     // Named actions
     if (action_ == "ctrl_alt_del")      parent_->send_ctrl_alt_del();
     else if (action_ == "sleep")        parent_->send_sleep();
@@ -969,6 +1078,9 @@ void EspidfBleKeyboardButton::press_action() {
     else if (action_ == "volume_up")    parent_->send_volume_up();
     else if (action_ == "volume_down")  parent_->send_volume_down();
     else if (action_ == "mute")         parent_->send_mute();
+    else if (action_ == "left_click")   parent_->send_mouse_click(0x01);
+    else if (action_ == "right_click")  parent_->send_mouse_click(0x02);
+    else if (action_ == "middle_click") parent_->send_mouse_click(0x04);
     else parent_->send_string(action_);
 }
 

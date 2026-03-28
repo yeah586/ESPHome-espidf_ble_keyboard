@@ -35,6 +35,9 @@ class EspidfBleKeyboard : public Component {
   void send_volume_up();
   void send_volume_down();
   void send_mute();
+  void send_mouse_click(uint8_t buttons);
+  void send_mouse_move(int8_t x, int8_t y);
+  void send_mouse_scroll(int8_t wheel);
 
   void set_passkey(uint32_t passkey) {
     passkey_ = passkey;
