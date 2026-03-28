@@ -339,6 +339,16 @@
       <p>Left, right and middle click, cursor movement, and scroll wheel via HID mouse reports. Drive from buttons or automations.</p>
     </div>
     <div class="feature">
+      <div class="feature-icon">🖥️</div>
+      <h3>HA Mouse Card</h3>
+      <p>Custom Lovelace card with a touchpad, 3 mouse buttons, and scroll controls. Drag to move cursor, wheel to scroll.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">⌨️</div>
+      <h3>HA Keyboard Card</h3>
+      <p>Full on-screen QWERTY keyboard card for Home Assistant. Sticky modifiers, Caps Lock, F-keys, and arrow keys.</p>
+    </div>
+    <div class="feature">
       <div class="feature-icon">⚡</div>
       <h3>Stable &amp; Efficient</h3>
       <p>Direct API implementation ensures reliability even with complex ESPHome configurations.</p>
@@ -416,6 +426,65 @@
       <tr><td><code>type: mouse_click</code></td><td class="desc">Dict format — <code>type: mouse_click</code>, <code>buttons: 0x01</code>. 0x01=left, 0x02=right, 0x04=middle.</td></tr>
       <tr><td><code>text entity</code></td><td class="desc">Type any text from Home Assistant and press Send Custom Text button. See README for setup.</td></tr>
     </table>
+  </div>
+
+  <p class="section-title">Home Assistant Cards</p>
+  <div class="code-section">
+    <div class="code-header"><div class="dot"></div><span>Mouse Card — dashboard YAML</span></div>
+    <pre><span class="yaml-key">type</span><span class="yaml-val">:</span> <span class="yaml-str">custom:ble-mouse-card</span>
+<span class="yaml-key">device</span><span class="yaml-val">:</span> <span class="yaml-str">bluetooth_keyboard</span>
+<span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">Mouse Control</span>        <span class="yaml-comment"># optional card title</span>
+<span class="yaml-key">sensitivity</span><span class="yaml-val">:</span> <span class="yaml-str">1.5</span>            <span class="yaml-comment"># optional cursor speed (default: 1.5)</span>
+<span class="yaml-key">scroll_sensitivity</span><span class="yaml-val">:</span> <span class="yaml-str">2</span>      <span class="yaml-comment"># optional scroll speed (default: 2)</span>
+<span class="yaml-key">tap_to_click</span><span class="yaml-val">:</span> <span class="yaml-str">true</span>          <span class="yaml-comment"># optional tap = left click (default: true)</span></pre>
+  </div>
+
+  <div class="code-section">
+    <div class="code-header"><div class="dot"></div><span>Keyboard Card — dashboard YAML</span></div>
+    <pre><span class="yaml-key">type</span><span class="yaml-val">:</span> <span class="yaml-str">custom:ble-keyboard-card</span>
+<span class="yaml-key">device</span><span class="yaml-val">:</span> <span class="yaml-str">bluetooth_keyboard</span>
+<span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">BLE Keyboard</span>          <span class="yaml-comment"># optional card title</span>
+<span class="yaml-key">show_fkeys</span><span class="yaml-val">:</span> <span class="yaml-str">true</span>            <span class="yaml-comment"># optional show F1-F12 row (default: true)</span></pre>
+  </div>
+
+  <div class="code-section">
+    <div class="code-header"><div class="dot"></div><span>ESPHome services required for cards</span></div>
+    <pre><span class="yaml-key">api</span><span class="yaml-val">:</span>
+  <span class="yaml-key">services</span><span class="yaml-val">:</span>
+    <span class="yaml-comment"># Mouse card services</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_move</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">x</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+        <span class="yaml-key">y</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_move(x, y);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_scroll</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">amount</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_scroll(amount);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_click</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">btn</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_click(btn);</span>
+    <span class="yaml-comment"># Keyboard card services</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">send_string</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">keys</span><span class="yaml-val">:</span> <span class="yaml-str">string</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_string(keys);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">send_key</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">modifier</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+        <span class="yaml-key">keycode</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_key_combo(modifier, keycode);</span></pre>
   </div>
 
 </div>
