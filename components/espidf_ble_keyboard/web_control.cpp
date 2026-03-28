@@ -24,7 +24,19 @@ static const char PAGE_HTML[] PROGMEM = R"rawhtml(<!DOCTYPE html>
 body{background:#1a1e28;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:680px;margin:0 auto;user-select:none;-webkit-user-select:none}
 h2{font-size:15px;font-weight:600;margin:12px 0 8px;color:#00d4aa;display:flex;align-items:center;gap:6px}
 h2 svg{width:18px;height:18px;fill:#00d4aa}
+.toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:10px;background:#13161e;border:1px solid #252a38;border-radius:10px}
+.toolbar-left{display:flex;align-items:center;gap:8px}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#6b7a99;transition:background .3s}
+.status-dot.connected{background:#00d4aa}
+.status-dot.paired{background:#03a9f4}
+.status-text{font-size:12px;color:#6b7a99}
+.status-text.on{color:#00d4aa}
+.zoom-controls{display:flex;align-items:center;gap:4px}
+.zoom-btn{width:30px;height:30px;border:1px solid #252a38;border-radius:6px;background:#1a1e28;color:#e2e8f0;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+.zoom-btn:active{background:#03a9f4;color:#fff}
+.zoom-label{font-size:11px;color:#6b7a99;min-width:36px;text-align:center}
 .card{background:#13161e;border:1px solid #252a38;border-radius:10px;padding:10px;margin-bottom:12px}
+.scalable{transform-origin:top center;transition:transform .15s}
 .row{display:flex;gap:3px;margin-bottom:3px}
 .row:last-child{margin-bottom:0}
 .k{flex:1;min-width:0;padding:9px 1px;border:1px solid #252a38;border-radius:5px;background:#1a1e28;color:#e2e8f0;font-size:12px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .08s}
@@ -42,9 +54,25 @@ h2 svg{width:18px;height:18px;fill:#00d4aa}
 .scroll-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .sbtn{padding:8px 0;border:1px solid #252a38;border-radius:8px;background:#1a1e28;color:#e2e8f0;font-size:16px;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .1s}
 .sbtn:active{background:#03a9f4;color:#fff;border-color:#03a9f4}
-.status{font-size:11px;color:#6b7a99;text-align:center;margin-top:8px}
+.prog-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.prog-btn{padding:8px 14px;border:1px solid #252a38;border-radius:8px;background:#1a1e28;color:#e2e8f0;font-size:12px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .1s}
+.prog-btn:active,.prog-btn.p{background:#03a9f4;color:#fff;border-color:#03a9f4}
+.prog-empty{font-size:12px;color:#6b7a99;padding:4px 0}
 </style></head><body>
 
+<div class="toolbar">
+<div class="toolbar-left">
+<div class="status-dot" id="sdot"></div>
+<span class="status-text" id="stxt">Disconnected</span>
+</div>
+<div class="zoom-controls">
+<button class="zoom-btn" id="zout">-</button>
+<span class="zoom-label" id="zlbl">100%</span>
+<button class="zoom-btn" id="zin">+</button>
+</div>
+</div>
+
+<div id="scalable" class="scalable">
 <div class="card" id="keyboard"></div>
 
 <div class="card">
@@ -61,7 +89,11 @@ h2 svg{width:18px;height:18px;fill:#00d4aa}
 </div>
 </div>
 
-<div class="status" id="status">Ready</div>
+<div class="card" id="btns-card" style="display:none">
+<h2><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 12h2v2H7v-2zm0-4h2v2H7V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8z"/></svg>Buttons</h2>
+<div class="prog-btns" id="prog-btns"><span class="prog-empty">Loading...</span></div>
+</div>
+</div>
 
 <script>
 // API helper
@@ -69,6 +101,54 @@ function api(endpoint,params){
   const url='/api/ble_keyboard/'+endpoint+'?'+new URLSearchParams(params);
   fetch(url,{method:'POST'}).catch(()=>{});
 }
+
+// ── Zoom ──
+let zoom=100;
+const scalable=document.getElementById('scalable');
+const zlbl=document.getElementById('zlbl');
+function setZoom(v){zoom=Math.max(50,Math.min(150,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%'}
+document.getElementById('zin').addEventListener('click',()=>setZoom(zoom+10));
+document.getElementById('zout').addEventListener('click',()=>setZoom(zoom-10));
+
+// ── Status polling ──
+const sdot=document.getElementById('sdot');
+const stxt=document.getElementById('stxt');
+function pollStatus(){
+  fetch('/api/ble_keyboard/status').then(r=>r.json()).then(d=>{
+    const c=d.connected,p=d.paired;
+    sdot.className='status-dot'+(p?' paired':c?' connected':'');
+    stxt.className='status-text'+((c||p)?' on':'');
+    stxt.textContent=p?'Paired':c?'Connected':'Disconnected';
+  }).catch(()=>{
+    sdot.className='status-dot';
+    stxt.className='status-text';
+    stxt.textContent='Offline';
+  });
+}
+pollStatus();
+setInterval(pollStatus,3000);
+
+// ── Programmed Buttons ──
+(function(){
+  const card=document.getElementById('btns-card');
+  const container=document.getElementById('prog-btns');
+  fetch('/api/ble_keyboard/buttons').then(r=>r.json()).then(btns=>{
+    if(!btns.length){card.style.display='none';return}
+    card.style.display='';
+    container.innerHTML='';
+    btns.forEach(b=>{
+      const el=document.createElement('button');
+      el.className='prog-btn';
+      el.textContent=b.name;
+      el.addEventListener('pointerdown',e=>{
+        e.preventDefault();el.classList.add('p');
+        api('press',{action:b.action});
+        setTimeout(()=>el.classList.remove('p'),150);
+      });
+      container.appendChild(el);
+    });
+  }).catch(()=>{card.style.display='none'});
+})();
 
 // ── Keyboard ──
 const CK={a:0x04,b:0x05,c:0x06,d:0x07,e:0x08,f:0x09,g:0x0A,h:0x0B,i:0x0C,j:0x0D,k:0x0E,l:0x0F,m:0x10,n:0x11,o:0x12,p:0x13,q:0x14,r:0x15,s:0x16,t:0x17,u:0x18,v:0x19,w:0x1A,x:0x1B,y:0x1C,z:0x1D,'1':0x1E,'2':0x1F,'3':0x20,'4':0x21,'5':0x22,'6':0x23,'7':0x24,'8':0x25,'9':0x26,'0':0x27,'`':0x35,'-':0x2D,'=':0x2E,'[':0x2F,']':0x30,'\\':0x31,';':0x33,"'":0x34,',':0x36,'.':0x37,'/':0x38,' ':0x2C};
@@ -246,13 +326,39 @@ class BleKbWebHandler : public AsyncWebHandler {
       return;
     }
 
-    // API endpoints — POST only
+    std::string path = url.substr(strlen("/api/ble_keyboard/"));
+
+    // GET-only endpoints (read state)
+    if (path == "status") {
+      char buf[64];
+      snprintf(buf, sizeof(buf), "{\"connected\":%s,\"paired\":%s}",
+               kb_->is_connected() ? "true" : "false",
+               kb_->is_paired() ? "true" : "false");
+      request->send(200, "application/json", buf);
+      return;
+    }
+
+    if (path == "buttons") {
+      std::string json = "[";
+      const auto &btns = kb_->get_buttons();
+      for (size_t i = 0; i < btns.size(); i++) {
+        if (i > 0) json += ",";
+        json += "{\"name\":\"";
+        json += btns[i].name;
+        json += "\",\"action\":\"";
+        json += btns[i].action;
+        json += "\"}";
+      }
+      json += "]";
+      request->send(200, "application/json", json.c_str());
+      return;
+    }
+
+    // Remaining endpoints — POST only
     if (request->method() != HTTP_POST) {
       request->send(405, "text/plain", "POST only");
       return;
     }
-
-    std::string path = url.substr(strlen("/api/ble_keyboard/"));
 
     if (path == "mouse_move") {
       int x = request->hasArg("x") ? atoi(request->arg("x").c_str()) : 0;
@@ -281,6 +387,39 @@ class BleKbWebHandler : public AsyncWebHandler {
       int modifier = request->hasArg("modifier") ? atoi(request->arg("modifier").c_str()) : 0;
       int keycode = request->hasArg("keycode") ? atoi(request->arg("keycode").c_str()) : 0;
       kb_->send_key_combo((uint8_t) modifier, (uint8_t) keycode);
+      request->send(200);
+
+    } else if (path == "press") {
+      // Press a button by action string
+      if (request->hasArg("action")) {
+        std::string action = request->arg("action").c_str();
+        // Find and press the button by triggering its action directly
+        // Reuse the same logic as press_action by calling the component methods
+        if (action.find("combo:") == 0) {
+          int mod = 0, key = 0;
+          if (sscanf(action.c_str(), "combo:%i:%i", &mod, &key) == 2)
+            kb_->send_key_combo((uint8_t) mod, (uint8_t) key);
+        } else if (action.find("consumer:") == 0) {
+          int usage = 0;
+          if (sscanf(action.c_str(), "consumer:%i", &usage) == 1)
+            kb_->send_consumer((uint16_t) usage);
+        } else if (action == "ctrl_alt_del") kb_->send_ctrl_alt_del();
+        else if (action == "sleep") kb_->send_sleep();
+        else if (action == "shutdown") kb_->send_shutdown();
+        else if (action == "hibernate") kb_->send_hibernate();
+        else if (action == "power") kb_->send_power();
+        else if (action == "play_pause") kb_->send_media_play_pause();
+        else if (action == "next_track") kb_->send_media_next();
+        else if (action == "prev_track") kb_->send_media_prev();
+        else if (action == "stop") kb_->send_media_stop();
+        else if (action == "volume_up") kb_->send_volume_up();
+        else if (action == "volume_down") kb_->send_volume_down();
+        else if (action == "mute") kb_->send_mute();
+        else if (action == "left_click") kb_->send_mouse_click(0x01);
+        else if (action == "right_click") kb_->send_mouse_click(0x02);
+        else if (action == "middle_click") kb_->send_mouse_click(0x04);
+        else kb_->send_string(action);
+      }
       request->send(200);
 
     } else {

@@ -61,3 +61,6 @@ async def to_code(config):
     parent = await cg.get_variable(config[CONF_KEYBOARD_ID])
     cg.add(var.set_parent(parent))
     cg.add(var.set_action(config[CONF_ACTION]))
+    # Register button info for web control page
+    name = config.get("name", config[CONF_ACTION])
+    cg.add(parent.register_button(name, config[CONF_ACTION]))

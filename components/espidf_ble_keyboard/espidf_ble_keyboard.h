@@ -4,6 +4,7 @@
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include <atomic>
 #include <string>
+#include <vector>
 
 #include "freertos/semphr.h"
 #include "esp_bt.h"
@@ -61,6 +62,15 @@ class EspidfBleKeyboard : public Component {
 
   void set_web_control(bool enabled) { web_control_enabled_ = enabled; }
 
+  struct ButtonInfo {
+    std::string name;
+    std::string action;
+  };
+  void register_button(const std::string &name, const std::string &action) {
+    buttons_.push_back({name, action});
+  }
+  const std::vector<ButtonInfo> &get_buttons() const { return buttons_; }
+
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
   void set_web_server_base(web_server_base::WebServerBase *base) { web_server_base_ = base; }
 #endif
@@ -106,6 +116,7 @@ class EspidfBleKeyboard : public Component {
   uint32_t key_delay_ms_{80};
 
   bool web_control_enabled_{false};
+  std::vector<ButtonInfo> buttons_;
 
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
   web_server_base::WebServerBase *web_server_base_{nullptr};

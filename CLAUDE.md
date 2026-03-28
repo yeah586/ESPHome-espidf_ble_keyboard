@@ -91,6 +91,9 @@ espidf_ble_keyboard:
   # Optional pairing mode when passkey is set:
   # legacy (default, Windows/Android-friendly) or secure_connections (Apple-friendly)
   passkey_mode: legacy
+  # Optional: enable built-in web control page at http://<device-ip>/ble_keyboard
+  # Requires web_server component. No HA cards or services needed.
+  web_control: true
 
 button:
 
@@ -210,6 +213,7 @@ binary_sensor:
 * **key_delay_ms** (Optional, int): Total delay per character when typing strings, in milliseconds. Split evenly between key-down and key-up. Defaults to `80`. Increase if characters are being dropped on slow BLE connections.
 * **passkey** (Optional, int): A 6-digit static PIN (000000–999999). If set, the device uses static passkey pairing (legacy MITM bond) and requires this PIN during initial pairing.
 * **passkey_mode** (Optional, string): Passkey security mode. `legacy` (default) uses legacy MITM bonding — tested and recommended for Windows and Android. `secure_connections` uses LE Secure Connections MITM bonding — tested and recommended for iOS.
+* **web_control** (Optional, bool): Enable a built-in web control page with keyboard and mouse UI at `http://<device-ip>/ble_keyboard`. Requires the `web_server` component. Defaults to `false`.
 
 ### `button` (Platform: `espidf_ble_keyboard`)
 

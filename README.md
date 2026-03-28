@@ -401,7 +401,9 @@ espidf_ble_keyboard:
 - **Mouse touchpad** — drag to move cursor, tap for left click
 - **Mouse buttons** — Left, Middle, Right click
 - **Scroll controls** — buttons + mouse wheel on the touchpad
-- **Tab switching** — toggle between Keyboard and Mouse views
+- **Zoom controls** — resize keyboard and mouse with +/- buttons (50%–150%)
+- **BLE connection status** — live indicator shows Connected, Paired, or Disconnected (polls every 3s)
+- **Programmed buttons** — any buttons defined in YAML appear as clickable buttons on the web page
 - **Zero dependencies** — no HA, no custom cards, no JS files to install
 - **Works from any phone** — just open the URL in a mobile browser
 
@@ -416,6 +418,9 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/mouse_move` | POST | `x` (int), `y` (int) | Move cursor |
 | `/api/ble_keyboard/mouse_click` | POST | `btn` (int) | Click button |
 | `/api/ble_keyboard/mouse_scroll` | POST | `amount` (int) | Scroll wheel |
+| `/api/ble_keyboard/status` | GET | — | Returns `{"connected":bool,"paired":bool}` |
+| `/api/ble_keyboard/buttons` | GET | — | Returns JSON array of programmed buttons |
+| `/api/ble_keyboard/press` | POST | `action` (string) | Trigger a programmed button action |
 
 Example: `curl -X POST "http://<device-ip>/api/ble_keyboard/string?keys=Hello"`
 
