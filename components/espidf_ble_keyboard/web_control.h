@@ -1,4 +1,5 @@
 #pragma once
+#include "esphome/core/defines.h"
 
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
 

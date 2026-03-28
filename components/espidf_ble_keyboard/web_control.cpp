@@ -1,3 +1,4 @@
+#include "esphome/core/defines.h"
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
 
 #include "web_control.h"
