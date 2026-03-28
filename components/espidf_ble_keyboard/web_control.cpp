@@ -316,13 +316,13 @@ class BleKbWebHandler : public AsyncWebHandler {
   BleKbWebHandler(EspidfBleKeyboard *kb) : kb_(kb) {}
 
   bool canHandle(AsyncWebServerRequest *request) const override {
-    std::string url = request->url();
+    std::string url = request->url_to();
     return url == "/ble_keyboard" ||
            url.rfind("/api/ble_keyboard/", 0) == 0;
   }
 
   void handleRequest(AsyncWebServerRequest *request) override {
-    std::string url = request->url();
+    std::string url = request->url_to();
 
     // Serve the page
     if (url == "/ble_keyboard") {
