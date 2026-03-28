@@ -45,7 +45,7 @@ h2 svg{width:18px;height:18px;fill:#00d4aa}
 .k.active{background:#03a9f4;color:#fff;border-color:#03a9f4}
 .k.caps{background:#ff9800;color:#fff;border-color:#ff9800}
 .k.fk{font-size:10px;padding:6px 1px}
-.touchpad{width:100%;height:170px;background:#1a1e28;border-radius:10px;border:2px solid #252a38;cursor:crosshair;touch-action:none;position:relative;overflow:hidden;transition:border-color .15s}
+.touchpad{width:100%;aspect-ratio:16/9;background:#1a1e28;border-radius:10px;border:2px solid #252a38;cursor:crosshair;touch-action:none;position:relative;overflow:hidden;transition:border-color .15s}
 .touchpad.active{border-color:#03a9f4}
 .touchpad-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#6b7a99;font-size:12px;pointer-events:none;opacity:.5}
 .touchpad.active .touchpad-hint{opacity:0}
