@@ -5,6 +5,7 @@
 #include <atomic>
 #include <string>
 
+#include "freertos/semphr.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_gap_ble_api.h"
@@ -91,6 +92,7 @@ class EspidfBleKeyboard : public Component {
   uint32_t key_delay_ms_{80};
 
   // Non-blocking string typing state machine (driven from loop())
+  SemaphoreHandle_t type_mutex_{nullptr};
   std::string type_queue_;
   size_t type_index_{0};
   bool type_key_up_pending_{false};

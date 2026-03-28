@@ -250,8 +250,8 @@ static void maybe_reset_bonds_after_security_config_change() {
 static void request_host_friendly_conn_params(const esp_bd_addr_t bda) {
     esp_ble_conn_update_params_t conn_params = {};
     memcpy(conn_params.bda, bda, sizeof(esp_bd_addr_t));
-    conn_params.min_int = 0x10;
-    conn_params.max_int = 0x20;
+    conn_params.min_int = 0x06;  // 7.5ms — BLE spec minimum, ideal for HID
+    conn_params.max_int = 0x0C;  // 15ms
     conn_params.latency = 0;
     conn_params.timeout = 400;
 
@@ -695,6 +695,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
 // ── Component Setup ──────────────────────────────────────────────────────────
 void EspidfBleKeyboard::setup() {
     s_instance = this;
+    type_mutex_ = xSemaphoreCreateMutex();
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         nvs_flash_erase();
