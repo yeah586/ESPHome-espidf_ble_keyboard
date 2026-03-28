@@ -297,6 +297,70 @@ Both formats are equivalent — the dict format is converted to the string forma
 
 ---
 
+## Mouse Control Card for Home Assistant
+
+A custom Lovelace card is included that provides a touchpad, 3 mouse buttons, and scroll controls. It requires ESPHome services to be defined so Home Assistant can call the mouse functions with parameters.
+
+### 1. Add ESPHome services
+
+Add the following to your ESPHome device YAML (alongside the existing `api:` section):
+
+```yaml
+api:
+  encryption:
+    key: ${api_encryption_key}
+  services:
+    - service: mouse_move
+      variables:
+        x: int
+        y: int
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_move(x, y);
+    - service: mouse_scroll
+      variables:
+        amount: int
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_scroll(amount);
+    - service: mouse_click
+      variables:
+        button: int
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_click(button);
+```
+
+### 2. Install the card
+
+1. Copy `docs/mouse-card.js` to your Home Assistant `config/www/` folder.
+2. In Home Assistant: **Settings -> Dashboards -> Resources -> Add Resource**
+   - URL: `/local/mouse-card.js`
+   - Type: **JavaScript Module**
+
+### 3. Add to a dashboard
+
+```yaml
+type: custom:ble-mouse-card
+device: bluetooth_keyboard    # your ESPHome device name (underscored)
+```
+
+Optional configuration:
+
+| Option | Default | Description |
+|---|---|---|
+| `sensitivity` | `1.5` | Cursor movement multiplier. |
+| `scroll_sensitivity` | `2` | Scroll speed multiplier. |
+| `tap_to_click` | `true` | Tap the touchpad for a left click. |
+| `two_finger_scroll` | `true` | Two-finger drag on touchpad to scroll. |
+
+Features:
+- **Touchpad** — drag to move cursor, tap for left click, two-finger drag for scroll.
+- **Buttons** — Left, Middle, Right click.
+- **Scroll** — Scroll Up / Scroll Down buttons (hold to repeat).
+
+---
+
 ## Custom Text Input
 
 You can send arbitrary text from Home Assistant to the paired host device without hardcoding it in the YAML. Add the following to your ESPHome config:
