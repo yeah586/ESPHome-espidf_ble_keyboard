@@ -191,14 +191,14 @@ button:
     name: "Host 1"
     action:
       type: switch_host
-      slot: 1
+      slot: 0
 
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
     name: "Host 2"
     action:
       type: switch_host
-      slot: 2
+      slot: 1
 
   - platform: restart
     name: ${friendly_name}
@@ -272,8 +272,8 @@ State behavior:
 | `"mouse_click:0x01"` | Mouse click with button mask. `0x01` = left, `0x02` = right, `0x04` = middle. Combine for simultaneous buttons. |
 | `"mouse_move:<x>:<y>"` | Move mouse cursor. Values -127 to 127 (relative, pixels). |
 | `"mouse_scroll:<wheel>"` | Scroll mouse wheel. Positive = up, negative = down (-127 to 127). |
-| `"switch_host:N"` | Switch to host N (1–10). Reconnects to stored host or advertises for new pairing. |
-| `"forget_host:N"` | Remove BLE bond for host N (1–10) and clear the slot. |
+| `"switch_host:N"` | Switch to host slot N (0–9). Reconnects to stored host or advertises for new pairing. |
+| `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
 
 ---
 
@@ -318,12 +318,12 @@ action:
 # Switch host
 action:
   type: switch_host
-  slot: 2             # switch to Host 2
+  slot: 1             # switch to host slot 1
 
 # Forget host
 action:
   type: forget_host
-  slot: 3             # remove bond for Host 3
+  slot: 2             # remove bond for host slot 2
 ```
 
 Both formats are equivalent — the dict format is converted to the string format at compile time so there is no runtime difference.
@@ -336,8 +336,8 @@ The keyboard supports up to 4 bonded hosts and can switch between them on the fl
 
 ### How It Works
 
-1. **Pair your first host** — it is automatically saved to Host 1.
-2. **Switch to an empty slot** (e.g. Host 2) — the keyboard disconnects and starts advertising. Pair a new host; it is saved to that slot.
+1. **Pair your first host** — it is automatically saved to slot 0.
+2. **Switch to an empty slot** (e.g. slot 1) — the keyboard disconnects and starts advertising. Pair a new host; it is saved to that slot.
 3. **Switch back** — the keyboard disconnects from the current host and uses directed advertising to reconnect to the stored host. The target host reconnects automatically (no re-pairing needed).
 
 Each host slot uses a unique BLE address, so other bonded hosts won't interfere during pairing.
@@ -357,38 +357,38 @@ button:
     name: "Host 1"
     action:
       type: switch_host
-      slot: 1
+      slot: 0
 
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
     name: "Host 2"
     action:
       type: switch_host
-      slot: 2
+      slot: 1
 
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
     name: "Host 3"
     action:
       type: switch_host
-      slot: 3
+      slot: 2
 
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
     name: "Host 4"
     action:
       type: switch_host
-      slot: 4
+      slot: 3
 
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
     name: "Forget Host 1"
     action:
       type: forget_host
-      slot: 1
+      slot: 0
 ```
 
-String action format is also supported: `"switch_host:1"`, `"forget_host:3"`.
+String action format is also supported: `"switch_host:0"`, `"forget_host:2"`.
 
 ### Host Switching from Home Assistant
 
@@ -402,13 +402,13 @@ api:
         slot: int
       then:
         - lambda: |-
-            id(my_keyboard).switch_host(slot - 1);  // 1-based input
+            id(my_keyboard).switch_host(slot);
     - service: forget_host
       variables:
         slot: int
       then:
         - lambda: |-
-            id(my_keyboard).forget_host(slot - 1);  // 1-based input
+            id(my_keyboard).forget_host(slot);
 ```
 
 ### Web Control
@@ -419,8 +419,8 @@ When `web_control: true` is enabled and `host_slots` > 1, a host bar appears bel
 
 | Action | Description |
 |---|---|
-| `"switch_host:N"` | Switch to host N (1–10). If the slot has a stored host, uses directed advertising to reconnect. If empty, starts normal advertising for new pairing. |
-| `"forget_host:N"` | Remove the bond for host N (1–10). Clears the stored address and removes the BLE bond from the ESP32. If the forgotten host is currently connected, it is disconnected. |
+| `"switch_host:N"` | Switch to host slot N (0–9). If the slot has a stored host, uses directed advertising to reconnect. If empty, starts normal advertising for new pairing. |
+| `"forget_host:N"` | Remove the bond for host slot N (0–9). Clears the stored address and removes the BLE bond from the ESP32. If the forgotten host is currently connected, it is disconnected. |
 
 ---
 
@@ -570,7 +570,7 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/buttons` | GET | — | Returns JSON array of programmed buttons |
 | `/api/ble_keyboard/press` | POST | `action` (string) | Trigger a programmed button action |
 | `/api/ble_keyboard/hosts` | GET | — | Returns `{"active":N,"slots":[{"slot":N,"occupied":bool,"addr":"XX:XX:..."},...]}`  |
-| `/api/ble_keyboard/switch_host` | POST | `slot` (int) | Switch to host 1–10 |
+| `/api/ble_keyboard/switch_host` | POST | `slot` (int) | Switch to host slot 0–9 |
 
 Example: `curl -X POST "http://<device-ip>/api/ble_keyboard/string?keys=Hello"`
 

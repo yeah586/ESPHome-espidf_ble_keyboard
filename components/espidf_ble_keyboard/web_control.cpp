@@ -168,7 +168,7 @@ setInterval(pollStatus,3000);
       d.slots.forEach(s=>{
         const b=document.createElement('button');
         b.className='host-btn'+(s.slot===d.active?' active':'')+(s.occupied?' occupied':'');
-        b.innerHTML='<span class="slot-label">Host '+s.slot+'</span>'+(s.occupied?s.addr:'Empty');
+        b.innerHTML='<span class="slot-label">Host '+(s.slot+1)+'</span>'+(s.occupied?s.addr:'Empty');
         b.addEventListener('pointerdown',e=>{
           e.preventDefault();
           api('switch_host',{slot:s.slot});
@@ -443,13 +443,13 @@ class BleKbWebHandler : public AsyncWebHandler {
 
     if (path == "hosts") {
       std::string json = "{\"active\":";
-      json += std::to_string(kb_->active_host_slot() + 1);  // 1-based
+      json += std::to_string(kb_->active_host_slot());
       json += ",\"slots\":[";
       for (uint8_t i = 0; i < kb_->host_slots(); i++) {
         if (i > 0) json += ",";
         const auto &h = kb_->get_host_slot(i);
         json += "{\"slot\":";
-        json += std::to_string(i + 1);  // 1-based
+        json += std::to_string(i);
         json += ",\"occupied\":";
         json += h.occupied ? "true" : "false";
         if (h.occupied) {
@@ -533,19 +533,19 @@ class BleKbWebHandler : public AsyncWebHandler {
         else if (action == "middle_click") kb_->send_mouse_click(0x04);
         else if (action.find("switch_host:") == 0) {
           int slot = 0;
-          if (sscanf(action.c_str(), "switch_host:%i", &slot) == 1 && slot >= 1)
-            kb_->switch_host((uint8_t)(slot - 1));
+          if (sscanf(action.c_str(), "switch_host:%i", &slot) == 1)
+            kb_->switch_host((uint8_t) slot);
         } else if (action.find("forget_host:") == 0) {
           int slot = 0;
-          if (sscanf(action.c_str(), "forget_host:%i", &slot) == 1 && slot >= 1)
-            kb_->forget_host((uint8_t)(slot - 1));
+          if (sscanf(action.c_str(), "forget_host:%i", &slot) == 1)
+            kb_->forget_host((uint8_t) slot);
         } else kb_->send_string(action);
       }
       request->send(200);
 
     } else if (path == "switch_host") {
-      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 1;
-      kb_->switch_host((uint8_t)(slot - 1));  // 1-based input → 0-based internal
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 0;
+      kb_->switch_host((uint8_t) slot);
       request->send(200);
 
     } else {

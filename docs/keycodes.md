@@ -205,8 +205,8 @@ action:
 
 | Action | Description |
 |---|---|
-| `switch_host:N` | Switch to host N (1–4). Reconnects to stored host via directed advertising, or advertises for new pairing if slot is empty. |
-| `forget_host:N` | Remove BLE bond for host N (1–4) and clear the stored address. Disconnects the host if currently active. |
+| `switch_host:N` | Switch to host slot N (0–9). Reconnects to stored host via directed advertising, or advertises for new pairing if slot is empty. |
+| `forget_host:N` | Remove BLE bond for host slot N (0–9) and clear the stored address. Disconnects the host if currently active. |
 
 ### Dict Format
 

@@ -1307,18 +1307,18 @@ void EspidfBleKeyboardButton::press_action() {
         }
     }
 
-    // Multi-host switching: "switch_host:N" or "forget_host:N" (1-based in UI, 0-based internally)
+    // Multi-host switching: "switch_host:N" or "forget_host:N"
     if (action_.find("switch_host:") == 0) {
         int slot;
-        if (sscanf(action_.c_str(), "switch_host:%i", &slot) == 1 && slot >= 1) {
-            parent_->switch_host((uint8_t)(slot - 1));
+        if (sscanf(action_.c_str(), "switch_host:%i", &slot) == 1) {
+            parent_->switch_host((uint8_t)slot);
             return;
         }
     }
     if (action_.find("forget_host:") == 0) {
         int slot;
-        if (sscanf(action_.c_str(), "forget_host:%i", &slot) == 1 && slot >= 1) {
-            parent_->forget_host((uint8_t)(slot - 1));
+        if (sscanf(action_.c_str(), "forget_host:%i", &slot) == 1) {
+            parent_->forget_host((uint8_t)slot);
             return;
         }
     }
