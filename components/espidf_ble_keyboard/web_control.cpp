@@ -70,8 +70,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .host-btn.occupied{border-color:var(--accent)}
 .host-btn .slot-label{font-size:10px;color:var(--muted);display:block}
 .host-btn.active .slot-label{color:rgba(255,255,255,.7)}
-.toggle-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap}
-.toggle-btn{padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s}
+.section-toggles{display:flex;gap:4px;align-items:center}
+.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s}
 .toggle-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
 .media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 .media-btn{padding:14px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .1s;display:flex;flex-direction:column;align-items:center;gap:4px}
@@ -87,6 +87,12 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <span class="dev-name" id="dname"></span>
 </div>
 <div class="toolbar-right">
+<div class="section-toggles" id="toggle-bar">
+<button class="toggle-btn on" data-section="keyboard">Keyboard</button>
+<button class="toggle-btn on" data-section="mouse-card">Mouse</button>
+<button class="toggle-btn on" data-section="media-card">Remote</button>
+<button class="toggle-btn on" data-section="btns-card">Buttons</button>
+</div>
 <div class="zoom-controls">
 <button class="zoom-btn" id="zout">-</button>
 <span class="zoom-label" id="zlbl">100%</span>
@@ -97,13 +103,6 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <div class="host-bar" id="host-bar" style="display:none"></div>
-
-<div class="toggle-bar" id="toggle-bar">
-<button class="toggle-btn on" data-section="keyboard">Keyboard</button>
-<button class="toggle-btn on" data-section="mouse-card">Mouse</button>
-<button class="toggle-btn on" data-section="media-card">Remote</button>
-<button class="toggle-btn on" data-section="btns-card">Buttons</button>
-</div>
 
 <div id="scalable" class="scalable">
 <div class="card" id="keyboard"></div>
