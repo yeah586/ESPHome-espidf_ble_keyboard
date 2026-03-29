@@ -450,12 +450,24 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                 ESP_LOGI(TAG, "GAP: Pairing Successful");
                 if (s_instance) {
                     s_instance->queue_paired_state(true);
-                    // Auto-assign this host to the active slot
-                    s_instance->assign_host_slot_(
-                        s_instance->active_host_slot(),
-                        param->ble_security.auth_cmpl.bd_addr,
-                        (esp_ble_addr_type_t) param->ble_security.auth_cmpl.addr_type);
-                    s_instance->save_host_slots_();
+                    // Check if this host is already in a known slot
+                    bool already_known = false;
+                    for (uint8_t i = 0; i < EspidfBleKeyboard::MAX_HOST_SLOTS; i++) {
+                        auto &hs = s_instance->get_host_slot(i);
+                        if (hs.occupied && memcmp(hs.addr, param->ble_security.auth_cmpl.bd_addr, sizeof(esp_bd_addr_t)) == 0) {
+                            already_known = true;
+                            ESP_LOGI(TAG, "Reconnected host already in slot %u", i);
+                            break;
+                        }
+                    }
+                    if (!already_known) {
+                        // New host — assign to the active slot
+                        s_instance->assign_host_slot_(
+                            s_instance->active_host_slot(),
+                            param->ble_security.auth_cmpl.bd_addr,
+                            (esp_ble_addr_type_t) param->ble_security.auth_cmpl.addr_type);
+                        s_instance->save_host_slots_();
+                    }
                 }
             } else {
                 uint8_t fail_reason = param->ble_security.auth_cmpl.fail_reason;
