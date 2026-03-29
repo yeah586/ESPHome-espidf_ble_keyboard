@@ -9,6 +9,7 @@
 #include "esp_gatt_defs.h"
 #include "esp_bt_defs.h"
 #include "nvs.h"
+#include "esp_random.h"
 #include <cstring>
 #include <cstdio>
 #include <vector>
@@ -218,9 +219,6 @@ static bool s_directed_adv_pending = false;
 static esp_bd_addr_t s_directed_addr = {};
 static esp_ble_addr_type_t s_directed_addr_type = BLE_ADDR_TYPE_PUBLIC;
 
-// When rejecting a known host during pairing mode, suppress advertising
-// until this timestamp to let the old host stop trying to reconnect.
-static uint32_t s_adv_suppress_until_ms = 0;
 
 static void maybe_reset_bonds_after_security_config_change() {
     if (s_instance == nullptr) {
@@ -358,6 +356,17 @@ static void apply_security_params(bool use_static_passkey) {
 }
 
 static void do_start_advertising() {
+    // Set per-slot random address so each slot appears as a different BLE device.
+    // This prevents hosts bonded to other slots from auto-reconnecting.
+    if (s_instance) {
+        uint8_t slot = s_instance->active_host_slot();
+        const uint8_t *laddr = s_instance->get_slot_addr(slot);
+        esp_ble_gap_set_rand_addr(const_cast<uint8_t *>(laddr));
+        adv_params.own_addr_type = BLE_ADDR_TYPE_RANDOM;
+        ESP_LOGD(TAG, "ADV: Using slot %u addr %02X:%02X:%02X:%02X:%02X:%02X", slot,
+                 laddr[0], laddr[1], laddr[2], laddr[3], laddr[4], laddr[5]);
+    }
+
     // If directed advertising is requested, target the specific bonded host
     if (s_directed_adv_pending) {
         s_directed_adv_pending = false;
@@ -732,28 +741,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             break;
         case ESP_GATTS_CONNECT_EVT: {
             ESP_LOGI(TAG, "GATTS: Connected");
-            bool reject_known = false;
-            if (s_instance) {
-                s_instance->set_connected(true, param->connect.conn_id);
-                // If active slot is empty (pairing mode) and this host is already
-                // known in another slot, reject it so a new host can pair instead.
-                uint8_t active = s_instance->active_host_slot();
-                if (!s_instance->get_host_slot(active).occupied) {
-                    for (uint8_t i = 0; i < MAX_HOST_SLOTS; i++) {
-                        auto &hs = s_instance->get_host_slot(i);
-                        if (hs.occupied && memcmp(hs.addr, param->connect.remote_bda, sizeof(esp_bd_addr_t)) == 0) {
-                            ESP_LOGW(TAG, "GATTS: Known host (slot %u) connected while pairing slot %u — disconnecting", i, active);
-                            reject_known = true;
-                            // Suppress advertising for 6s so old host stops retrying
-                            s_adv_suppress_until_ms = millis() + 6000;
-                            // Use GAP-level disconnect to avoid SMP bond removal
-                            esp_ble_gap_disconnect(param->connect.remote_bda);
-                            break;
-                        }
-                    }
-                }
-            }
-            if (reject_known) break;  // Skip encryption — don't trigger SMP on a rejected connection
+            if (s_instance) s_instance->set_connected(true, param->connect.conn_id);
             proto_mode_val = 0x01;
             report_ccc_val = 0;
             boot_kb_in_ccc_val = 0;
@@ -782,13 +770,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             system_ccc_val = 0;
             mouse_ccc_val = 0;
             battery_ccc_val = 0;
-            // Don't restart advertising while suppressed (pairing mode rejecting known hosts)
-            if (s_adv_suppress_until_ms == 0 || millis() >= s_adv_suppress_until_ms) {
-                s_adv_suppress_until_ms = 0;
-                do_start_advertising();
-            } else {
-                ESP_LOGD(TAG, "GATTS: Advertising suppressed — waiting for old host to stop");
-            }
+            do_start_advertising();
             break;
         case ESP_GATTS_WRITE_EVT:
             if (param->write.handle == s_proto_mode_handle && param->write.len > 0) {
@@ -832,6 +814,34 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
 
 // ── Multi-Host Slot Management ──────────────────────────────────────────────
 
+void EspidfBleKeyboard::generate_slot_addrs_() {
+    // Generate random static BLE addresses for each slot and persist to NVS.
+    // Random static addresses have the two MSBs set to 11.
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+
+    for (uint8_t i = 0; i < MAX_HOST_SLOTS; i++) {
+        char key[16];
+        snprintf(key, sizeof(key), "slot%u_laddr", i);
+        size_t len = sizeof(esp_bd_addr_t);
+        if (nvs_get_blob(handle, key, slot_addrs_[i], &len) == ESP_OK) {
+            ESP_LOGI(TAG, "Loaded slot %u local addr: %02X:%02X:%02X:%02X:%02X:%02X", i,
+                     slot_addrs_[i][0], slot_addrs_[i][1], slot_addrs_[i][2],
+                     slot_addrs_[i][3], slot_addrs_[i][4], slot_addrs_[i][5]);
+        } else {
+            // Generate new random static address
+            esp_fill_random(slot_addrs_[i], 6);
+            slot_addrs_[i][0] |= 0xC0;  // MSBs = 11 → random static
+            nvs_set_blob(handle, key, slot_addrs_[i], sizeof(esp_bd_addr_t));
+            ESP_LOGI(TAG, "Generated slot %u local addr: %02X:%02X:%02X:%02X:%02X:%02X", i,
+                     slot_addrs_[i][0], slot_addrs_[i][1], slot_addrs_[i][2],
+                     slot_addrs_[i][3], slot_addrs_[i][4], slot_addrs_[i][5]);
+        }
+    }
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
 void EspidfBleKeyboard::load_host_slots_() {
     nvs_handle_t handle;
     if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
@@ -839,7 +849,7 @@ void EspidfBleKeyboard::load_host_slots_() {
     uint8_t slot_count = 0;
     if (nvs_get_u8(handle, "host_cnt", &slot_count) == ESP_OK) {
         for (uint8_t i = 0; i < slot_count && i < MAX_HOST_SLOTS; i++) {
-            char key[12];
+            char key[16];
             snprintf(key, sizeof(key), "host%u_addr", i);
             size_t len = sizeof(esp_bd_addr_t);
             if (nvs_get_blob(handle, key, hosts_[i].addr, &len) == ESP_OK) {
@@ -977,6 +987,7 @@ void EspidfBleKeyboard::setup() {
 
     maybe_reset_bonds_after_security_config_change();
     load_host_slots_();
+    generate_slot_addrs_();
 
     // If active slot has a bonded host, use directed advertising on startup
     if (hosts_[active_slot_].occupied) {
@@ -1006,13 +1017,6 @@ void EspidfBleKeyboard::setup() {
 void EspidfBleKeyboard::loop() {
     if (pending_paired_update_.exchange(false)) {
         set_paired(pending_paired_state_.load());
-    }
-
-    // Resume advertising after suppress period (pairing mode rejected known host)
-    if (s_adv_suppress_until_ms != 0 && millis() >= s_adv_suppress_until_ms && !is_connected_) {
-        s_adv_suppress_until_ms = 0;
-        ESP_LOGI(TAG, "Resuming advertising after suppress period");
-        do_start_advertising();
     }
 
     // Non-blocking string typing: one keystroke step per loop() call, paced by timer.

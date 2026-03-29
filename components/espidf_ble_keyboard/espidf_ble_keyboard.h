@@ -119,6 +119,7 @@ class EspidfBleKeyboard : public Component {
     std::string name;  // friendly label
   };
   const HostSlot &get_host_slot(uint8_t slot) const { return hosts_[slot]; }
+  const uint8_t *get_slot_addr(uint8_t slot) const { return slot_addrs_[slot]; }
   void assign_host_slot_(uint8_t slot, const esp_bd_addr_t addr, esp_ble_addr_type_t addr_type);
   void save_host_slots_();
 
@@ -142,7 +143,9 @@ class EspidfBleKeyboard : public Component {
   uint8_t host_slots_{MAX_HOST_SLOTS};
   uint8_t active_slot_{0};
   HostSlot hosts_[MAX_HOST_SLOTS];
+  esp_bd_addr_t slot_addrs_[MAX_HOST_SLOTS]{};  // per-slot random BLE address
   void load_host_slots_();
+  void generate_slot_addrs_();
 
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
   web_server_base::WebServerBase *web_server_base_{nullptr};
