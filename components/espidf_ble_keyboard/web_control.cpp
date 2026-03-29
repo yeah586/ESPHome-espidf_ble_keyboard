@@ -168,7 +168,7 @@ setInterval(pollStatus,3000);
       d.slots.forEach(s=>{
         const b=document.createElement('button');
         b.className='host-btn'+(s.slot===d.active?' active':'')+(s.occupied?' occupied':'');
-        b.innerHTML='<span class="slot-label">Host '+s.slot+'</span>'+(s.occupied?s.addr.substring(9):'Empty');
+        b.innerHTML='<span class="slot-label">Host '+s.slot+'</span>'+(s.occupied?s.addr:'Empty');
         b.addEventListener('pointerdown',e=>{
           e.preventDefault();
           api('switch_host',{slot:s.slot});

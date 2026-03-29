@@ -520,6 +520,26 @@ espidf_ble_keyboard:
 
 2. Flash and open `http://<device-ip>/ble_keyboard` in any browser or phone.
 
+### Web Control Link in Home Assistant
+
+Add this sensor to your YAML to get a clickable link in HA that opens the web control page:
+
+```yaml
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      id: wifi_ip
+      internal: true
+  - platform: template
+    name: "Web Control"
+    icon: "mdi:keyboard"
+    lambda: |-
+      return {"http://" + id(wifi_ip).state + "/ble_keyboard"};
+    update_interval: 60s
+```
+
+In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble_keyboard`. Click it to open the web control page directly.
+
 ### Features
 
 - **Full QWERTY keyboard** — letters, numbers, symbols, F-keys, modifiers, arrows
