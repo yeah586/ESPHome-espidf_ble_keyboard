@@ -332,7 +332,7 @@ Both formats are equivalent — the dict format is converted to the string forma
 
 ## Multi-Host Switching
 
-The keyboard supports up to 4 bonded hosts and can switch between them on the fly — like commercial keyboards with a host-switch button. Each host slot stores the bonded device address in NVS (persistent across reboots).
+The keyboard supports up to 10 bonded hosts and can switch between them on the fly — like commercial keyboards with a host-switch button. Each host slot stores the bonded device address in NVS (persistent across reboots).
 
 ### How It Works
 
@@ -547,6 +547,8 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground (up to 4x)
 - **Mouse buttons** — Left, Middle, Right click
 - **Scroll controls** — buttons + mouse wheel on the touchpad
+- **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat
+- **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
 - **Zoom controls** — resize keyboard and mouse with +/- buttons (50%–150%)
 - **Light/dark theme** — toggle between dark and light mode, preference saved in browser
 - **BLE connection status** — live indicator shows Connected, Paired, or Disconnected (polls every 3s)
