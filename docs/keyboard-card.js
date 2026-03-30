@@ -250,49 +250,47 @@ class BleKeyboardCard extends HTMLElement {
       .fkey-row {
         display: ${this._config.show_fkeys ? 'flex' : 'none'};
       }
-      .host-bar {
+      .header-right {
+        margin-left: auto;
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 10px;
-        padding: 6px 8px;
-        background: var(--secondary-background-color, #f0f0f0);
-        border-radius: 8px;
-        border: 1px solid var(--divider-color, #e0e0e0);
+        gap: 6px;
       }
       .host-btn {
-        width: 32px;
-        height: 32px;
+        width: 24px;
+        height: 24px;
         border: 1px solid var(--divider-color, #e0e0e0);
-        border-radius: 6px;
-        background: var(--card-background-color, #fff);
+        border-radius: 4px;
+        background: var(--secondary-background-color, #f0f0f0);
         color: var(--primary-text-color);
-        font-size: 18px;
+        font-size: 12px;
         font-weight: 700;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         touch-action: manipulation;
+        padding: 0;
       }
       .host-btn:active {
         background: var(--primary-color, #03a9f4);
         color: #fff;
       }
       .host-info {
-        flex: 1;
         text-align: center;
         min-width: 0;
       }
       .host-name {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         color: var(--primary-text-color);
+        line-height: 1.2;
       }
       .host-addr {
-        font-size: 11px;
+        font-size: 10px;
         color: var(--secondary-text-color, #888);
         font-family: monospace;
+        line-height: 1.2;
       }
     `;
 
@@ -307,25 +305,13 @@ class BleKeyboardCard extends HTMLElement {
       <svg viewBox="0 0 24 24"><path d="M19 10h-2V8h2v2zm0 4h-2v-2h2v2zm-4-4h-2V8h2v2zm0 4h-2v-2h2v2zm0 4H9v-2h6v2zm-8-8H5V8h2v2zm0 4H5v-2h2v2zM20 5H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2z"/></svg>
       <span class="header-name">${this._config.name || defaultName}</span>
     `;
-    card.appendChild(header);
-    // Auto-resolve device friendly name from HA if name not set
-    if (!this._config.name && this._hass) {
-      const nameSpan = header.querySelector('.header-name');
-      const slug = this._config.device.replace(/-/g, '_');
-      this._hass.callWS({ type: 'config/device_registry/list' }).then(devices => {
-        const dev = devices.find(d => d.name_by_user
-          ? d.name_by_user.replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug
-          : (d.name || '').replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug);
-        if (dev) nameSpan.textContent = dev.name_by_user || dev.name;
-      }).catch(() => { /* keep default */ });
-    }
-
-    // Host switcher bar
+    // Host switcher in header
     if (this._config.host_slots > 1) {
       this._activeSlot = 0;
       this._hostSlots = [];
-      const hostBar = document.createElement('div');
-      hostBar.className = 'host-bar';
+
+      const hostRight = document.createElement('div');
+      hostRight.className = 'header-right';
 
       const prevBtn = document.createElement('button');
       prevBtn.className = 'host-btn';
@@ -352,13 +338,26 @@ class BleKeyboardCard extends HTMLElement {
       hostInfo.appendChild(this._hostNameEl);
       hostInfo.appendChild(this._hostAddrEl);
 
-      hostBar.appendChild(prevBtn);
-      hostBar.appendChild(hostInfo);
-      hostBar.appendChild(nextBtn);
-      card.appendChild(hostBar);
+      hostRight.appendChild(prevBtn);
+      hostRight.appendChild(hostInfo);
+      hostRight.appendChild(nextBtn);
+      header.appendChild(hostRight);
 
       this._pollHosts();
       this._hostPollInterval = setInterval(() => this._pollHosts(), 5000);
+    }
+
+    card.appendChild(header);
+    // Auto-resolve device friendly name from HA if name not set
+    if (!this._config.name && this._hass) {
+      const nameSpan = header.querySelector('.header-name');
+      const slug = this._config.device.replace(/-/g, '_');
+      this._hass.callWS({ type: 'config/device_registry/list' }).then(devices => {
+        const dev = devices.find(d => d.name_by_user
+          ? d.name_by_user.replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug
+          : (d.name || '').replace(/[^a-z0-9]/gi, '_').toLowerCase() === slug);
+        if (dev) nameSpan.textContent = dev.name_by_user || dev.name;
+      }).catch(() => { /* keep default */ });
     }
 
     // Store key elements for label updates
