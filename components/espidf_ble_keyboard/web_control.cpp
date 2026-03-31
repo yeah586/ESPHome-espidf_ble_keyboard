@@ -83,6 +83,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .media-btn:active svg,.media-btn.p svg{fill:#fff}
 </style></head><body>
 
+<div id="scalable" class="scalable">
 <div class="toolbar">
 <div class="toolbar-left">
 <div class="status-dot" id="sdot"></div>
@@ -106,8 +107,6 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <div class="host-bar" id="host-bar" style="display:none"></div>
-
-<div id="scalable" class="scalable">
 <div class="card" id="keyboard"></div>
 
 <div class="card" id="mouse-card">
@@ -168,7 +167,7 @@ thmBtn.addEventListener('click',toggleTheme);
 let zoom=100;
 const scalable=document.getElementById('scalable');
 const zlbl=document.getElementById('zlbl');
-function setZoom(v){zoom=Math.max(50,Math.min(150,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%'}
+function setZoom(v){zoom=Math.max(50,Math.min(200,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%'}
 document.getElementById('zin').addEventListener('click',()=>setZoom(zoom+10));
 document.getElementById('zout').addEventListener('click',()=>setZoom(zoom-10));
 
