@@ -71,6 +71,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .host-btn.occupied{border-color:var(--accent)}
 .host-btn .slot-label{font-size:10px;color:var(--muted);display:block}
 .host-btn.active .slot-label{color:rgba(255,255,255,.7)}
+.forget-btn{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:#c44;font-size:11px;font-weight:600;cursor:pointer;touch-action:manipulation;transition:background .15s;white-space:nowrap}
+.forget-btn:hover{background:#c44;color:#fff}
 .section-toggles{display:flex;gap:4px;align-items:center}
 .toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s}
 .toggle-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
@@ -210,6 +212,18 @@ setInterval(pollStatus,3000);
         });
         bar.appendChild(b);
       });
+      const fb=document.createElement('button');
+      fb.className='forget-btn';
+      fb.textContent='Forget Host';
+      fb.addEventListener('pointerdown',e=>{
+        e.preventDefault();
+        const active=d.active;
+        if(confirm('Forget host in slot '+(active+1)+'?')){
+          api('forget_host',{slot:active});
+          setTimeout(loadHosts,1000);
+        }
+      });
+      bar.appendChild(fb);
     }).catch(()=>{bar.style.display='none'});
   }
   loadHosts();
@@ -635,6 +649,11 @@ class BleKbWebHandler : public AsyncWebHandler {
     } else if (path == "switch_host") {
       int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 0;
       kb_->switch_host((uint8_t) slot);
+      request->send(200);
+
+    } else if (path == "forget_host") {
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 0;
+      kb_->forget_host((uint8_t) slot);
       request->send(200);
 
     } else {

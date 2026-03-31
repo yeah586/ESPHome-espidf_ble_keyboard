@@ -662,6 +662,7 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/press` | POST | `action` (string) | Trigger a programmed button action |
 | `/api/ble_keyboard/hosts` | GET | — | Returns `{"active":N,"slots":[{"slot":N,"occupied":bool,"addr":"XX:XX:..."},...]}`  |
 | `/api/ble_keyboard/switch_host` | POST | `slot` (int) | Switch to host slot 0–9 |
+| `/api/ble_keyboard/forget_host` | POST | `slot` (int) | Remove bond for host slot 0–9 |
 
 Example: `curl -X POST "http://<device-ip>/api/ble_keyboard/string?keys=Hello"`
 
