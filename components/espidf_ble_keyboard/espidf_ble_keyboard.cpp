@@ -216,7 +216,9 @@ static bool s_require_mitm = false;
 
 // Multi-host: when true, next advertising cycle uses directed advertising to target host
 static bool s_directed_adv_pending = false;
-static esp_bd_addr_t s_directed_addr = {};
+  static std::atomic<bool> s_directed_adv_active{false};
+  static std::atomic<uint32_t> s_directed_adv_start_ms{0};
+  static esp_bd_addr_t s_directed_addr = {};
 static esp_ble_addr_type_t s_directed_addr_type = BLE_ADDR_TYPE_PUBLIC;
 
 
@@ -379,11 +381,13 @@ static void do_start_advertising() {
     // If directed advertising is requested, target the specific bonded host
     if (s_directed_adv_pending) {
         s_directed_adv_pending = false;
+        s_directed_adv_active = true;
+        s_directed_adv_start_ms = millis();
         ESP_LOGI(TAG, "ADV: Directed advertising to %02X:%02X:%02X:%02X:%02X:%02X",
                  s_directed_addr[0], s_directed_addr[1], s_directed_addr[2],
                  s_directed_addr[3], s_directed_addr[4], s_directed_addr[5]);
         esp_ble_adv_params_t dir_params = adv_params;
-        dir_params.adv_type = ADV_TYPE_DIRECT_IND_LOW;
+        dir_params.adv_type = ADV_TYPE_DIRECT_IND_HIGH;
         memcpy(dir_params.peer_addr, s_directed_addr, sizeof(esp_bd_addr_t));
         dir_params.peer_addr_type = s_directed_addr_type;
         // Set adv data then start (directed low-duty still needs adv data on some stacks)
@@ -397,7 +401,7 @@ static void do_start_advertising() {
         for (char c : dev_name) scan_rsp.push_back(static_cast<uint8_t>(c));
         esp_ble_gap_config_scan_rsp_data_raw(scan_rsp.data(), static_cast<uint16_t>(scan_rsp.size()));
         // Override adv_params for this cycle — the GAP completion handler will use dir_params
-        adv_params.adv_type = ADV_TYPE_DIRECT_IND_LOW;
+        adv_params.adv_type = ADV_TYPE_DIRECT_IND_HIGH;
         memcpy(adv_params.peer_addr, s_directed_addr, sizeof(esp_bd_addr_t));
         adv_params.peer_addr_type = s_directed_addr_type;
         return;
@@ -1077,6 +1081,17 @@ void EspidfBleKeyboard::loop() {
         set_paired(pending_paired_state_.load());
     }
 
+    if (is_connected_) {
+        s_directed_adv_active = false;
+    } else if (s_directed_adv_active) {
+        if (millis() - s_directed_adv_start_ms > 2000) {
+            s_directed_adv_active = false;
+            ESP_LOGW(TAG, "ADV: Directed advertising timeout. Falling back to undirected...");
+            esp_ble_gap_stop_advertising();
+            do_start_advertising();
+        }
+    }
+
     // Non-blocking string typing: one keystroke step per loop() call, paced by timer.
     if (!is_connected_ || type_mutex_ == nullptr) return;
 
@@ -1411,3 +1426,7 @@ void EspidfBleKeyboardButton::press_action() {
 
 }  // namespace espidf_ble_keyboard
 }  // namespace esphome
+
+
+
+
