@@ -137,7 +137,7 @@ const ROWS = [
     { label: 'Win', type: 'modifier', mod: 'win', bit: 0x08, flex: 1.2 },
     { label: 'Alt', type: 'modifier', mod: 'alt', bit: 0x04, flex: 1.2 },
     { label: '', type: 'char', char: ' ', shiftChar: ' ', flex: 6 },
-    { label: 'Alt', type: 'modifier', mod: 'alt', bit: 0x04, flex: 1.2 },
+      { label: 'Alt R', type: 'modifier', mod: 'altgr', bit: 0x40, flex: 1.2 },
     { label: 'Del', type: 'special', keycode: 0x4C, flex: 1.2 },
     { label: '\u2190', type: 'special', keycode: 0x50 },
     { label: '\u2191', type: 'special', keycode: 0x52 },
