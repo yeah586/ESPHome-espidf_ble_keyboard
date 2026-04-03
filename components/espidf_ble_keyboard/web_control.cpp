@@ -102,11 +102,11 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <span class="zoom-label" id="zlbl">100%</span>
 <button class="zoom-btn" id="zin">+</button>
 </div>
-<button class="theme-btn" id="log-btn" title="Toggle Logs" style="font-size:12px;margin-right:2px;background:var(--card);color:var(--muted)">&#128196;</button><button class="theme-btn" id="thm" title="Toggle light/dark">&#9788;</button>
+<button class="theme-btn" id="thm" title="Toggle light/dark">&#9788;</button>
 </div>
 </div>
 
-<div class="host-bar" id="host-bar" style="display:none"></div><div class="card" id="log-view" style="display:none;flex-direction:column;gap:6px;height:300px"><div style="display:flex;justify-content:space-between;align-items:center"><h2><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>ESPHome Logs</h2><button class="toggle-btn" id="log-clear">Clear</button></div><div id="log-out" style="flex:1;overflow-y:auto;background:#1e1e1e;color:#ccc;font-family:monospace;font-size:11px;padding:8px;border-radius:6px;word-break:break-all;white-space:pre-wrap"></div></div>
+<div class="host-bar" id="host-bar" style="display:none"></div>
 <div class="card" id="keyboard"></div>
 
 <div class="card" id="mouse-card">
@@ -148,50 +148,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <script>
-let fq=Promise.resolve();const qf=(u,o)=>new Promise((res,rej)=>{fq=fq.then(()=>fetch(u,o).then(res).catch(rej));});
 // API helper
 function api(endpoint,params){
   const url='/api/ble_keyboard/'+endpoint+'?'+new URLSearchParams(params);
-  qf(url,{method:'POST'}).catch(()=>{});
+  fetch(url,{method:'POST'}).catch(()=>{});
 }
 
 // ── Theme ──
 const thmBtn=document.getElementById('thm');
-const logBtn=document.getElementById('log-btn');
-const logView=document.getElementById('log-view');
-const logOut=document.getElementById('log-out');
-let logSource=null, pingTimer=null;
-function resetPing(){clearTimeout(pingTimer);pingTimer=setTimeout(startLogs,65000);}
-function startLogs(){
-  if(logSource)logSource.close();
-  logSource=new EventSource('/events');
-  logSource.addEventListener('log',e=>{
-    resetPing();
-    let msg=e.data;
-    try{const d=JSON.parse(e.data);if(d.message)msg=d.message;}catch(err){}
-    msg=msg.replace(/\x1B\[[0-9;]*[a-zA-Z]/g,'');
-    const div=document.createElement('div');
-    div.textContent=msg;
-    logOut.appendChild(div);
-    while(logOut.childNodes.length>300)logOut.firstChild.remove();
-    logOut.scrollTop=logOut.scrollHeight;
-  });
-  logSource.addEventListener('ping',resetPing);
-  const rs=()=>{clearTimeout(pingTimer);pingTimer=setTimeout(startLogs,5000);};
-  logSource.onopen=resetPing;
-  logSource.onerror=rs;
-}
-logBtn.addEventListener('click',()=>{
-  if(logView.style.display==='none'){
-    logView.style.display='flex';
-    if(!logSource)startLogs();
-  }else{
-    logView.style.display='none';
-    if(logSource){logSource.close();logSource=null;}
-    clearTimeout(pingTimer);
-  }
-});
-document.getElementById('log-clear').addEventListener('click',()=>{logOut.innerHTML='';});
 if(localStorage.getItem('blekb_theme')==='light')document.body.classList.add('light');
 function toggleTheme(){
   document.body.classList.toggle('light');
@@ -212,7 +176,7 @@ const sdot=document.getElementById('sdot');
 const stxt=document.getElementById('stxt');
 const dname=document.getElementById('dname');
 function pollStatus(){
-  qf('/api/ble_keyboard/status').then(r=>r.json()).then(d=>{
+  fetch('/api/ble_keyboard/status').then(r=>r.json()).then(d=>{
     const c=d.connected,p=d.paired;
     sdot.className='status-dot'+(p?' paired':c?' connected':'');
     stxt.className='status-text'+((c||p)?' on':'');
@@ -225,14 +189,14 @@ function pollStatus(){
   });
 }
 pollStatus();
-setTimeout(function loopS(){pollStatus();setTimeout(loopS,11000);},11000);
+setInterval(pollStatus,3000);
 
 // ── Host Switcher ──
 (function(){
   const bar=document.getElementById('host-bar');
   let lastHostsRaw=null;
   function loadHosts(){
-    qf('/api/ble_keyboard/hosts').then(r=>r.text()).then(txt=>{
+    fetch('/api/ble_keyboard/hosts').then(r=>r.text()).then(txt=>{
       if(txt===lastHostsRaw)return;
       lastHostsRaw=txt;
       const d=JSON.parse(txt);
@@ -266,14 +230,14 @@ setTimeout(function loopS(){pollStatus();setTimeout(loopS,11000);},11000);
     }).catch(()=>{bar.style.display='none'});
   }
   loadHosts();
-  setTimeout(function loopH(){loadHosts();setTimeout(loopH,23000);},23000);
+  setInterval(loadHosts,5000);
 })();
 
 // ── Programmed Buttons ──
 (function(){
   const card=document.getElementById('btns-card');
   const container=document.getElementById('prog-btns');
-  qf('/api/ble_keyboard/buttons').then(r=>r.json()).then(btns=>{
+  fetch('/api/ble_keyboard/buttons').then(r=>r.json()).then(btns=>{
     if(!btns.length){card.style.display='none';return}
     card.style.display='';
     container.innerHTML='';
@@ -516,15 +480,15 @@ class BleKbWebHandler : public AsyncWebHandler {
   void handleRequest(AsyncWebServerRequest *request) override {
       std::string url = get_url(request);
 
-      auto send_response = [request](int code, const char* type, const char* content, bool keep_alive = false) {
-          AsyncWebServerResponse* response = request->beginResponse(code, type, content);
-          if (!keep_alive) response->addHeader("Connection", "close");
-          request->send(response);
-        };
+      auto send_response = [request](int code, const char* type, const char* content) {
+        AsyncWebServerResponse* response = request->beginResponse(code, type, content);
+        response->addHeader("Connection", "close");
+        request->send(response);
+      };
 
     // Serve the page
     if (url == "/ble_keyboard") {
-      request->send(200, "text/html", PAGE_HTML);
+      send_response(200, "text/html", PAGE_HTML);
       return;
     }
 
@@ -627,30 +591,30 @@ class BleKbWebHandler : public AsyncWebHandler {
       int x = request->hasArg("x") ? atoi(request->arg("x").c_str()) : 0;
       int y = request->hasArg("y") ? atoi(request->arg("y").c_str()) : 0;
       kb_->send_mouse_move((int8_t) x, (int8_t) y);
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "mouse_click") {
       int btn = request->hasArg("btn") ? atoi(request->arg("btn").c_str()) : 1;
       kb_->send_mouse_click((uint8_t) btn);
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "mouse_scroll") {
       int amount = request->hasArg("amount") ? atoi(request->arg("amount").c_str()) : 0;
       kb_->send_mouse_scroll((int8_t) amount);
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "string") {
       if (request->hasArg("keys")) {
         std::string keys = request->arg("keys").c_str();
         kb_->send_string(keys);
       }
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "key") {
       int modifier = request->hasArg("modifier") ? atoi(request->arg("modifier").c_str()) : 0;
       int keycode = request->hasArg("keycode") ? atoi(request->arg("keycode").c_str()) : 0;
       kb_->send_key_combo((uint8_t) modifier, (uint8_t) keycode);
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "press") {
       // Press a button by action string
@@ -691,17 +655,17 @@ class BleKbWebHandler : public AsyncWebHandler {
             kb_->forget_host((uint8_t) slot);
         } else kb_->send_string(action);
       }
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "switch_host") {
       int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 0;
       kb_->switch_host((uint8_t) slot);
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else if (path == "forget_host") {
       int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : 0;
       kb_->forget_host((uint8_t) slot);
-      send_response(200, "text/plain", "OK", true);
+      send_response(200, "text/plain", "OK");
 
     } else {
       send_response(404, "text/plain", "Unknown endpoint");
@@ -724,17 +688,6 @@ void BleKeyboardWebControl::setup() {
 }  // namespace esphome
 
 #endif  // USE_BLE_KEYBOARD_WEB_CONTROL
-
-
-
-
-
-
-
-
-
-
-
 
 
 
