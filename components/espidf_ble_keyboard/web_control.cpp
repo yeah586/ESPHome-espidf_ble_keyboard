@@ -225,7 +225,7 @@ function pollStatus(){
   });
 }
 pollStatus();
-setTimeout(function loopS(){pollStatus();setTimeout(loopS,10000);},10000);
+setTimeout(function loopS(){pollStatus();setTimeout(loopS,11000);},11000);
 
 // ── Host Switcher ──
 (function(){
@@ -266,7 +266,7 @@ setTimeout(function loopS(){pollStatus();setTimeout(loopS,10000);},10000);
     }).catch(()=>{bar.style.display='none'});
   }
   loadHosts();
-  setTimeout(function loopH(){loadHosts();setTimeout(loopH,15000);},15000);
+  setTimeout(function loopH(){loadHosts();setTimeout(loopH,23000);},23000);
 })();
 
 // ── Programmed Buttons ──
@@ -518,7 +518,7 @@ class BleKbWebHandler : public AsyncWebHandler {
 
       auto send_response = [request](int code, const char* type, const char* content) {
         AsyncWebServerResponse* response = request->beginResponse(code, type, content);
-        response->addHeader("Connection", "close");
+        // Re-enable keep-alive now that JS requests are strictly queued
         request->send(response);
       };
 
@@ -724,6 +724,8 @@ void BleKeyboardWebControl::setup() {
 }  // namespace esphome
 
 #endif  // USE_BLE_KEYBOARD_WEB_CONTROL
+
+
 
 
 
