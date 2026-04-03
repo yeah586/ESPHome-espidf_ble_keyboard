@@ -682,3 +682,4 @@ void BleKeyboardWebControl::setup() {
 }  // namespace esphome
 
 #endif  // USE_BLE_KEYBOARD_WEB_CONTROL
+
