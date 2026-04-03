@@ -361,10 +361,11 @@ class BleMouseCard extends HTMLElement {
     for (const [btn, amount] of [[upBtn, 3], [downBtn, -3]]) {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        btn.classList.add('pressed');
         startScroll(amount);
       });
-      btn.addEventListener('pointerup', stopScroll);
-      btn.addEventListener('pointerleave', stopScroll);
+      btn.addEventListener('pointerup', () => { btn.classList.remove('pressed'); stopScroll(); });
+      btn.addEventListener('pointerleave', () => { btn.classList.remove('pressed'); stopScroll(); });
     }
   }
 

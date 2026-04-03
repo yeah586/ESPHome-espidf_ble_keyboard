@@ -122,6 +122,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="toggle-btn on" data-section="mouse-card">Mouse</button>
 <button class="toggle-btn on" data-section="media-card">Remote</button>
 <button class="toggle-btn on" data-section="btns-card">Buttons</button>
+<button class="toggle-btn on" data-section="macros-card">Macros</button>
 </div>
 <div class="zoom-controls">
 <button class="zoom-btn" id="zout">-</button>
@@ -196,8 +197,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <div class="card" id="btns-card">
-<h2><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 12h2v2H7v-2zm0-4h2v2H7V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8z"/></svg>Buttons &amp; Macros</h2>
+<h2><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 12h2v2H7v-2zm0-4h2v2H7V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8z"/></svg>Buttons</h2>
 <div class="prog-btns" id="prog-btns"><span class="prog-empty">Loading...</span></div>
+</div>
+
+<div class="card" id="macros-card">
+<h2><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 12h2v2H7v-2zm0-4h2v2H7V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8z"/></svg>Macros</h2>
+<div class="prog-btns" id="macro-btns"><span class="prog-empty">Loading...</span></div>
 <div class="macro-form" id="macro-form">
 <input id="mn" placeholder="Name" maxlength="31">
 <input id="ma" placeholder="Action" maxlength="63">
@@ -318,7 +324,8 @@ setInterval(pollStatus,3000);
 
 // ── Buttons & Macros ──
 (function(){
-  const container=document.getElementById('prog-btns');
+  const containerBtns=document.getElementById('prog-btns');
+  const containerMacros=document.getElementById('macro-btns');
   const nameIn=document.getElementById('mn');
   const actIn=document.getElementById('ma');
   const presetSel=document.getElementById('mp');
@@ -331,10 +338,12 @@ setInterval(pollStatus,3000);
 
   function loadButtons(){
     fetch('/api/ble_keyboard/buttons').then(r=>r.json()).then(btns=>{
-      container.innerHTML='';
-      if(!btns.length){container.innerHTML='<span class="prog-empty">No buttons or macros</span>';return}
+      containerBtns.innerHTML='';
+      containerMacros.innerHTML='';
+      let hasBtns=false, hasMacros=false;
       btns.forEach(b=>{
         if(!b.editable){
+          hasBtns=true;
           const el=document.createElement('button');
           el.className='prog-btn';
           el.textContent=b.name;
@@ -343,8 +352,9 @@ setInterval(pollStatus,3000);
             api('press',{action:b.action});
             setTimeout(()=>el.classList.remove('p'),150);
           });
-          container.appendChild(el);
+          containerBtns.appendChild(el);
         }else{
+          hasMacros=true;
           const wrap=document.createElement('div');
           wrap.className='macro-wrap';
           const el=document.createElement('button');
@@ -377,10 +387,15 @@ setInterval(pollStatus,3000);
             }
           });
           wrap.appendChild(el);wrap.appendChild(eb);wrap.appendChild(db);
-          container.appendChild(wrap);
+          containerMacros.appendChild(wrap);
         }
       });
-    }).catch(()=>{container.innerHTML='<span class="prog-empty">Error loading</span>'});
+      if(!hasBtns) containerBtns.innerHTML='<span class="prog-empty">No buttons</span>';
+      if(!hasMacros) containerMacros.innerHTML='<span class="prog-empty">No macros</span>';
+    }).catch(()=>{
+      containerBtns.innerHTML='<span class="prog-empty">Error loading</span>';
+      containerMacros.innerHTML='<span class="prog-empty">Error loading</span>';
+    });
   }
 
   saveBtn.addEventListener('click',()=>{

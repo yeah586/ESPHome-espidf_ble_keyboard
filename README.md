@@ -265,9 +265,14 @@ State behavior:
 
 ### `sensor` (Platform: `espidf_ble_keyboard`)
 
+The sensor platform supports two types via the `type` key:
+
+#### RSSI Sensor (default)
+
 Exposes the RSSI (signal strength) of the currently connected host as an ESPHome sensor entity.
 
 * **keyboard_id** (Required, ID): The ID of the `espidf_ble_keyboard` component.
+* **type** (Optional, string): `rssi` (default).
 * **name** (Optional, string): Friendly entity name shown in Home Assistant.
 * **update_interval** (Optional, duration): How often to read RSSI from the connected host. Default: `10s`.
 
@@ -282,6 +287,31 @@ sensor:
     keyboard_id: my_keyboard
     name: "BLE Host RSSI"
     update_interval: 15s
+```
+
+#### Active Host Sensor
+
+Publishes the currently active host slot number (0-based). Updates instantly when the host is switched from the webserver, HA card, or YAML automation. Required for the keyboard card's host display to stay in sync.
+
+* **keyboard_id** (Required, ID): The ID of the `espidf_ble_keyboard` component.
+* **type** (Required, string): `active_host`.
+* **name** (Optional, string): Friendly entity name shown in Home Assistant.
+
+```yaml
+sensor:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    type: active_host
+    name: "BLE Keyboard Active Host"
+```
+
+The keyboard card auto-detects this entity by name pattern (`sensor.*_active_host`). If auto-detection fails, set `active_host_entity` in the card config:
+
+```yaml
+type: custom:ble-keyboard-card
+device: bluetooth_keyboard
+host_slots: 4
+active_host_entity: sensor.bluetooth_keyboard_active_host
 ```
 
 #### Proximity Automations

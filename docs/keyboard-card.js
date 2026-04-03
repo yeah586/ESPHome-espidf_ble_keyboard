@@ -413,11 +413,15 @@ class BleKeyboardCard extends HTMLElement {
     shadow.appendChild(style);
     shadow.appendChild(card);
 
-    // Delegated event handler
     card.addEventListener('pointerdown', (e) => {
       const btn = e.target.closest('.key');
       if (!btn) return;
       e.preventDefault();
+      e.stopPropagation();
+
+      if (btn.dataset.deb) return;
+      btn.dataset.deb = '1';
+      setTimeout(() => delete btn.dataset.deb, 350);
 
       const rowIdx = parseInt(btn.dataset.row);
       const keyIdx = parseInt(btn.dataset.key);
