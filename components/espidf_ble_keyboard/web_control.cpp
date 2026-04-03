@@ -102,11 +102,11 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <span class="zoom-label" id="zlbl">100%</span>
 <button class="zoom-btn" id="zin">+</button>
 </div>
-<button class="theme-btn" id="thm" title="Toggle light/dark">&#9788;</button>
+<button class="theme-btn" id="log-btn" title="Toggle Logs" style="font-size:12px;margin-right:2px;background:var(--card);color:var(--muted)">&#128196;</button><button class="theme-btn" id="thm" title="Toggle light/dark">&#9788;</button>
 </div>
 </div>
 
-<div class="host-bar" id="host-bar" style="display:none"></div>
+<div class="host-bar" id="host-bar" style="display:none"></div><div class="card" id="log-view" style="display:none;flex-direction:column;gap:6px;height:300px"><div style="display:flex;justify-content:space-between;align-items:center"><h2><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>ESPHome Logs</h2><button class="toggle-btn" id="log-clear">Clear</button></div><div id="log-out" style="flex:1;overflow-y:auto;background:#1e1e1e;color:#ccc;font-family:monospace;font-size:11px;padding:8px;border-radius:6px;word-break:break-all;white-space:pre-wrap"></div></div>
 <div class="card" id="keyboard"></div>
 
 <div class="card" id="mouse-card">
@@ -156,6 +156,32 @@ function api(endpoint,params){
 
 // ── Theme ──
 const thmBtn=document.getElementById('thm');
+const logBtn=document.getElementById('log-btn');
+const logView=document.getElementById('log-view');
+const logOut=document.getElementById('log-out');
+let logSource=null;
+logBtn.addEventListener('click',()=>{
+  if(logView.style.display==='none'){
+    logView.style.display='flex';
+    if(!logSource){
+      logSource=new EventSource('/events');
+      logSource.addEventListener('log',e=>{
+        let msg=e.data;
+        try{const d=JSON.parse(e.data);if(d.message)msg=d.message;}catch(err){}
+        msg=msg.replace(/\x1B\[[0-9;]*[a-zA-Z]/g,'');
+        const div=document.createElement('div');
+        div.textContent=msg;
+        logOut.appendChild(div);
+        if(logOut.childNodes.length>100)logOut.firstChild.remove();
+        logOut.scrollTop=logOut.scrollHeight;
+      });
+    }
+  }else{
+    logView.style.display='none';
+    if(logSource){logSource.close();logSource=null;}
+  }
+});
+document.getElementById('log-clear').addEventListener('click',()=>{logOut.innerHTML='';});
 if(localStorage.getItem('blekb_theme')==='light')document.body.classList.add('light');
 function toggleTheme(){
   document.body.classList.toggle('light');
@@ -688,6 +714,7 @@ void BleKeyboardWebControl::setup() {
 }  // namespace esphome
 
 #endif  // USE_BLE_KEYBOARD_WEB_CONTROL
+
 
 
 
