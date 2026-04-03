@@ -224,7 +224,7 @@ function pollStatus(){
   });
 }
 pollStatus();
-setInterval(pollStatus,3000);
+setInterval(pollStatus,10000);
 
 // ── Host Switcher ──
 (function(){
@@ -265,7 +265,7 @@ setInterval(pollStatus,3000);
     }).catch(()=>{bar.style.display='none'});
   }
   loadHosts();
-  setInterval(loadHosts,5000);
+  setInterval(loadHosts,15000);
 })();
 
 // ── Programmed Buttons ──
@@ -723,6 +723,7 @@ void BleKeyboardWebControl::setup() {
 }  // namespace esphome
 
 #endif  // USE_BLE_KEYBOARD_WEB_CONTROL
+
 
 
 
