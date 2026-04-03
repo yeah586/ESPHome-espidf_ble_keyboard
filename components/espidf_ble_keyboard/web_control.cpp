@@ -529,9 +529,13 @@ class BleKbWebHandler : public AsyncWebHandler {
         request->send(response);
       };
 
-    // Serve the page
+    // Serve the page — use Progmem response to avoid heap-copying the large HTML
     if (url == "/ble_keyboard") {
-      send_response(200, "text/html", PAGE_HTML);
+      AsyncWebServerResponse* response = request->beginResponse(
+          200, "text/html",
+          reinterpret_cast<const uint8_t *>(PAGE_HTML), sizeof(PAGE_HTML) - 1);
+      response->addHeader("Connection", "close");
+      request->send(response);
       return;
     }
 
