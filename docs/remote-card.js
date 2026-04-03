@@ -281,7 +281,13 @@ class BleRemoteCard extends HTMLElement {
         const btn = document.createElement('button');
         btn.className = 'btn';
         btn.textContent = i;
-        btn.addEventListener('pointerdown', (e) => { e.preventDefault(); this._press(btn); this._sendString(String(i)); });
+        btn.addEventListener('pointerdown', (e) => { 
+          e.preventDefault(); 
+          if(btn.dataset.deb) return;
+          btn.dataset.deb='1'; setTimeout(()=>delete btn.dataset.deb,80);
+          this._press(btn); 
+          this._sendString(String(i)); 
+        });
         numpad.appendChild(btn);
       }
       // Bottom row: empty, 0, empty
@@ -289,7 +295,13 @@ class BleRemoteCard extends HTMLElement {
       const zero = document.createElement('button');
       zero.className = 'btn';
       zero.textContent = '0';
-      zero.addEventListener('pointerdown', (e) => { e.preventDefault(); this._press(zero); this._sendString('0'); });
+      zero.addEventListener('pointerdown', (e) => { 
+        e.preventDefault(); 
+        if(zero.dataset.deb) return;
+        zero.dataset.deb='1'; setTimeout(()=>delete zero.dataset.deb,80);
+        this._press(zero); 
+        this._sendString('0'); 
+      });
       const spacer2 = document.createElement('div');
       numpad.appendChild(spacer1);
       numpad.appendChild(zero);
@@ -313,6 +325,8 @@ class BleRemoteCard extends HTMLElement {
         btn.textContent = app.name;
         btn.addEventListener('pointerdown', (e) => {
           e.preventDefault();
+          if(btn.dataset.deb) return;
+          btn.dataset.deb='1'; setTimeout(()=>delete btn.dataset.deb,80);
           this._press(btn);
           this._sendConsumer(app.consumer);
         });
@@ -392,6 +406,9 @@ class BleRemoteCard extends HTMLElement {
         let interval = null;
         const start = (e) => {
           e.preventDefault();
+          if (el.dataset.deb) return;
+          el.dataset.deb = '1';
+          setTimeout(() => delete el.dataset.deb, 80);
           this._press(el);
           handler();
           interval = setInterval(() => handler(), 180);
@@ -404,6 +421,9 @@ class BleRemoteCard extends HTMLElement {
       } else {
         el.addEventListener('pointerdown', (e) => {
           e.preventDefault();
+          if (el.dataset.deb) return;
+          el.dataset.deb = '1';
+          setTimeout(() => delete el.dataset.deb, 80);
           this._press(el);
           handler();
         });
