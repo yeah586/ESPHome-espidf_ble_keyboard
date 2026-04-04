@@ -1273,19 +1273,6 @@ static uint16_t get_keyboard_input_handle() {
     return s_boot_kb_input_handle;
 }
 
-static uint16_t get_alternate_keyboard_input_handle(uint16_t primary) {
-    if (primary == s_hid_report_handle) {
-        return s_boot_kb_input_handle;
-    }
-    if (primary == s_boot_kb_input_handle) {
-        return s_hid_report_handle;
-    }
-    if (s_hid_report_handle != 0) {
-        return s_hid_report_handle;
-    }
-    return s_boot_kb_input_handle;
-}
-
 static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *report, uint16_t len) {
     const uint16_t primary_handle = get_keyboard_input_handle();
     if (primary_handle == 0) {
@@ -1294,29 +1281,11 @@ static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *rep
     }
 
     esp_err_t ret = esp_ble_gatts_send_indicate(s_gatts_if, conn_id, primary_handle, len, const_cast<uint8_t *>(report), false);
-    if (ret == ESP_OK) {
-        return ESP_OK;
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Keyboard report send failed on handle 0x%04X (%d), caller will retry",
+                 primary_handle, ret);
     }
-
-    const uint16_t fallback_handle = get_alternate_keyboard_input_handle(primary_handle);
-    if (fallback_handle == 0 || fallback_handle == primary_handle) {
-        ESP_LOGW(TAG, "Keyboard report send failed on handle 0x%04X (%d), no fallback handle", primary_handle, ret);
-        return ret;
-    }
-
-    ESP_LOGW(TAG,
-             "Keyboard report send failed on handle 0x%04X (%d), retrying 0x%04X [proto=0x%02X report_ccc=0x%04X boot_ccc=0x%04X]",
-             primary_handle,
-             ret,
-             fallback_handle,
-             proto_mode_val,
-             report_ccc_val,
-             boot_kb_in_ccc_val);
-    esp_err_t fallback_ret = esp_ble_gatts_send_indicate(s_gatts_if, conn_id, fallback_handle, len, const_cast<uint8_t *>(report), false);
-    if (fallback_ret != ESP_OK) {
-        ESP_LOGW(TAG, "Fallback keyboard report send also failed on handle 0x%04X (%d)", fallback_handle, fallback_ret);
-    }
-    return fallback_ret;
+    return ret;
 }
 
 void EspidfBleKeyboard::send_string(const std::string &str) {
