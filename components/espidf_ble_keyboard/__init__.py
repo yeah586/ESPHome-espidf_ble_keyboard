@@ -13,6 +13,10 @@ CONF_PASSKEY = "passkey"
 CONF_PASSKEY_MODE = "passkey_mode"
 CONF_WEB_CONTROL = "web_control"
 CONF_HOST_SLOTS = "host_slots"
+CONF_MOUSE_SENSITIVITY = "mouse_sensitivity"
+CONF_MOUSE_ACCEL = "mouse_acceleration"
+CONF_MOUSE_MAX_SPEED = "mouse_max_speed"
+CONF_SCROLL_SENSITIVITY = "scroll_sensitivity"
 CONF_HOSTS = "hosts"
 CONF_SLOT = "slot"
 PASSKEY_MODE_LEGACY = "legacy"
@@ -63,6 +67,10 @@ CONFIG_SCHEMA = cv.All(
             lower=True,
         ),
         cv.Optional(CONF_WEB_CONTROL, default=False): cv.boolean,
+        cv.Optional(CONF_MOUSE_SENSITIVITY, default=1.0): cv.float_range(min=0.1, max=10.0),
+        cv.Optional(CONF_MOUSE_ACCEL, default=0.15): cv.float_range(min=0.0, max=2.0),
+        cv.Optional(CONF_MOUSE_MAX_SPEED, default=4.0): cv.float_range(min=0.5, max=20.0),
+        cv.Optional(CONF_SCROLL_SENSITIVITY, default=2.0): cv.float_range(min=0.1, max=10.0),
         cv.Optional(CONF_HOST_SLOTS, default=4): cv.int_range(min=1, max=10),
         cv.Optional(CONF_HOSTS): cv.All(cv.ensure_list(HOST_SCHEMA)),
         cv.Optional(CONF_ON_RSSI_ABOVE): automation.validate_automation({
@@ -93,6 +101,10 @@ async def to_code(config):
     ))
 
     cg.add(var.set_host_slots(config[CONF_HOST_SLOTS]))
+    cg.add(var.set_mouse_sensitivity(config[CONF_MOUSE_SENSITIVITY]))
+    cg.add(var.set_mouse_accel(config[CONF_MOUSE_ACCEL]))
+    cg.add(var.set_mouse_max_speed(config[CONF_MOUSE_MAX_SPEED]))
+    cg.add(var.set_scroll_sensitivity(config[CONF_SCROLL_SENSITIVITY]))
 
     if CONF_HOSTS in config:
         for host in config[CONF_HOSTS]:

@@ -68,6 +68,16 @@ class EspidfBleKeyboard : public Component {
   void set_web_control(bool enabled) { web_control_enabled_ = enabled; }
   void set_host_slots(uint8_t slots) { host_slots_ = slots > MAX_HOST_SLOTS ? MAX_HOST_SLOTS : slots; }
 
+  // Web mouse sensitivity
+  void set_mouse_sensitivity(float s) { mouse_sensitivity_ = s; }
+  void set_mouse_accel(float a) { mouse_accel_ = a; }
+  void set_mouse_max_speed(float m) { mouse_max_speed_ = m; }
+  void set_scroll_sensitivity(float s) { scroll_sensitivity_ = s; }
+  float mouse_sensitivity() const { return mouse_sensitivity_; }
+  float mouse_accel() const { return mouse_accel_; }
+  float mouse_max_speed() const { return mouse_max_speed_; }
+  float scroll_sensitivity() const { return scroll_sensitivity_; }
+
   struct ButtonInfo {
     std::string name;
     std::string action;
@@ -184,6 +194,10 @@ class EspidfBleKeyboard : public Component {
   uint32_t key_delay_ms_{80};
 
   bool web_control_enabled_{false};
+  float mouse_sensitivity_{1.0f};
+  float mouse_accel_{0.15f};
+  float mouse_max_speed_{4.0f};
+  float scroll_sensitivity_{2.0f};
   std::vector<ButtonInfo> buttons_;
   std::vector<ButtonInfo> macros_;   // user-editable, NVS-persisted
   void load_macros_();

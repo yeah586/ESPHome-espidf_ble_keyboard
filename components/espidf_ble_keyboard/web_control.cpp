@@ -512,7 +512,11 @@ buildKeyboard();
   const pad=document.getElementById('touchpad');
   let tracking=false,lastX=0,lastY=0,lastTime=0,startTime=0,moved=false,startSX=0,startSY=0;
   let accumX=0,accumY=0;
-  const baseSens=1.0,accelFactor=0.15,maxSens=4.0,scrollSens=2,tapDeadZone=5;
+  let baseSens=1.0,accelFactor=0.15,maxSens=4.0,scrollSens=2;
+  const tapDeadZone=5;
+  fetch('/api/ble_keyboard/mouse_config').then(r=>r.json()).then(c=>{
+    baseSens=c.sensitivity;accelFactor=c.acceleration;maxSens=c.max_speed;scrollSens=c.scroll_sensitivity;
+  }).catch(()=>{});
 
   function onStart(x,y){tracking=true;lastX=startSX=x;lastY=startSY=y;lastTime=startTime=Date.now();moved=false;accumX=0;accumY=0;pad.classList.add('active')}
   function onMove(x,y){
@@ -715,6 +719,16 @@ class BleKbWebHandler : public AsyncWebHandler {
       }
       json += "]";
       send_response(200, "application/json", json.c_str());
+      return;
+    }
+
+    if (path == "mouse_config") {
+      char buf[128];
+      snprintf(buf, sizeof(buf),
+               "{\"sensitivity\":%.2f,\"acceleration\":%.2f,\"max_speed\":%.2f,\"scroll_sensitivity\":%.2f}",
+               kb_->mouse_sensitivity(), kb_->mouse_accel(),
+               kb_->mouse_max_speed(), kb_->scroll_sensitivity());
+      send_response(200, "application/json", buf);
       return;
     }
 
