@@ -79,6 +79,9 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .combo-row{display:flex;gap:4px;width:100%;align-items:center;flex-wrap:wrap}
 .mod-btn{padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:600;cursor:pointer;user-select:none}
 .mod-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
+.macro-edit-btn{margin-left:auto;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:11px;cursor:pointer}
+.macro-edit-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
+.macros-card:not(.editing) .macro-act,.macros-card:not(.editing) .macro-form{display:none}
 .host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px}
 .host-btn{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
@@ -204,8 +207,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="prog-btns" id="prog-btns"><span class="prog-empty">Loading...</span></div>
 </div>
 
-<div class="card" id="macros-card">
-<h2><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 12h2v2H7v-2zm0-4h2v2H7V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8z"/></svg>Macros</h2>
+<div class="card macros-card" id="macros-card">
+<h2><svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 12h2v2H7v-2zm0-4h2v2H7V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8zm4 4h2v2h-2v-2zm0-4h2v2h-2V8z"/></svg>Macros<button class="macro-edit-btn" id="macro-edit-toggle">Edit</button></h2>
 <div class="prog-btns" id="macro-btns"><span class="prog-empty">Loading...</span></div>
 <div class="macro-form" id="macro-form">
 <input id="mn" placeholder="Name" maxlength="31">
@@ -379,7 +382,18 @@ setInterval(pollStatus,3000);
   const actIn=document.getElementById('ma');
   const presetSel=document.getElementById('mp');
   const saveBtn=document.getElementById('macro-save');
+  const macrosCard=document.getElementById('macros-card');
+  const editToggle=document.getElementById('macro-edit-toggle');
   let editIdx=-1;
+
+  editToggle.addEventListener('click',()=>{
+    macrosCard.classList.toggle('editing');
+    editToggle.classList.toggle('on');
+    const editing=macrosCard.classList.contains('editing');
+    editToggle.textContent=editing?'Done':'Edit';
+    if(!editing){editIdx=-1;nameIn.value='';actIn.value='';saveBtn.textContent='+ Add'}
+    loadButtons();
+  });
 
   presetSel.addEventListener('change',()=>{
     if(presetSel.value){
@@ -427,8 +441,9 @@ setInterval(pollStatus,3000);
           wrap.className='macro-wrap';
           const el=document.createElement('button');
           el.className='prog-btn';
-          el.textContent='['+b.index+'] '+b.name;
-          el.title='Macro #'+b.index+': '+b.action;
+          const editing=macrosCard.classList.contains('editing');
+          el.textContent=editing?'['+b.index+'] '+b.name:b.name;
+          el.title=editing?'Macro #'+b.index+': '+b.action:b.name;
           el.addEventListener('pointerdown',e=>{
             e.preventDefault();el.classList.add('p');
             api('press',{action:b.action});
