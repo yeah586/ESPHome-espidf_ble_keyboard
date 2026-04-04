@@ -4,7 +4,7 @@ from esphome.const import CONF_ID
 from esphome import automation
 
 DEPENDENCIES = ["esp32"]
-AUTO_LOAD = ["sensor", "binary_sensor", "button"]
+AUTO_LOAD = ["sensor", "binary_sensor", "button", "text"]
 
 # Define configuration keys
 CONF_DEVICE_NAME = "device_name"
@@ -19,6 +19,7 @@ CONF_MOUSE_MAX_SPEED = "mouse_max_speed"
 CONF_SCROLL_SENSITIVITY = "scroll_sensitivity"
 CONF_HOSTS = "hosts"
 CONF_SLOT = "slot"
+CONF_CUSTOM_TEXT_ID = "custom_text_id"
 PASSKEY_MODE_LEGACY = "legacy"
 PASSKEY_MODE_SECURE_CONNECTIONS = "secure_connections"
 
@@ -71,6 +72,7 @@ CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_MOUSE_ACCEL, default=0.15): cv.float_range(min=0.0, max=2.0),
         cv.Optional(CONF_MOUSE_MAX_SPEED, default=4.0): cv.float_range(min=0.5, max=20.0),
         cv.Optional(CONF_SCROLL_SENSITIVITY, default=2.0): cv.float_range(min=0.1, max=10.0),
+        cv.Optional(CONF_CUSTOM_TEXT_ID): cv.use_id(cg.Nameable),
         cv.Optional(CONF_HOST_SLOTS, default=4): cv.int_range(min=1, max=10),
         cv.Optional(CONF_HOSTS): cv.All(cv.ensure_list(HOST_SCHEMA)),
         cv.Optional(CONF_ON_RSSI_ABOVE): automation.validate_automation({
@@ -111,6 +113,11 @@ async def to_code(config):
             if CONF_PASSKEY in host:
                 sc = host[CONF_PASSKEY_MODE] == PASSKEY_MODE_SECURE_CONNECTIONS
                 cg.add(var.set_host_slot_passkey(host[CONF_SLOT], host[CONF_PASSKEY], sc))
+
+    if CONF_CUSTOM_TEXT_ID in config:
+        cg.add_define("USE_TEXT")
+        text_entity = await cg.get_variable(config[CONF_CUSTOM_TEXT_ID])
+        cg.add(var.set_custom_text(text_entity))
 
     if config[CONF_WEB_CONTROL]:
         cg.add_define("USE_BLE_KEYBOARD_WEB_CONTROL")

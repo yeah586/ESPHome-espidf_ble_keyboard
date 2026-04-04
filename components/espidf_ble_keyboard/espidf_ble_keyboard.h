@@ -3,6 +3,9 @@
 #include "esphome/components/button/button.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
+#ifdef USE_TEXT
+#include "esphome/components/text/text.h"
+#endif
 #include <atomic>
 #include <functional>
 #include <string>
@@ -164,6 +167,12 @@ class EspidfBleKeyboard : public Component {
   bool get_active_slot_passkey(bool &has_passkey, uint32_t &passkey, bool &secure_connections) const;
   const HostSlotConfig &get_host_slot_config(uint8_t slot) const { return host_slot_configs_[slot]; }
 
+  // Custom text entity
+#ifdef USE_TEXT
+  void set_custom_text(text::Text *t) { custom_text_ = t; }
+  text::Text *get_custom_text() const { return custom_text_; }
+#endif
+
   // Active host sensor
   void set_active_host_sensor(sensor::Sensor *sensor) { active_host_sensor_ = sensor; }
 
@@ -239,6 +248,9 @@ class EspidfBleKeyboard : public Component {
   uint16_t last_consumer_usage_{0};
   uint32_t last_mouse_click_ms_{0};
   uint8_t last_mouse_click_{0};
+#ifdef USE_TEXT
+  text::Text *custom_text_{nullptr};
+#endif
 };
 
 class EspidfBleKeyboardButton : public button::Button, public Component {

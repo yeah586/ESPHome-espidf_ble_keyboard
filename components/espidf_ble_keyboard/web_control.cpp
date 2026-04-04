@@ -245,6 +245,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="consumer:0x0221">HID Search</option>
 </optgroup>
 <optgroup label="Other">
+<option value="send_custom_text">Send Custom Text</option>
 <option value="string:">Type Text</option>
 <option value="delay:100">Delay 100ms</option>
 <option value="delay:500">Delay 500ms</option>
