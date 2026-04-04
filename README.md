@@ -380,13 +380,15 @@ espidf_ble_keyboard:
 | `"mouse_scroll:<wheel>"` | Scroll mouse wheel. Positive = up, negative = down (-127 to 127). |
 | `"switch_host:N"` | Switch to host slot N (0–9). Reconnects to stored host or advertises for new pairing. |
 | `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
+| `"string:hello"` | Explicit text typing — useful in multi-step macros to distinguish text from action names. |
+| `"delay:N"` | Pause for N milliseconds (max 10000). Used between steps in multi-step macros. |
 
 **Lambda helpers** (for use in YAML automations):
 
 | Method | Description |
 |--------|-------------|
-| `execute_action("action_string")` | Run any action string from a lambda. Works with all action types above. |
-| `execute_macro(index)` | Run a web-defined macro by index (0-based). Returns `false` if index is out of range. |
+| `execute_action("action_string")` | Run any action string from a lambda. Works with all action types above. Supports multi-step with `\|`. |
+| `execute_macro(index)` | Run a web-defined macro by index (0-based, shown as [0], [1] in web UI). Returns `false` if index is out of range. |
 
 ---
 
@@ -894,10 +896,12 @@ Features:
 When `web_control: true` is enabled, macros can be created, edited, and deleted directly from the web UI at `/ble_keyboard` — no reflash needed. Macros are stored in NVS flash and persist across reboots. Up to 16 macros are supported.
 
 The web UI provides:
-- **Add form** with name, action input, and a preset dropdown for common actions
+- **Add form** with name, action textarea, and a preset dropdown (media, system, clipboard, consumer HID, text, delays)
+- **Combo builder** — toggle Ctrl/Shift/Alt/Win modifier buttons, then pick a key (F1-F12, arrows, letters, numbers, etc.) to insert `combo:mod:key`
 - **Edit/Delete** controls on each macro (pencil and X buttons)
+- **Macro index** shown as `[0]`, `[1]`, etc. next to each macro name — use with `execute_macro(N)` in YAML
 - YAML-defined buttons appear alongside macros but are not editable
-- Selecting a preset appends to the action field, making it easy to build multi-step macros
+- Selecting a preset or key appends to the action field with `|`, making it easy to build multi-step macros
 
 ### Multi-Step Macros
 
@@ -910,6 +914,7 @@ Examples:
 | `combo:2:4 \| delay:50 \| combo:2:6` | Select All, Copy |
 | `play_pause \| delay:500 \| next_track` | Play/Pause, wait 500ms, Next Track |
 | `combo:0:40 \| delay:200 \| combo:0:40` | Enter twice with 200ms gap |
+| `combo:2:4 \| delay:50 \| string:hello` | Select All, type "hello" |
 
 Multi-step actions work everywhere: web macros, YAML buttons, `execute_action()`, and the `/api/ble_keyboard/press` endpoint.
 
