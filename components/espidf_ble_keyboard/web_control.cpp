@@ -76,6 +76,9 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .macro-form button{padding:6px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .macro-form button:active{opacity:.8}
 .macro-form .cancel{background:var(--muted)}
+.combo-row{display:flex;gap:4px;width:100%;align-items:center;flex-wrap:wrap}
+.mod-btn{padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:600;cursor:pointer;user-select:none}
+.mod-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
 .host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px}
 .host-btn{flex:1;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
@@ -208,7 +211,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <input id="mn" placeholder="Name" maxlength="31">
 <textarea id="ma" placeholder="Action (use | to chain steps)" maxlength="255" rows="1"></textarea>
 <select id="mp"><option value="">Preset...</option>
-<option value="ctrl_alt_del">Ctrl+Alt+Del</option>
+<optgroup label="Media">
 <option value="play_pause">Play/Pause</option>
 <option value="next_track">Next Track</option>
 <option value="prev_track">Prev Track</option>
@@ -216,25 +219,68 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="volume_up">Volume Up</option>
 <option value="volume_down">Volume Down</option>
 <option value="mute">Mute</option>
+</optgroup>
+<optgroup label="System">
+<option value="ctrl_alt_del">Ctrl+Alt+Del</option>
 <option value="power">Power</option>
 <option value="sleep">Sleep</option>
 <option value="shutdown">Shutdown</option>
 <option value="hibernate">Hibernate</option>
-<option value="consumer:0x0030">HID Power</option>
-<option value="consumer:0x0223">HID Home</option>
-<option value="consumer:0x0224">HID Back</option>
-<option value="consumer:0x0221">HID Search</option>
-<option value="combo:0:75">Page Up</option>
-<option value="combo:0:78">Page Down</option>
+</optgroup>
+<optgroup label="Clipboard">
 <option value="combo:2:4">Ctrl+A</option>
 <option value="combo:2:6">Ctrl+C</option>
 <option value="combo:2:25">Ctrl+V</option>
 <option value="combo:2:29">Ctrl+Z</option>
+</optgroup>
+<optgroup label="Consumer HID">
+<option value="consumer:0x0030">HID Power</option>
+<option value="consumer:0x0223">HID Home</option>
+<option value="consumer:0x0224">HID Back</option>
+<option value="consumer:0x0221">HID Search</option>
+</optgroup>
+<optgroup label="Other">
 <option value="string:">Type Text</option>
 <option value="delay:100">Delay 100ms</option>
 <option value="delay:500">Delay 500ms</option>
+</optgroup>
 </select>
 <button id="macro-save">+ Add</button>
+<div class="combo-row">
+<button class="mod-btn" data-mod="1">Ctrl</button>
+<button class="mod-btn" data-mod="2">Shift</button>
+<button class="mod-btn" data-mod="4">Alt</button>
+<button class="mod-btn" data-mod="8">Win</button>
+<select id="mk"><option value="">+ Key...</option>
+<optgroup label="F Keys">
+<option value="58">F1</option><option value="59">F2</option><option value="60">F3</option><option value="61">F4</option>
+<option value="62">F5</option><option value="63">F6</option><option value="64">F7</option><option value="65">F8</option>
+<option value="66">F9</option><option value="67">F10</option><option value="68">F11</option><option value="69">F12</option>
+</optgroup>
+<optgroup label="Navigation">
+<option value="74">Home</option><option value="75">PgUp</option><option value="77">End</option><option value="78">PgDn</option>
+<option value="80">Left</option><option value="81">Down</option><option value="82">Up</option><option value="79">Right</option>
+</optgroup>
+<optgroup label="Editing">
+<option value="40">Enter</option><option value="41">Esc</option><option value="42">Backspace</option><option value="43">Tab</option>
+<option value="44">Space</option><option value="73">Insert</option><option value="76">Delete</option><option value="70">PrtSc</option>
+<option value="71">ScrLk</option><option value="72">Pause</option>
+</optgroup>
+<optgroup label="Letters">
+<option value="4">A</option><option value="5">B</option><option value="6">C</option><option value="7">D</option>
+<option value="8">E</option><option value="9">F</option><option value="10">G</option><option value="11">H</option>
+<option value="12">I</option><option value="13">J</option><option value="14">K</option><option value="15">L</option>
+<option value="16">M</option><option value="17">N</option><option value="18">O</option><option value="19">P</option>
+<option value="20">Q</option><option value="21">R</option><option value="22">S</option><option value="23">T</option>
+<option value="24">U</option><option value="25">V</option><option value="26">W</option><option value="27">X</option>
+<option value="28">Y</option><option value="29">Z</option>
+</optgroup>
+<optgroup label="Numbers">
+<option value="30">1</option><option value="31">2</option><option value="32">3</option><option value="33">4</option><option value="34">5</option>
+<option value="35">6</option><option value="36">7</option><option value="37">8</option><option value="38">9</option><option value="39">0</option>
+</optgroup>
+</select>
+</div>
 </div>
 </div>
 </div>
@@ -341,6 +387,21 @@ setInterval(pollStatus,3000);
       if(!nameIn.value)nameIn.value=presetSel.options[presetSel.selectedIndex].text;
     }
     presetSel.value='';
+  });
+
+  // Combo builder: modifier toggles + key dropdown
+  const modBtns=document.querySelectorAll('.mod-btn');
+  const keySel=document.getElementById('mk');
+  modBtns.forEach(b=>b.addEventListener('click',()=>b.classList.toggle('on')));
+  keySel.addEventListener('change',()=>{
+    if(!keySel.value)return;
+    let mod=0;
+    modBtns.forEach(b=>{if(b.classList.contains('on'))mod|=parseInt(b.dataset.mod)});
+    const combo='combo:'+mod+':'+keySel.value;
+    const label=(mod?[...modBtns].filter(b=>b.classList.contains('on')).map(b=>b.textContent).join('+')+'+':'')+keySel.options[keySel.selectedIndex].text;
+    if(actIn.value.trim()){actIn.value+=' | '+combo}else{actIn.value=combo}
+    if(!nameIn.value)nameIn.value=label;
+    keySel.value='';
   });
 
   function loadButtons(){
