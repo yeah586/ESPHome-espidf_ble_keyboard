@@ -943,7 +943,7 @@ void EspidfBleKeyboard::load_macros_() {
     if (nvs_get_u8(handle, "macro_cnt", &count) == ESP_OK) {
         for (uint8_t i = 0; i < count && i < MAX_MACROS; i++) {
             char key[16];
-            char buf[64];
+            char buf[256];
             size_t len;
             std::string name, action;
 
@@ -1427,6 +1427,13 @@ void EspidfBleKeyboard::send_hibernate() {
 // ── Centralized action executor ──────────────────────────────────
 
 void EspidfBleKeyboard::execute_action(const std::string &action) {
+    // Delay action for multi-step macros
+    if (action.find("delay:") == 0) {
+        int ms = 0;
+        if (sscanf(action.c_str(), "delay:%i", &ms) == 1 && ms > 0 && ms <= 10000)
+            vTaskDelay(pdMS_TO_TICKS(ms));
+        return;
+    }
     // Parametric actions
     if (action.find("combo:") == 0) {
         int mod = 0, key = 0;
@@ -1492,7 +1499,25 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
 
 bool EspidfBleKeyboard::execute_macro(uint8_t index) {
     if (index >= macros_.size()) return false;
-    execute_action(macros_[index].action);
+    const std::string &action = macros_[index].action;
+    // Multi-step macros: split on '|' and execute each step
+    size_t start = 0;
+    while (start < action.size()) {
+        size_t end = action.find('|', start);
+        if (end == std::string::npos) end = action.size();
+        std::string step = action.substr(start, end - start);
+        // Trim whitespace
+        while (!step.empty() && step.front() == ' ') step.erase(step.begin());
+        while (!step.empty() && step.back() == ' ') step.pop_back();
+        if (!step.empty()) {
+            execute_action(step);
+        }
+        start = end + 1;
+        // Small default delay between steps (unless step was an explicit delay)
+        if (start < action.size() && step.find("delay:") != 0) {
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
+    }
     return true;
 }
 

@@ -71,7 +71,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .macro-act.del{color:#c44}
 .macro-act.del:hover{background:#c44;color:#fff}
 .macro-form{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap;align-items:center}
-.macro-form input,.macro-form select{flex:1;min-width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:12px}
+.macro-form input,.macro-form select,.macro-form textarea{flex:1;min-width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:12px;font-family:inherit;resize:vertical}
 .macro-form select{flex:0 1 auto;min-width:100px}
 .macro-form button{padding:6px 12px;border:none;border-radius:6px;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .macro-form button:active{opacity:.8}
@@ -206,7 +206,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="prog-btns" id="macro-btns"><span class="prog-empty">Loading...</span></div>
 <div class="macro-form" id="macro-form">
 <input id="mn" placeholder="Name" maxlength="31">
-<input id="ma" placeholder="Action" maxlength="63">
+<textarea id="ma" placeholder="Action (use | to chain steps)" maxlength="255" rows="1"></textarea>
 <select id="mp"><option value="">Preset...</option>
 <option value="ctrl_alt_del">Ctrl+Alt+Del</option>
 <option value="play_pause">Play/Pause</option>
@@ -834,8 +834,8 @@ class BleKbWebHandler : public AsyncWebHandler {
       std::string action = request->hasArg("action") ? request->arg("action").c_str() : "";
       if (name.empty() || action.empty()) {
         send_response(400, "text/plain", "name and action required");
-      } else if (name.size() > 31 || action.size() > 63) {
-        send_response(400, "text/plain", "name max 31, action max 63 chars");
+      } else if (name.size() > 31 || action.size() > 255) {
+        send_response(400, "text/plain", "name max 31, action max 255 chars");
       } else if (!kb_->add_macro(name, action)) {
         send_response(400, "text/plain", "Max macros reached");
       } else {
@@ -848,8 +848,8 @@ class BleKbWebHandler : public AsyncWebHandler {
       std::string action = request->hasArg("action") ? request->arg("action").c_str() : "";
       if (index < 0 || name.empty() || action.empty()) {
         send_response(400, "text/plain", "index, name, and action required");
-      } else if (name.size() > 31 || action.size() > 63) {
-        send_response(400, "text/plain", "name max 31, action max 63 chars");
+      } else if (name.size() > 31 || action.size() > 255) {
+        send_response(400, "text/plain", "name max 31, action max 255 chars");
       } else if (!kb_->update_macro((uint8_t) index, name, action)) {
         send_response(404, "text/plain", "Invalid index");
       } else {
