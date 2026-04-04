@@ -91,8 +91,10 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .forget-btn{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:#c44;font-size:11px;font-weight:600;cursor:pointer;touch-action:manipulation;transition:background .15s;white-space:nowrap}
 .forget-btn:hover{background:#c44;color:#fff}
 .section-toggles{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
-.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s}
+.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s;user-select:none;-webkit-user-select:none}
 .toggle-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
+.toggle-btn.dragging{opacity:.5}
+.toggle-btn.drag-over{box-shadow:inset 0 0 0 2px var(--accent)}
 .rmt-section{margin-bottom:10px}
 .rmt-section:last-child{margin-bottom:0}
 .rmt-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:8px}
@@ -681,22 +683,100 @@ buildKeyboard();
   },true);
 })();
 
-// ── Section Toggles ──
+// ── Section Toggles + Drag Reorder ──
 (function(){
   const bar=document.getElementById('toggle-bar');
+  const scalable=document.getElementById('scalable');
   const KEY='blekb_sections';
+  const OKEY='blekb_order';
   let state={};
   try{state=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){}
+  let order=null;
+  try{order=JSON.parse(localStorage.getItem(OKEY))}catch(e){}
+
+  // Apply saved order to buttons and cards
+  function applyOrder(ids){
+    ids.forEach(id=>{
+      const btn=[...bar.children].find(b=>b.dataset&&b.dataset.section===id);
+      if(btn)bar.appendChild(btn);
+      const card=document.getElementById(id);
+      if(card)scalable.appendChild(card);
+    });
+  }
+  if(order&&order.length)applyOrder(order);
+
+  function saveOrder(){
+    const ids=[...bar.querySelectorAll('.toggle-btn')].map(b=>b.dataset.section);
+    localStorage.setItem(OKEY,JSON.stringify(ids));
+  }
+
+  // Toggle visibility
   bar.querySelectorAll('.toggle-btn').forEach(btn=>{
     const id=btn.dataset.section;
     if(state[id]===false){btn.classList.remove('on');const el=document.getElementById(id);if(el)el.style.display='none'}
     btn.addEventListener('click',()=>{
+      if(btn._wasDragged)return;
       const on=btn.classList.toggle('on');
       const el=document.getElementById(id);
       if(el)el.style.display=on?'':'none';
       state[id]=on;
       localStorage.setItem(KEY,JSON.stringify(state));
     });
+  });
+
+  // Drag reorder (pointer events for touch+mouse)
+  let dragBtn=null,startX=0,startY=0,didDrag=false;
+  const DRAG_THRESHOLD=10;
+
+  bar.addEventListener('pointerdown',e=>{
+    const btn=e.target.closest('.toggle-btn');
+    if(!btn)return;
+    dragBtn=btn;startX=e.clientX;startY=e.clientY;didDrag=false;
+    btn._wasDragged=false;
+    btn.setPointerCapture(e.pointerId);
+  });
+
+  bar.addEventListener('pointermove',e=>{
+    if(!dragBtn)return;
+    if(!didDrag){
+      if(Math.abs(e.clientX-startX)+Math.abs(e.clientY-startY)<DRAG_THRESHOLD)return;
+      didDrag=true;dragBtn.classList.add('dragging');
+    }
+    // Find which button we're over
+    const els=bar.querySelectorAll('.toggle-btn');
+    els.forEach(b=>b.classList.remove('drag-over'));
+    const over=document.elementFromPoint(e.clientX,e.clientY);
+    const target=over?over.closest('.toggle-btn'):null;
+    if(target&&target!==dragBtn)target.classList.add('drag-over');
+  });
+
+  bar.addEventListener('pointerup',e=>{
+    if(!dragBtn)return;
+    const els=bar.querySelectorAll('.toggle-btn');
+    els.forEach(b=>b.classList.remove('drag-over'));
+    dragBtn.classList.remove('dragging');
+    if(didDrag){
+      dragBtn._wasDragged=true;
+      const over=document.elementFromPoint(e.clientX,e.clientY);
+      const target=over?over.closest('.toggle-btn'):null;
+      if(target&&target!==dragBtn){
+        // Swap positions in toggle bar and cards in DOM
+        const ids=[...els].map(b=>b.dataset.section);
+        const fromIdx=ids.indexOf(dragBtn.dataset.section);
+        const toIdx=ids.indexOf(target.dataset.section);
+        ids.splice(fromIdx,1);
+        ids.splice(toIdx,0,dragBtn.dataset.section);
+        applyOrder(ids);
+        saveOrder();
+      }
+    }
+    dragBtn.releasePointerCapture(e.pointerId);
+    dragBtn=null;
+  });
+
+  bar.addEventListener('pointercancel',()=>{
+    if(dragBtn){dragBtn.classList.remove('dragging');dragBtn=null}
+    bar.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('drag-over'));
   });
 })();
 </script></body></html>)rawhtml";
