@@ -230,6 +230,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="combo:2:6">Ctrl+C</option>
 <option value="combo:2:25">Ctrl+V</option>
 <option value="combo:2:29">Ctrl+Z</option>
+<option value="string:">Type Text</option>
 <option value="delay:100">Delay 100ms</option>
 <option value="delay:500">Delay 500ms</option>
 </select>

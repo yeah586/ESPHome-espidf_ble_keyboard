@@ -1513,6 +1513,7 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
     else if (action == "left_click")   send_mouse_click(0x01);
     else if (action == "right_click")  send_mouse_click(0x02);
     else if (action == "middle_click") send_mouse_click(0x04);
+    else if (action.find("string:") == 0) send_string(action.substr(7));
     else send_string(action);  // Fallback: send as typed text
 }
 
