@@ -46,6 +46,8 @@ class BleMouseCard extends HTMLElement {
       device: config.device,
       name: config.name || null,
       sensitivity: config.sensitivity || 1.5,
+      mouse_acceleration: config.mouse_acceleration || 0.15,
+      mouse_max_speed: config.mouse_max_speed || 4.5,
       scroll_sensitivity: config.scroll_sensitivity || 2,
       tap_to_click: config.tap_to_click !== false,
     };
@@ -220,8 +222,8 @@ class BleMouseCard extends HTMLElement {
     let accumY = 0;
 
     const baseSens = this._config.sensitivity;
-    const accelFactor = 0.15;
-    const maxSens = baseSens * 3;
+    const accelFactor = this._config.mouse_acceleration;
+    const maxSens = this._config.mouse_max_speed;
     const tapDeadZone = 5;
     const scrollSensitivity = this._config.scroll_sensitivity;
 
