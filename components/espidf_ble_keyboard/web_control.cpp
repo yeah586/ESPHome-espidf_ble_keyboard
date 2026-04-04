@@ -724,43 +724,50 @@ buildKeyboard();
     });
   });
 
-  // Drag reorder (pointer events for touch+mouse)
-  let dragBtn=null,startX=0,startY=0,didDrag=false;
+  // Drag reorder (touch + mouse via pointer events)
+  let dragBtn=null,dragPid=null,startX=0,startY=0,didDrag=false;
   const DRAG_THRESHOLD=10;
+
+  function hitBtn(x,y){
+    const btns=bar.querySelectorAll('.toggle-btn');
+    for(const b of btns){
+      const r=b.getBoundingClientRect();
+      if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)return b;
+    }
+    return null;
+  }
 
   bar.addEventListener('pointerdown',e=>{
     const btn=e.target.closest('.toggle-btn');
     if(!btn)return;
-    dragBtn=btn;startX=e.clientX;startY=e.clientY;didDrag=false;
+    dragBtn=btn;dragPid=e.pointerId;startX=e.clientX;startY=e.clientY;didDrag=false;
     btn._wasDragged=false;
-    btn.setPointerCapture(e.pointerId);
   });
 
   bar.addEventListener('pointermove',e=>{
-    if(!dragBtn)return;
+    if(!dragBtn||e.pointerId!==dragPid)return;
     if(!didDrag){
       if(Math.abs(e.clientX-startX)+Math.abs(e.clientY-startY)<DRAG_THRESHOLD)return;
       didDrag=true;dragBtn.classList.add('dragging');
+      bar.style.touchAction='none';
     }
-    // Find which button we're over
+    e.preventDefault();
     const els=bar.querySelectorAll('.toggle-btn');
     els.forEach(b=>b.classList.remove('drag-over'));
-    const over=document.elementFromPoint(e.clientX,e.clientY);
-    const target=over?over.closest('.toggle-btn'):null;
+    const target=hitBtn(e.clientX,e.clientY);
     if(target&&target!==dragBtn)target.classList.add('drag-over');
   });
 
-  bar.addEventListener('pointerup',e=>{
+  function endDrag(e){
     if(!dragBtn)return;
     const els=bar.querySelectorAll('.toggle-btn');
     els.forEach(b=>b.classList.remove('drag-over'));
     dragBtn.classList.remove('dragging');
+    bar.style.touchAction='';
     if(didDrag){
       dragBtn._wasDragged=true;
-      const over=document.elementFromPoint(e.clientX,e.clientY);
-      const target=over?over.closest('.toggle-btn'):null;
+      const target=hitBtn(e.clientX,e.clientY);
       if(target&&target!==dragBtn){
-        // Swap positions in toggle bar and cards in DOM
         const ids=[...els].map(b=>b.dataset.section);
         const fromIdx=ids.indexOf(dragBtn.dataset.section);
         const toIdx=ids.indexOf(target.dataset.section);
@@ -770,14 +777,10 @@ buildKeyboard();
         saveOrder();
       }
     }
-    dragBtn.releasePointerCapture(e.pointerId);
-    dragBtn=null;
-  });
-
-  bar.addEventListener('pointercancel',()=>{
-    if(dragBtn){dragBtn.classList.remove('dragging');dragBtn=null}
-    bar.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('drag-over'));
-  });
+    dragBtn=null;dragPid=null;
+  }
+  bar.addEventListener('pointerup',endDrag);
+  bar.addEventListener('pointercancel',endDrag);
 })();
 </script></body></html>)rawhtml";
 
