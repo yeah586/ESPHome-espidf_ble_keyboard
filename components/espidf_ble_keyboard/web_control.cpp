@@ -209,7 +209,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="prog-btns" id="macro-btns"><span class="prog-empty">Loading...</span></div>
 <div class="macro-form" id="macro-form">
 <input id="mn" placeholder="Name" maxlength="31">
-<textarea id="ma" placeholder="Action (use | to chain steps)" maxlength="255" rows="1"></textarea>
+<textarea id="ma" placeholder="Action (use | to chain steps)" maxlength="255" rows="3"></textarea>
 <select id="mp"><option value="">Preset...</option>
 <optgroup label="Media">
 <option value="play_pause">Play/Pause</option>
