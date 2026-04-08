@@ -545,6 +545,7 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                      param->update_conn_params.timeout);
             break;
         case ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT:
+            if (s_instance) {
             s_instance->rssi_pending_ = false;
                 if (param->read_rssi_cmpl.status == ESP_BT_STATUS_SUCCESS) {
                     s_instance->pending_rssi_value_ = param->read_rssi_cmpl.rssi;
