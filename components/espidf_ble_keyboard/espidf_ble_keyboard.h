@@ -188,6 +188,9 @@ class EspidfBleKeyboard : public Component {
   sensor::Sensor *active_host_sensor_{nullptr};
   sensor::Sensor *rssi_sensor_{nullptr};
   bool rssi_pending_{false};
+  std::atomic<bool> pending_rssi_nan_{false};
+  std::atomic<bool> pending_rssi_update_{false};
+  std::atomic<int8_t> pending_rssi_value_{0};
 
  protected:
   bool is_connected_{false};

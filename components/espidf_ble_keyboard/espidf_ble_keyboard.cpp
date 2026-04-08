@@ -545,10 +545,10 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                      param->update_conn_params.timeout);
             break;
         case ESP_GAP_BLE_READ_RSSI_COMPLETE_EVT:
-            if (s_instance) {
-                s_instance->rssi_pending_ = false;
+            s_instance->rssi_pending_ = false;
                 if (param->read_rssi_cmpl.status == ESP_BT_STATUS_SUCCESS) {
-                    s_instance->update_rssi(param->read_rssi_cmpl.rssi);
+                    s_instance->pending_rssi_value_ = param->read_rssi_cmpl.rssi;
+                    s_instance->pending_rssi_update_ = true;
                 }
             }
             break;
@@ -805,10 +805,8 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                 s_instance->set_connected(false, 0);
                 // Host-side unpair often appears only as disconnect.
                 s_instance->queue_paired_state(false);
-                if (s_instance->rssi_sensor_ != nullptr) {
-                    s_instance->rssi_sensor_->publish_state(NAN);
-                    s_instance->rssi_pending_ = false;
-                }
+                s_instance->rssi_pending_ = false;
+                s_instance->pending_rssi_nan_ = true;
             }
             proto_mode_val = 0x01;
             report_ccc_val = 0;
@@ -1198,6 +1196,12 @@ void EspidfBleKeyboard::setup() {
 void EspidfBleKeyboard::loop() {
     if (pending_paired_update_.exchange(false)) {
         set_paired(pending_paired_state_.load());
+    }
+    if (pending_rssi_nan_.exchange(false)) {
+        if (rssi_sensor_ != nullptr) rssi_sensor_->publish_state(NAN);
+    }
+    if (pending_rssi_update_.exchange(false)) {
+        update_rssi(pending_rssi_value_.load());
     }
 
     if (is_connected_) {
