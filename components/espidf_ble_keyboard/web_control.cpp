@@ -35,13 +35,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .status-dot.paired{background:var(--active)}
 .status-text{font-size:13px;color:var(--muted)}
 .status-text.on{color:var(--accent)}
-.dev-name{font-size:12px;color:var(--name);margin-left:4px;font-weight:500}
+.dev-name{font-size:13px;color:var(--name);margin-left:4px;font-weight:500}
 .toolbar-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .zoom-controls{display:flex;align-items:center;gap:4px}
 .zoom-btn,.theme-btn{width:30px;height:30px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
 .zoom-btn:active,.theme-btn:active{background:var(--active);color:#fff}
 .theme-btn{font-size:15px}
-.zoom-label{font-size:12px;color:var(--muted);min-width:36px;text-align:center}
+.zoom-label{font-size:13px;color:var(--muted);min-width:36px;text-align:center}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px}
 .scalable{transform-origin:top left;transition:transform .15s}
 .row{display:flex;gap:3px;margin-bottom:3px}
@@ -91,7 +91,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .forget-btn{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:#c44;font-size:11px;font-weight:600;cursor:pointer;touch-action:manipulation;transition:background .15s;white-space:nowrap}
 .forget-btn:active{background:#c44;color:#fff}
 .section-toggles{display:flex;gap:4px;align-items:center;flex-wrap:wrap;touch-action:none}
-.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:10px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s;user-select:none;-webkit-user-select:none}
+.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s;user-select:none;-webkit-user-select:none}
 .toggle-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
 .toggle-btn.dragging{opacity:.5}
 .toggle-btn.drag-over{box-shadow:inset 0 0 0 2px var(--accent)}
