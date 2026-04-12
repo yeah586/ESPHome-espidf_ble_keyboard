@@ -91,7 +91,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .forget-btn{padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:#c44;font-size:11px;font-weight:600;cursor:pointer;touch-action:manipulation;transition:background .15s;white-space:nowrap}
 .forget-btn:active{background:#c44;color:#fff}
 .section-toggles{display:flex;gap:4px;align-items:center;flex-wrap:wrap;touch-action:none}
-.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s;user-select:none;-webkit-user-select:none}
+.toggle-btn{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--name);font-size:11px;font-weight:500;cursor:pointer;touch-action:manipulation;transition:background .15s,color .15s;user-select:none;-webkit-user-select:none}
 .toggle-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
 .toggle-btn.dragging{opacity:.5}
 .toggle-btn.drag-over{box-shadow:inset 0 0 0 2px var(--accent)}
