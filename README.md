@@ -795,6 +795,7 @@ Optional configuration:
 |---|---|---|
 | `name` | Auto from HA | Card title. Auto-detected from HA device registry if omitted. |
 | `show_fkeys` | `true` | Show the F1–F12 function key row. |
+| `layout` | `us` | Keyboard layout for the on-screen card: `us` or `uk`. UK draws the ISO shape (extra `\|` key, `£` on Shift+3, etc.). Set this to match the ESP's `keyboard_layout` option so the visual matches what gets typed. |
 | `host_slots` | `0` | Number of host slots. Set to match your `host_slots` config to show a host switcher bar with prev/next buttons, host name, and MAC address. `0` hides the bar. |
 | `host_names` | `[]` | List of custom names for each host slot (e.g., `["TV", "Phone"]`). Index 0 = slot 0, etc. Falls back to switch_host button names from the ESP32, then "Host N". |
 | `active_host_entity` | Auto | Entity ID of the active host sensor. Auto-detected by name pattern (`sensor.*_active_host`). Set explicitly if auto-detection fails. |
@@ -808,6 +809,7 @@ Features:
 - **Shift labels** — key labels update to show shifted characters when Shift is active.
 - **Host switcher** — prev/next buttons to switch hosts, shows current host name and MAC address (requires `host_slots` and `switch_host` ESPHome service).
 - **Auto device name** — card title is auto-detected from Home Assistant's device registry.
+- **Keyboard layouts** — `layout: us` (default) or `layout: uk` renders the matching ISO/ANSI shape with the correct shifted labels.
 
 > **Note:** Caps Lock state is tracked locally in the card. If Caps Lock is toggled from another keyboard, the card indicator may be out of sync.
 

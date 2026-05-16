@@ -18,6 +18,8 @@
  *   # Optional overrides:
  *   # name: My Keyboard            # card title (default "BLE Keyboard")
  *   # show_fkeys: true             # show F1-F12 row (default true)
+ *   # layout: us                    # keyboard layout: us (default) or uk
+ *   #                                 NOTE: should match the ESP's keyboard_layout YAML option
  *   # host_slots: 4                # show host switcher bar (default 0 = hidden)
  *   # host_names:                   # custom names for each host slot (optional)
  *   #   - TV
@@ -50,8 +52,12 @@ const CHAR_TO_KEYCODE = {
   ';':0x33,"'":0x34,',':0x36,'.':0x37,'/':0x38,' ':0x2C,
 };
 
-// Keyboard layout rows — each key: { label, shiftLabel?, type, char?, shiftChar?, keycode?, mod?, flex? }
-const ROWS = [
+// Keyboard layouts — each key: { label, shiftLabel?, type, char?, shiftChar?, keycode?, mod?, flex? }
+// To add a layout: append an entry below. The matching ASCII/Unicode tables on
+// the ESP side (components/espidf_ble_keyboard/keyboard_layouts.cpp) translate
+// what the card sends via send_string into the correct HID keycodes for the host.
+const LAYOUTS = {
+us: { name: 'English (US)', ROWS: [
   // F-key row
   [
     { label: 'Esc', type: 'special', keycode: 0x29, flex: 1.2 },
@@ -146,7 +152,105 @@ const ROWS = [
     { label: '\u2193', type: 'special', keycode: 0x51 },
     { label: '\u2192', type: 'special', keycode: 0x4F },
   ],
-];
+]},
+uk: { name: 'English (UK)', ROWS: [
+  // F-key row
+  [
+    { label: 'Esc', type: 'special', keycode: 0x29, flex: 1.2 },
+    { label: 'F1', type: 'special', keycode: 0x3A },
+    { label: 'F2', type: 'special', keycode: 0x3B },
+    { label: 'F3', type: 'special', keycode: 0x3C },
+    { label: 'F4', type: 'special', keycode: 0x3D },
+    { label: 'F5', type: 'special', keycode: 0x3E },
+    { label: 'F6', type: 'special', keycode: 0x3F },
+    { label: 'F7', type: 'special', keycode: 0x40 },
+    { label: 'F8', type: 'special', keycode: 0x41 },
+    { label: 'F9', type: 'special', keycode: 0x42 },
+    { label: 'F10', type: 'special', keycode: 0x43 },
+    { label: 'F11', type: 'special', keycode: 0x44 },
+    { label: 'F12', type: 'special', keycode: 0x45 },
+  ],
+  // Number row \u2014 UK: Shift+2 = ", Shift+3 = \u00a3 (GBP), Shift+` = \u00ac (negate)
+  [
+    { label: '`', shiftLabel: '\u00ac', type: 'char', char: '`', shiftChar: '\u00ac' },
+    { label: '1', shiftLabel: '!', type: 'char', char: '1', shiftChar: '!' },
+    { label: '2', shiftLabel: '"', type: 'char', char: '2', shiftChar: '"' },
+    { label: '3', shiftLabel: '\u00a3', type: 'char', char: '3', shiftChar: '\u00a3' },
+    { label: '4', shiftLabel: '$', type: 'char', char: '4', shiftChar: '$' },
+    { label: '5', shiftLabel: '%', type: 'char', char: '5', shiftChar: '%' },
+    { label: '6', shiftLabel: '^', type: 'char', char: '6', shiftChar: '^' },
+    { label: '7', shiftLabel: '&', type: 'char', char: '7', shiftChar: '&' },
+    { label: '8', shiftLabel: '*', type: 'char', char: '8', shiftChar: '*' },
+    { label: '9', shiftLabel: '(', type: 'char', char: '9', shiftChar: '(' },
+    { label: '0', shiftLabel: ')', type: 'char', char: '0', shiftChar: ')' },
+    { label: '-', shiftLabel: '_', type: 'char', char: '-', shiftChar: '_' },
+    { label: '=', shiftLabel: '+', type: 'char', char: '=', shiftChar: '+' },
+    { label: 'Bksp', type: 'special', keycode: 0x2A, flex: 1.5 },
+  ],
+  // QWERTY row \u2014 UK has 13 keys (no \| at the end; that key moves to shift row)
+  [
+    { label: 'Tab', type: 'special', keycode: 0x2B, flex: 1.3 },
+    { label: 'q', shiftLabel: 'Q', type: 'char', char: 'q', shiftChar: 'Q' },
+    { label: 'w', shiftLabel: 'W', type: 'char', char: 'w', shiftChar: 'W' },
+    { label: 'e', shiftLabel: 'E', type: 'char', char: 'e', shiftChar: 'E' },
+    { label: 'r', shiftLabel: 'R', type: 'char', char: 'r', shiftChar: 'R' },
+    { label: 't', shiftLabel: 'T', type: 'char', char: 't', shiftChar: 'T' },
+    { label: 'y', shiftLabel: 'Y', type: 'char', char: 'y', shiftChar: 'Y' },
+    { label: 'u', shiftLabel: 'U', type: 'char', char: 'u', shiftChar: 'U' },
+    { label: 'i', shiftLabel: 'I', type: 'char', char: 'i', shiftChar: 'I' },
+    { label: 'o', shiftLabel: 'O', type: 'char', char: 'o', shiftChar: 'O' },
+    { label: 'p', shiftLabel: 'P', type: 'char', char: 'p', shiftChar: 'P' },
+    { label: '[', shiftLabel: '{', type: 'char', char: '[', shiftChar: '{' },
+    { label: ']', shiftLabel: '}', type: 'char', char: ']', shiftChar: '}' },
+  ],
+  // Home row \u2014 UK adds #/~ between '@ and Enter; Shift+' = @
+  [
+    { label: 'Caps', type: 'caps', keycode: 0x39, flex: 1.5 },
+    { label: 'a', shiftLabel: 'A', type: 'char', char: 'a', shiftChar: 'A' },
+    { label: 's', shiftLabel: 'S', type: 'char', char: 's', shiftChar: 'S' },
+    { label: 'd', shiftLabel: 'D', type: 'char', char: 'd', shiftChar: 'D' },
+    { label: 'f', shiftLabel: 'F', type: 'char', char: 'f', shiftChar: 'F' },
+    { label: 'g', shiftLabel: 'G', type: 'char', char: 'g', shiftChar: 'G' },
+    { label: 'h', shiftLabel: 'H', type: 'char', char: 'h', shiftChar: 'H' },
+    { label: 'j', shiftLabel: 'J', type: 'char', char: 'j', shiftChar: 'J' },
+    { label: 'k', shiftLabel: 'K', type: 'char', char: 'k', shiftChar: 'K' },
+    { label: 'l', shiftLabel: 'L', type: 'char', char: 'l', shiftChar: 'L' },
+    { label: ';', shiftLabel: ':', type: 'char', char: ';', shiftChar: ':' },
+    { label: "'", shiftLabel: '@', type: 'char', char: "'", shiftChar: '@' },
+    { label: '#', shiftLabel: '~', type: 'char', char: '#', shiftChar: '~' },
+    { label: 'Enter', type: 'special', keycode: 0x28, flex: 1.5 },
+  ],
+  // Shift row \u2014 UK adds the ISO \| key between LShift and Z
+  [
+    { label: 'Shift', type: 'modifier', mod: 'shift', bit: 0x02, flex: 1.5 },
+    { label: '\\', shiftLabel: '|', type: 'char', char: '\\', shiftChar: '|' },
+    { label: 'z', shiftLabel: 'Z', type: 'char', char: 'z', shiftChar: 'Z' },
+    { label: 'x', shiftLabel: 'X', type: 'char', char: 'x', shiftChar: 'X' },
+    { label: 'c', shiftLabel: 'C', type: 'char', char: 'c', shiftChar: 'C' },
+    { label: 'v', shiftLabel: 'V', type: 'char', char: 'v', shiftChar: 'V' },
+    { label: 'b', shiftLabel: 'B', type: 'char', char: 'b', shiftChar: 'B' },
+    { label: 'n', shiftLabel: 'N', type: 'char', char: 'n', shiftChar: 'N' },
+    { label: 'm', shiftLabel: 'M', type: 'char', char: 'm', shiftChar: 'M' },
+    { label: ',', shiftLabel: '<', type: 'char', char: ',', shiftChar: '<' },
+    { label: '.', shiftLabel: '>', type: 'char', char: '.', shiftChar: '>' },
+    { label: '/', shiftLabel: '?', type: 'char', char: '/', shiftChar: '?' },
+    { label: 'Shift R', type: 'modifier', mod: 'rshift', bit: 0x20, flex: 2 },
+  ],
+  // Bottom row
+  [
+    { label: 'Ctrl', type: 'modifier', mod: 'ctrl', bit: 0x01, flex: 1.2 },
+    { label: 'Win', type: 'modifier', mod: 'win', bit: 0x08, flex: 1.2 },
+    { label: 'Alt', type: 'modifier', mod: 'alt', bit: 0x04, flex: 1.2 },
+    { label: '', type: 'char', char: ' ', shiftChar: ' ', flex: 6 },
+    { label: 'Alt R', type: 'modifier', mod: 'altgr', bit: 0x40, flex: 1.2 },
+    { label: 'Del', type: 'special', keycode: 0x4C, flex: 1.2 },
+    { label: '\u2190', type: 'special', keycode: 0x50 },
+    { label: '\u2191', type: 'special', keycode: 0x52 },
+    { label: '\u2193', type: 'special', keycode: 0x51 },
+    { label: '\u2192', type: 'special', keycode: 0x4F },
+  ],
+]},
+};
 
 class BleKeyboardCard extends HTMLElement {
   set hass(hass) {
@@ -174,10 +278,12 @@ class BleKeyboardCard extends HTMLElement {
     if (!config.device) {
       throw new Error('Please define a "device" (your ESPHome device name)');
     }
+    const layout = (config.layout || 'us').toLowerCase();
     this._config = {
       device: config.device,
       name: config.name || null,
       show_fkeys: config.show_fkeys !== false,
+      layout: LAYOUTS[layout] ? layout : 'us',
       host_slots: config.host_slots || 0,
       host_names: config.host_names || [],
       active_host_entity: config.active_host_entity || null,
@@ -393,7 +499,8 @@ class BleKeyboardCard extends HTMLElement {
     this._modifierBtns = { shift: [], ctrl: [], alt: [], win: [], rshift: [], altgr: [] };
 
     // Build keyboard rows
-    ROWS.forEach((row, rowIdx) => {
+    const rows = (LAYOUTS[this._config.layout] || LAYOUTS.us).ROWS;
+    rows.forEach((row, rowIdx) => {
       const rowDiv = document.createElement('div');
       rowDiv.className = rowIdx === 0 ? 'kb-row fkey-row' : 'kb-row';
 
@@ -440,7 +547,8 @@ class BleKeyboardCard extends HTMLElement {
 
       const rowIdx = parseInt(btn.dataset.row);
       const keyIdx = parseInt(btn.dataset.key);
-      const keyDef = ROWS[rowIdx][keyIdx];
+      const rows = (LAYOUTS[this._config.layout] || LAYOUTS.us).ROWS;
+      const keyDef = rows[rowIdx][keyIdx];
 
       // Visual press feedback
       btn.classList.add('pressed');
