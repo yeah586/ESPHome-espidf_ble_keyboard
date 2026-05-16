@@ -43,6 +43,9 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .theme-btn{font-size:15px}
 .zoom-label{font-size:13px;color:var(--name);min-width:36px;text-align:center}
 .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px}
+.kb-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;gap:8px}
+.kb-title{font-size:15px;font-weight:600;color:var(--accent)}
+.layout-sel{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:12px;font-family:inherit;cursor:pointer}
 .scalable{transform-origin:top left;transition:transform .15s}
 .row{display:flex;gap:3px;margin-bottom:3px}
 .row:last-child{margin-bottom:0}
@@ -126,7 +129,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
-<button class="toggle-btn on" data-section="keyboard">Keyboard</button>
+<button class="toggle-btn on" data-section="keyboard-card">Keyboard</button>
 <button class="toggle-btn on" data-section="mouse-card">Mouse</button>
 <button class="toggle-btn on" data-section="media-card">Remote</button>
 <button class="toggle-btn on" data-section="btns-card">Buttons</button>
@@ -142,7 +145,10 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <div class="host-bar" id="host-bar" style="display:none"></div>
-<div class="card" id="keyboard"></div>
+<div class="card" id="keyboard-card">
+<div class="kb-header"><span class="kb-title">Keyboard</span><select id="layoutSel" class="layout-sel"></select></div>
+<div id="keyboard"></div>
+</div>
 
 <div class="card" id="mouse-card">
 <h2><svg viewBox="0 0 24 24"><path d="M12 2C8.14 2 5 5.14 5 9v6c0 3.86 3.14 7 7 7s7-3.14 7-7V9c0-3.86-3.14-7-7-7zm0 2c2.76 0 5 2.24 5 5v2h-4V5h-2v6H7V9c0-2.76 2.24-5 5-5z"/></svg>Mouse</h2>
@@ -507,24 +513,44 @@ setInterval(pollStatus,3000);
 })();
 
 // ── Keyboard ──
+// CK = character -> raw HID keycode (used for Ctrl+letter combos). Physical
+// positions of letters/digits are identical across US/UK/DE/FR HID, so this
+// table is layout-independent.
 const CK={a:0x04,b:0x05,c:0x06,d:0x07,e:0x08,f:0x09,g:0x0A,h:0x0B,i:0x0C,j:0x0D,k:0x0E,l:0x0F,m:0x10,n:0x11,o:0x12,p:0x13,q:0x14,r:0x15,s:0x16,t:0x17,u:0x18,v:0x19,w:0x1A,x:0x1B,y:0x1C,z:0x1D,'1':0x1E,'2':0x1F,'3':0x20,'4':0x21,'5':0x22,'6':0x23,'7':0x24,'8':0x25,'9':0x26,'0':0x27,'`':0x35,'-':0x2D,'=':0x2E,'[':0x2F,']':0x30,'\\':0x31,';':0x33,"'":0x34,',':0x36,'.':0x37,'/':0x38,' ':0x2C};
-const ROWS=[
+// Per-layout row definitions. To add a layout: append an entry here and a
+// matching ASCII/Unicode table on the C++ side (keyboard_layouts.cpp).
+const LAYOUTS={us:{ROWS:[
 [{l:'Esc',t:'s',kc:0x29,f:1.2},{l:'F1',t:'s',kc:0x3A},{l:'F2',t:'s',kc:0x3B},{l:'F3',t:'s',kc:0x3C},{l:'F4',t:'s',kc:0x3D},{l:'F5',t:'s',kc:0x3E},{l:'F6',t:'s',kc:0x3F},{l:'F7',t:'s',kc:0x40},{l:'F8',t:'s',kc:0x41},{l:'F9',t:'s',kc:0x42},{l:'F10',t:'s',kc:0x43},{l:'F11',t:'s',kc:0x44},{l:'F12',t:'s',kc:0x45}],
 [{l:'`',sl:'~',t:'c',c:'`',sc:'~'},{l:'1',sl:'!',t:'c',c:'1',sc:'!'},{l:'2',sl:'@',t:'c',c:'2',sc:'@'},{l:'3',sl:'#',t:'c',c:'3',sc:'#'},{l:'4',sl:'$',t:'c',c:'4',sc:'$'},{l:'5',sl:'%',t:'c',c:'5',sc:'%'},{l:'6',sl:'^',t:'c',c:'6',sc:'^'},{l:'7',sl:'&',t:'c',c:'7',sc:'&'},{l:'8',sl:'*',t:'c',c:'8',sc:'*'},{l:'9',sl:'(',t:'c',c:'9',sc:'('},{l:'0',sl:')',t:'c',c:'0',sc:')'},{l:'-',sl:'_',t:'c',c:'-',sc:'_'},{l:'=',sl:'+',t:'c',c:'=',sc:'+'},{l:'Bksp',t:'s',kc:0x2A,f:1.5}],
 [{l:'Tab',t:'s',kc:0x2B,f:1.3},{l:'q',sl:'Q',t:'c',c:'q',sc:'Q'},{l:'w',sl:'W',t:'c',c:'w',sc:'W'},{l:'e',sl:'E',t:'c',c:'e',sc:'E'},{l:'r',sl:'R',t:'c',c:'r',sc:'R'},{l:'t',sl:'T',t:'c',c:'t',sc:'T'},{l:'y',sl:'Y',t:'c',c:'y',sc:'Y'},{l:'u',sl:'U',t:'c',c:'u',sc:'U'},{l:'i',sl:'I',t:'c',c:'i',sc:'I'},{l:'o',sl:'O',t:'c',c:'o',sc:'O'},{l:'p',sl:'P',t:'c',c:'p',sc:'P'},{l:'[',sl:'{',t:'c',c:'[',sc:'{'},{l:']',sl:'}',t:'c',c:']',sc:'}'},{l:'\\',sl:'|',t:'c',c:'\\',sc:'|'}],
 [{l:'Caps',t:'caps',kc:0x39,f:1.5},{l:'a',sl:'A',t:'c',c:'a',sc:'A'},{l:'s',sl:'S',t:'c',c:'s',sc:'S'},{l:'d',sl:'D',t:'c',c:'d',sc:'D'},{l:'f',sl:'F',t:'c',c:'f',sc:'F'},{l:'g',sl:'G',t:'c',c:'g',sc:'G'},{l:'h',sl:'H',t:'c',c:'h',sc:'H'},{l:'j',sl:'J',t:'c',c:'j',sc:'J'},{l:'k',sl:'K',t:'c',c:'k',sc:'K'},{l:'l',sl:'L',t:'c',c:'l',sc:'L'},{l:';',sl:':',t:'c',c:';',sc:':'},{l:"'",sl:'"',t:'c',c:"'",sc:'"'},{l:'Enter',t:'s',kc:0x28,f:1.8}],
 [{l:'Shift',t:'m',mod:'shift',bit:0x02,f:2},{l:'z',sl:'Z',t:'c',c:'z',sc:'Z'},{l:'x',sl:'X',t:'c',c:'x',sc:'X'},{l:'c',sl:'C',t:'c',c:'c',sc:'C'},{l:'v',sl:'V',t:'c',c:'v',sc:'V'},{l:'b',sl:'B',t:'c',c:'b',sc:'B'},{l:'n',sl:'N',t:'c',c:'n',sc:'N'},{l:'m',sl:'M',t:'c',c:'m',sc:'M'},{l:',',sl:'<',t:'c',c:',',sc:'<'},{l:'.',sl:'>',t:'c',c:'.',sc:'>'},{l:'/',sl:'?',t:'c',c:'/',sc:'?'},{l:'Shift R',t:'m',mod:'rshift',bit:0x20,f:2}],
 [{l:'Ctrl',t:'m',mod:'ctrl',bit:0x01,f:1.2},{l:'Win',t:'m',mod:'win',bit:0x08,f:1.2},{l:'Alt',t:'m',mod:'alt',bit:0x04,f:1.2},{l:'',t:'c',c:' ',sc:' ',f:6},{l:'Alt R',t:'m',mod:'altgr',bit:0x40,f:1.2},{l:'Del',t:'s',kc:0x4C,f:1.2},{l:'\u2190',t:'s',kc:0x50},{l:'\u2191',t:'s',kc:0x52},{l:'\u2193',t:'s',kc:0x51},{l:'\u2192',t:'s',kc:0x4F}]
-];
+]},
+uk:{ROWS:[
+[{l:'Esc',t:'s',kc:0x29,f:1.2},{l:'F1',t:'s',kc:0x3A},{l:'F2',t:'s',kc:0x3B},{l:'F3',t:'s',kc:0x3C},{l:'F4',t:'s',kc:0x3D},{l:'F5',t:'s',kc:0x3E},{l:'F6',t:'s',kc:0x3F},{l:'F7',t:'s',kc:0x40},{l:'F8',t:'s',kc:0x41},{l:'F9',t:'s',kc:0x42},{l:'F10',t:'s',kc:0x43},{l:'F11',t:'s',kc:0x44},{l:'F12',t:'s',kc:0x45}],
+[{l:'`',sl:'\u00ac',t:'c',c:'`',sc:'\u00ac'},{l:'1',sl:'!',t:'c',c:'1',sc:'!'},{l:'2',sl:'"',t:'c',c:'2',sc:'"'},{l:'3',sl:'\u00a3',t:'c',c:'3',sc:'\u00a3'},{l:'4',sl:'$',t:'c',c:'4',sc:'$'},{l:'5',sl:'%',t:'c',c:'5',sc:'%'},{l:'6',sl:'^',t:'c',c:'6',sc:'^'},{l:'7',sl:'&',t:'c',c:'7',sc:'&'},{l:'8',sl:'*',t:'c',c:'8',sc:'*'},{l:'9',sl:'(',t:'c',c:'9',sc:'('},{l:'0',sl:')',t:'c',c:'0',sc:')'},{l:'-',sl:'_',t:'c',c:'-',sc:'_'},{l:'=',sl:'+',t:'c',c:'=',sc:'+'},{l:'Bksp',t:'s',kc:0x2A,f:1.5}],
+[{l:'Tab',t:'s',kc:0x2B,f:1.3},{l:'q',sl:'Q',t:'c',c:'q',sc:'Q'},{l:'w',sl:'W',t:'c',c:'w',sc:'W'},{l:'e',sl:'E',t:'c',c:'e',sc:'E'},{l:'r',sl:'R',t:'c',c:'r',sc:'R'},{l:'t',sl:'T',t:'c',c:'t',sc:'T'},{l:'y',sl:'Y',t:'c',c:'y',sc:'Y'},{l:'u',sl:'U',t:'c',c:'u',sc:'U'},{l:'i',sl:'I',t:'c',c:'i',sc:'I'},{l:'o',sl:'O',t:'c',c:'o',sc:'O'},{l:'p',sl:'P',t:'c',c:'p',sc:'P'},{l:'[',sl:'{',t:'c',c:'[',sc:'{'},{l:']',sl:'}',t:'c',c:']',sc:'}'}],
+[{l:'Caps',t:'caps',kc:0x39,f:1.5},{l:'a',sl:'A',t:'c',c:'a',sc:'A'},{l:'s',sl:'S',t:'c',c:'s',sc:'S'},{l:'d',sl:'D',t:'c',c:'d',sc:'D'},{l:'f',sl:'F',t:'c',c:'f',sc:'F'},{l:'g',sl:'G',t:'c',c:'g',sc:'G'},{l:'h',sl:'H',t:'c',c:'h',sc:'H'},{l:'j',sl:'J',t:'c',c:'j',sc:'J'},{l:'k',sl:'K',t:'c',c:'k',sc:'K'},{l:'l',sl:'L',t:'c',c:'l',sc:'L'},{l:';',sl:':',t:'c',c:';',sc:':'},{l:"'",sl:'@',t:'c',c:"'",sc:'@'},{l:'#',sl:'~',t:'c',c:'#',sc:'~'},{l:'Enter',t:'s',kc:0x28,f:1.5}],
+[{l:'Shift',t:'m',mod:'shift',bit:0x02,f:1.5},{l:'\\',sl:'|',t:'c',c:'\\',sc:'|'},{l:'z',sl:'Z',t:'c',c:'z',sc:'Z'},{l:'x',sl:'X',t:'c',c:'x',sc:'X'},{l:'c',sl:'C',t:'c',c:'c',sc:'C'},{l:'v',sl:'V',t:'c',c:'v',sc:'V'},{l:'b',sl:'B',t:'c',c:'b',sc:'B'},{l:'n',sl:'N',t:'c',c:'n',sc:'N'},{l:'m',sl:'M',t:'c',c:'m',sc:'M'},{l:',',sl:'<',t:'c',c:',',sc:'<'},{l:'.',sl:'>',t:'c',c:'.',sc:'>'},{l:'/',sl:'?',t:'c',c:'/',sc:'?'},{l:'Shift R',t:'m',mod:'rshift',bit:0x20,f:2}],
+[{l:'Ctrl',t:'m',mod:'ctrl',bit:0x01,f:1.2},{l:'Win',t:'m',mod:'win',bit:0x08,f:1.2},{l:'Alt',t:'m',mod:'alt',bit:0x04,f:1.2},{l:'',t:'c',c:' ',sc:' ',f:6},{l:'Alt R',t:'m',mod:'altgr',bit:0x40,f:1.2},{l:'Del',t:'s',kc:0x4C,f:1.2},{l:'\u2190',t:'s',kc:0x50},{l:'\u2191',t:'s',kc:0x52},{l:'\u2193',t:'s',kc:0x51},{l:'\u2192',t:'s',kc:0x4F}]
+]}};
+let currentLayout='us';
 
 let shift=false,capsLock=false,ctrl=false,alt=false,win=false,rshift=false,altgr=false;
 const modBtns={shift:[],ctrl:[],alt:[],win:[],rshift:[],altgr:[]};
 const charKeys=[];
 let capsBtn=null;
 
+let kbListenersBound=false;
 function buildKeyboard(){
   const kb=document.getElementById('keyboard');
-  ROWS.forEach((row,ri)=>{
+  kb.innerHTML='';
+  charKeys.length=0;
+  Object.keys(modBtns).forEach(m=>modBtns[m].length=0);
+  capsBtn=null;
+  const rows=(LAYOUTS[currentLayout]||LAYOUTS.us).ROWS;
+  rows.forEach((row,ri)=>{
     const rd=document.createElement('div');
     rd.className='row';
     row.forEach((k,ki)=>{
@@ -536,12 +562,19 @@ function buildKeyboard(){
       b.dataset.r=ri;b.dataset.k=ki;
       if(k.t==='c'&&k.sl)charKeys.push({btn:b,def:k});
       if(k.t==='m'&&modBtns[k.mod])modBtns[k.mod].push(b);
-      if(k.t==='caps')capsBtn=b;
+      if(k.t==='caps'){capsBtn=b;if(capsLock)b.classList.add('caps')}
       rd.appendChild(b);
     });
     kb.appendChild(rd);
   });
-  {let sx,sy,ok,ab;
+  Object.keys(modBtns).forEach(m=>{
+    const on=({shift,ctrl,alt,win,rshift,altgr})[m];
+    if(on)modBtns[m].forEach(b=>b.classList.add('active'));
+  });
+  updateLabels();
+  if(kbListenersBound)return;
+  kbListenersBound=true;
+  let sx,sy,ok,ab;
   kb.addEventListener('pointerdown',e=>{
     ab=e.target.closest('.k');if(!ab)return;
     sx=e.clientX;sy=e.clientY;ok=true;ab.classList.add('p');
@@ -549,11 +582,10 @@ function buildKeyboard(){
   kb.addEventListener('pointermove',e=>{if(ok&&(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy))>10){ok=false;if(ab)ab.classList.remove('p')}});
   kb.addEventListener('pointerup',e=>{
     if(ab)ab.classList.remove('p');
-    if(ok&&ab){const k=ROWS[+ab.dataset.r][+ab.dataset.k];onKey(k)}
+    if(ok&&ab){const rows=(LAYOUTS[currentLayout]||LAYOUTS.us).ROWS;const k=rows[+ab.dataset.r][+ab.dataset.k];onKey(k)}
     ok=false;ab=null;
   });
   kb.addEventListener('pointercancel',()=>{if(ab)ab.classList.remove('p');ok=false;ab=null});
-  }
 }
 
 function toggleMod(mod){
@@ -605,6 +637,36 @@ function onKey(k){
 }
 
 buildKeyboard();
+
+// ── Layout selector ──
+(function(){
+  const sel=document.getElementById('layoutSel');
+  function apply(id){
+    if(!LAYOUTS[id]){console.warn('Unknown layout',id);return}
+    if(id===currentLayout)return;
+    currentLayout=id;
+    buildKeyboard();
+  }
+  sel.addEventListener('change',()=>{
+    const id=sel.value;
+    fetch('/api/ble_keyboard/set_layout?'+new URLSearchParams({id}),{method:'POST'}).then(r=>{
+      if(r.ok)apply(id);else alert('Layout switch failed');
+    }).catch(()=>{});
+  });
+  // One-time fetch to populate the dropdown and pick up the active layout.
+  fetch('/api/ble_keyboard/status').then(r=>r.json()).then(d=>{
+    if(d.layouts){
+      sel.innerHTML='';
+      d.layouts.forEach(L=>{
+        const o=document.createElement('option');
+        o.value=L.id;o.textContent=L.name;
+        if(L.id===(d.layout||'us'))o.selected=true;
+        sel.appendChild(o);
+      });
+    }
+    if(d.layout&&LAYOUTS[d.layout])apply(d.layout);
+  }).catch(()=>{});
+})();
 
 // ── Mouse ──
 (function(){
@@ -879,7 +941,20 @@ class BleKbWebHandler : public AsyncWebHandler {
       json += kb_->is_paired() ? "true" : "false";
       json += ",\"device_name\":\"";
       json += kb_->device_name();
-      json += "\"}";
+      json += "\",\"layout\":\"";
+      json += kb_->active_layout_id();
+      json += "\",\"layouts\":[";
+      for (size_t i = 0; i < layout_count(); i++) {
+        const KeyboardLayout *lay = layout_at(i);
+        if (lay == nullptr) continue;
+        if (i > 0) json += ",";
+        json += "{\"id\":\"";
+        json += lay->id;
+        json += "\",\"name\":\"";
+        json += lay->display_name;
+        json += "\"}";
+      }
+      json += "]}";
       send_response(200, "application/json", json.c_str());
       return;
     }
@@ -1064,6 +1139,20 @@ class BleKbWebHandler : public AsyncWebHandler {
         send_response(404, "text/plain", "Invalid index");
       } else {
         send_response(200, "text/plain", "OK");
+      }
+
+    } else if (path == "set_layout") {
+      std::string id = request->hasArg("id") ? request->arg("id").c_str() : "";
+      if (id.empty()) {
+        send_response(400, "text/plain", "id required");
+      } else {
+        const KeyboardLayout *prev = kb_->active_layout();
+        kb_->set_runtime_layout(id);
+        if (kb_->active_layout() == prev && (prev == nullptr || id != prev->id)) {
+          send_response(400, "text/plain", "Unknown layout");
+        } else {
+          send_response(200, "text/plain", "OK");
+        }
       }
 
     } else if (path == "macro_delete") {

@@ -8,7 +8,8 @@ This is a custom ESPHome component that transforms an ESP32 into a Bluetooth Low
 * **Secure Pairing:** Supports a configurable 6-digit static passkey (PIN) for secure bonding on Windows and iOS. Android uses Just Works pairing (no PIN) due to HID compatibility limitations.
 * **Efficient Memory Usage:** Direct API implementation ensures stability even with complex ESPHome configurations.
 * **Key Combos:** Send any modifier + key combination using hex keycodes (e.g. Win+R, Ctrl+C).
-* **String Typing:** Type any string directly — all printable ASCII characters are supported (US keyboard layout).
+* **String Typing:** Type any string directly. The active **keyboard layout** (`us`, `uk`) controls how each character is mapped to HID keycodes. UK adds `£`, `¬`, `€` via UTF-8.
+* **Keyboard Layouts:** Choose `us` (default) or `uk` in YAML, or switch live from the web UI (persisted to NVS). Layout is fully extensible — see [Keyboard layouts](#keyboard-layouts).
 * **Pre-defined Actions:** Built-in helpers for `ctrl_alt_del`, `sleep`, `hibernate` and `shutdown`.
 * **Media Keys:** Control volume, playback, mute and more via HID consumer control.
 * **Power Button:** Native HID power/sleep signals — no Run dialog, clean OS-level control.
@@ -256,6 +257,7 @@ binary_sensor:
 * **mouse_max_speed** (Optional, float): Web mouse maximum sensitivity cap. Defaults to `4.0`. Range: 0.5–20.0.
 * **scroll_sensitivity** (Optional, float): Web mouse scroll speed multiplier. Defaults to `2.0`. Range: 0.1–10.0.
 * **custom_text_id** (Optional, ID or list of IDs): Link one or more ESPHome `text` entities for custom text input. Automatically registers a "Send" button in the web UI for each. Use `send_custom_text` or `send_custom_text:N` action to trigger.
+* **keyboard_layout** (Optional, string): Default keyboard layout. One of `us` (default), `uk`. Controls how `send_string` maps each character to USB HID keycodes — must match the *host's* keyboard layout. Can be overridden at runtime from the web UI (persisted to NVS, survives reboot). See [Keyboard layouts](#keyboard-layouts) below.
 * **hosts** (Optional, list): Per-slot passkey and pairing mode overrides. Each entry has:
   * **slot** (Required, int): Host slot number (0–9).
   * **passkey** (Optional, int): 6-digit PIN for this slot (000000–999999). If omitted, the slot uses the global `passkey` setting (or Just Works if no global passkey).
@@ -360,7 +362,7 @@ espidf_ble_keyboard:
 
 | Action | Description |
 |---|---|
-| `"Hello\n"` | Type a string. Use `\n` for Enter. All printable ASCII characters supported (US layout). |
+| `"Hello\n"` | Type a string. Use `\n` for Enter. Printable ASCII is supported on all layouts; non-ASCII (e.g. `£ ¬ €` on UK) is supported via UTF-8 when a layout exposes it. Characters with no layout mapping are silently skipped. |
 | `"combo:0x08:0x15"` | Send a key combination. Format: `combo:<modifier_hex>:<keycode_hex>`. Use `0x00` as modifier for no modifier key. See [Keycode Reference](docs/keycodes.md). |
 | `"combo:0x00:0x04"` | Send a plain keypress with no modifier. `0x04` = A, `0x05` = B ... `0x1D` = Z. |
 | `"consumer:0x0192"` | Send any HID consumer control code. Format: `consumer:<usage_hex>`. See [Keycode Reference](docs/keycodes.md) for full list. |
@@ -1007,7 +1009,50 @@ automation:
           entity_id: button.bluetooth_keyboard_send_custom_text
 ```
 
-> **Note:** All printable ASCII characters and tab are supported (US keyboard layout). Non-ASCII and control characters are silently skipped.
+> **Note:** Printable ASCII and Tab are supported on every layout. Non-ASCII characters work when they're part of the active layout's Unicode table (e.g. `£`, `¬`, `€` on `uk`). Unmapped characters and most control characters are silently skipped.
+
+---
+
+## Keyboard layouts
+
+The component supports multiple keyboard layouts. The active layout affects how characters in `send_string` are translated into USB HID `(modifier, keycode)` pairs. It **must match the host PC's keyboard setting** — typing `@` from the ESP under `us` while the host is set to UK produces `"`, since the host reinterprets the same physical key under its own layout.
+
+### Supported layouts
+
+| ID | Name | Notes |
+|---|---|---|
+| `us` | English (US) | Default. ANSI shape. |
+| `uk` | English (UK) | ISO shape. Adds `£`, `¬`, `€` via UTF-8 (AltGr for `€`). |
+
+### Setting the layout
+
+**YAML (default at boot):**
+
+```yaml
+espidf_ble_keyboard:
+  id: my_keyboard
+  device_name: "ESP32 BLE KB"
+  keyboard_layout: uk
+```
+
+**Web UI (overrides YAML, persisted to NVS):** open `http://<device-ip>/ble_keyboard` and use the layout dropdown in the Keyboard card header. The choice is saved and survives reboot. Erasing NVS reverts to the YAML default.
+
+### Adding a new layout
+
+The layout system is intentionally small. Adding a new layout (e.g. German QWERTZ) touches just three places:
+
+1. **`components/espidf_ble_keyboard/keyboard_layouts.cpp`** — add `HID_ASCII_MAP_DE[128]` + `UNICODE_MAP_DE[]` and append one entry to the `LAYOUTS[]` registry array.
+2. **`components/espidf_ble_keyboard/__init__.py`** — append `"de"` to `SUPPORTED_LAYOUTS`.
+3. **`components/espidf_ble_keyboard/web_control.cpp`** — append a `de: { ROWS: [...] }` entry to the JS `LAYOUTS` object.
+
+No header changes, no `send_string` changes, no NVS code changes. The web UI dropdown, `/api/ble_keyboard/status` JSON, and YAML validation pick the new layout up automatically.
+
+### Notes
+
+- Characters with no mapping in the active layout are skipped silently (a debug log is emitted).
+- A layout switch in the middle of a typing operation can't corrupt in-flight text — keystrokes are pre-resolved at enqueue time using whatever layout was active then.
+- `combo:` actions (raw HID `(modifier, keycode)` pairs) are layout-independent by design. Macros built from `combo:` keep working unchanged after a layout change.
+- The web "Keyboard" card visual reflects the active layout (US shows ANSI, UK shows ISO with the extra `\|` key, `£` on Shift+3, etc.).
 
 ---
 

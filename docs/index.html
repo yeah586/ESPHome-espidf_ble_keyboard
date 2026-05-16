@@ -368,6 +368,11 @@
       <p>Pair with up to 10 hosts and switch between them with a button press. Uses directed advertising for fast reconnection. Slots persist across reboots.</p>
     </div>
     <div class="feature">
+      <div class="feature-icon">🌍</div>
+      <h3>Keyboard Layouts</h3>
+      <p>Pick <code>us</code> or <code>uk</code> in YAML and switch live from the web UI (persisted to NVS). UK adds <code>£ ¬ €</code> via UTF-8. The architecture supports more layouts with three small additions per language.</p>
+    </div>
+    <div class="feature">
       <div class="feature-icon">🔧</div>
       <h3>Web Macros</h3>
       <p>Create, edit, and delete macro keys directly from the web UI — no reflash needed. Macros support multi-step commands separated by <code>|</code> with optional <code>delay:N</code> timing. Persist in NVS across reboots.</p>
@@ -396,6 +401,7 @@
   <span class="yaml-key">mouse_acceleration</span><span class="yaml-val">:</span> <span class="yaml-str">0.15</span>  <span class="yaml-comment"># optional, web mouse accel factor (default: 0.15)</span>
   <span class="yaml-key">mouse_max_speed</span><span class="yaml-val">:</span> <span class="yaml-str">4.0</span>  <span class="yaml-comment"># optional, web mouse max sensitivity (default: 4.0)</span>
   <span class="yaml-key">scroll_sensitivity</span><span class="yaml-val">:</span> <span class="yaml-str">2.0</span>  <span class="yaml-comment"># optional, web mouse scroll speed (default: 2.0)</span>
+  <span class="yaml-key">keyboard_layout</span><span class="yaml-val">:</span> <span class="yaml-str">us</span>  <span class="yaml-comment"># optional, us | uk — must match host PC layout (default: us)</span>
   <span class="yaml-key">custom_text_id</span><span class="yaml-val">:</span>        <span class="yaml-comment"># optional, link text entities for Send buttons</span>
     <span class="yaml-val">-</span> <span class="yaml-str">custom_text</span>
 
@@ -444,7 +450,7 @@
   <div class="actions-section">
     <table>
       <tr><th>Action</th><th>Description</th></tr>
-      <tr><td><code>"Hello\n"</code></td><td class="desc">Type a string. All printable ASCII supported (US layout). Use \n for Enter.</td></tr>
+      <tr><td><code>"Hello\n"</code></td><td class="desc">Type a string. Printable ASCII supported on every layout; non-ASCII (e.g. <code>£ ¬ €</code> on UK) works via UTF-8 when the active layout exposes it. Use \n for Enter.</td></tr>
       <tr><td><code>"combo:0x08:0x15"</code></td><td class="desc">Key combo — modifier + keycode in hex. Use <code>0x00</code> as modifier for a plain keypress. See keycode reference.</td></tr>
       <tr><td><code>type: combo</code></td><td class="desc">Dict format alternative — <code>type: combo</code>, <code>modifier: 0x01</code>, <code>key: 0x04</code>. More readable for complex actions.</td></tr>
       <tr><td><code>type: consumer</code></td><td class="desc">Dict format for consumer codes — <code>type: consumer</code>, <code>code: 0x0192</code>.</td></tr>

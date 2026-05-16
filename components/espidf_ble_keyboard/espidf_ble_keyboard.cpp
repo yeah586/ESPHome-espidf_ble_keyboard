@@ -98,97 +98,8 @@ static const uint8_t hid_report_map[] = {
     0xC0               // End Collection (Application)
 };
 
-// ── ASCII → USB HID Keycode Lookup Table (US keyboard layout) ───────────────
-struct HidKeyMapping {
-    uint8_t modifier;  // 0x00 = none, 0x02 = Left Shift
-    uint8_t keycode;   // USB HID keycode, 0x00 = unmapped
-};
-
-static const HidKeyMapping HID_ASCII_MAP[128] = {
-    // 0x00 - 0x07: control characters (unmapped)
-    {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00},
-    {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00},
-    // 0x08 - 0x0F
-    {0x00, 0x00}, // 0x08 BS
-    {0x00, 0x2B}, // 0x09 TAB
-    {0x00, 0x28}, // 0x0A LF (\n) → Enter
-    {0x00, 0x00}, // 0x0B VT
-    {0x00, 0x00}, // 0x0C FF
-    {0x00, 0x28}, // 0x0D CR (\r) → Enter
-    {0x00, 0x00}, // 0x0E
-    {0x00, 0x00}, // 0x0F
-    // 0x10 - 0x1F: control characters (unmapped)
-    {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00},
-    {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00},
-    {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00},
-    {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00}, {0x00, 0x00},
-    // 0x20 - 0x2F: space, punctuation, digits
-    {0x00, 0x2C}, // 0x20 ' ' Space
-    {0x02, 0x1E}, // 0x21 '!' Shift+1
-    {0x02, 0x34}, // 0x22 '"' Shift+'
-    {0x02, 0x20}, // 0x23 '#' Shift+3
-    {0x02, 0x21}, // 0x24 '$' Shift+4
-    {0x02, 0x22}, // 0x25 '%' Shift+5
-    {0x02, 0x24}, // 0x26 '&' Shift+7
-    {0x00, 0x34}, // 0x27 '\''
-    {0x02, 0x26}, // 0x28 '(' Shift+9
-    {0x02, 0x27}, // 0x29 ')' Shift+0
-    {0x02, 0x25}, // 0x2A '*' Shift+8
-    {0x02, 0x2E}, // 0x2B '+' Shift+=
-    {0x00, 0x36}, // 0x2C ','
-    {0x00, 0x2D}, // 0x2D '-'
-    {0x00, 0x37}, // 0x2E '.'
-    {0x00, 0x38}, // 0x2F '/'
-    // 0x30 - 0x39: digits 0-9
-    {0x00, 0x27}, // 0x30 '0'
-    {0x00, 0x1E}, // 0x31 '1'
-    {0x00, 0x1F}, // 0x32 '2'
-    {0x00, 0x20}, // 0x33 '3'
-    {0x00, 0x21}, // 0x34 '4'
-    {0x00, 0x22}, // 0x35 '5'
-    {0x00, 0x23}, // 0x36 '6'
-    {0x00, 0x24}, // 0x37 '7'
-    {0x00, 0x25}, // 0x38 '8'
-    {0x00, 0x26}, // 0x39 '9'
-    // 0x3A - 0x3F: punctuation
-    {0x02, 0x33}, // 0x3A ':' Shift+;
-    {0x00, 0x33}, // 0x3B ';'
-    {0x02, 0x36}, // 0x3C '<' Shift+,
-    {0x00, 0x2E}, // 0x3D '='
-    {0x02, 0x37}, // 0x3E '>' Shift+.
-    {0x02, 0x38}, // 0x3F '?' Shift+/
-    // 0x40: @
-    {0x02, 0x1F}, // 0x40 '@' Shift+2
-    // 0x41 - 0x5A: uppercase A-Z
-    {0x02, 0x04}, {0x02, 0x05}, {0x02, 0x06}, {0x02, 0x07},
-    {0x02, 0x08}, {0x02, 0x09}, {0x02, 0x0A}, {0x02, 0x0B},
-    {0x02, 0x0C}, {0x02, 0x0D}, {0x02, 0x0E}, {0x02, 0x0F},
-    {0x02, 0x10}, {0x02, 0x11}, {0x02, 0x12}, {0x02, 0x13},
-    {0x02, 0x14}, {0x02, 0x15}, {0x02, 0x16}, {0x02, 0x17},
-    {0x02, 0x18}, {0x02, 0x19}, {0x02, 0x1A}, {0x02, 0x1B},
-    {0x02, 0x1C}, {0x02, 0x1D},
-    // 0x5B - 0x60: punctuation
-    {0x00, 0x2F}, // 0x5B '['
-    {0x00, 0x31}, // 0x5C '\'
-    {0x00, 0x30}, // 0x5D ']'
-    {0x02, 0x23}, // 0x5E '^' Shift+6
-    {0x02, 0x2D}, // 0x5F '_' Shift+-
-    {0x00, 0x35}, // 0x60 '`'
-    // 0x61 - 0x7A: lowercase a-z
-    {0x00, 0x04}, {0x00, 0x05}, {0x00, 0x06}, {0x00, 0x07},
-    {0x00, 0x08}, {0x00, 0x09}, {0x00, 0x0A}, {0x00, 0x0B},
-    {0x00, 0x0C}, {0x00, 0x0D}, {0x00, 0x0E}, {0x00, 0x0F},
-    {0x00, 0x10}, {0x00, 0x11}, {0x00, 0x12}, {0x00, 0x13},
-    {0x00, 0x14}, {0x00, 0x15}, {0x00, 0x16}, {0x00, 0x17},
-    {0x00, 0x18}, {0x00, 0x19}, {0x00, 0x1A}, {0x00, 0x1B},
-    {0x00, 0x1C}, {0x00, 0x1D},
-    // 0x7B - 0x7F: punctuation + DEL
-    {0x02, 0x2F}, // 0x7B '{' Shift+[
-    {0x02, 0x31}, // 0x7C '|' Shift+'\'
-    {0x02, 0x30}, // 0x7D '}' Shift+]
-    {0x02, 0x35}, // 0x7E '~' Shift+`
-    {0x00, 0x00}, // 0x7F DEL (unmapped)
-};
+// Keyboard layout ASCII/Unicode tables live in keyboard_layouts.cpp.
+// The active layout is selected via active_layout_ (set from YAML and NVS).
 
 // ── Advertising Data ─────────────────────────────────────────────────────────
 static uint8_t raw_adv_data[] = {
@@ -1168,6 +1079,9 @@ void EspidfBleKeyboard::setup() {
     maybe_reset_bonds_after_security_config_change();
     load_host_slots_();
     load_macros_();
+    // Apply YAML default if no setter ran (defensive), then let NVS override.
+    if (active_layout_ == nullptr) active_layout_ = default_layout();
+    load_layout_();
     generate_slot_addrs_();
     if (active_host_sensor_ != nullptr)
         active_host_sensor_->publish_state(active_slot_);
@@ -1246,7 +1160,8 @@ void EspidfBleKeyboard::loop() {
     if (xSemaphoreTake(type_mutex_, 0) != pdTRUE) return;
     bool queue_empty = type_queue_.empty();
     bool key_up = type_key_up_pending_;
-    char c = (!queue_empty && !key_up) ? type_queue_[type_index_] : 0;
+    HidKeyMapping mapping{0, 0};
+    if (!queue_empty && !key_up) mapping = type_queue_[type_index_];
     xSemaphoreGive(type_mutex_);
 
     if (queue_empty) return;
@@ -1267,28 +1182,14 @@ void EspidfBleKeyboard::loop() {
         type_next_ms_ = now + half_delay;
         xSemaphoreGive(type_mutex_);
     } else {
-        // Send key-down for the current character.
-        if (c >= 0 && c <= 127) {
-            const auto &mapping = HID_ASCII_MAP[static_cast<uint8_t>(c)];
-            if (mapping.keycode != 0x00) {
-                report[0] = mapping.modifier;
-                report[2] = mapping.keycode;
-                // Retry next loop() if BLE stack queue is full.
-                if (send_keyboard_input_report(conn_id_, report, 8) != ESP_OK) return;
-                xSemaphoreTake(type_mutex_, portMAX_DELAY);
-                type_key_up_pending_ = true;
-                type_next_ms_ = now + half_delay;
-                xSemaphoreGive(type_mutex_);
-                return;
-            }
-        }
-        // Unsupported or unmapped character — skip it.
+        // Send key-down for the current keystroke. Layout resolution happened
+        // at enqueue time (see send_string), so unmapped chars never reach here.
+        report[0] = mapping.modifier;
+        report[2] = mapping.keycode;
+        if (send_keyboard_input_report(conn_id_, report, 8) != ESP_OK) return;
         xSemaphoreTake(type_mutex_, portMAX_DELAY);
-        type_index_++;
-        if (type_index_ >= type_queue_.size()) {
-            type_queue_.clear();
-            type_index_ = 0;
-        }
+        type_key_up_pending_ = true;
+        type_next_ms_ = now + half_delay;
         xSemaphoreGive(type_mutex_);
     }
 }
@@ -1336,6 +1237,57 @@ static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *rep
     return ret;
 }
 
+// Decode one UTF-8 codepoint starting at `bytes[i]`. Returns codepoint and
+// advances `i` past consumed bytes. Returns 0xFFFD on malformed input (and
+// advances by 1 byte to recover).
+static uint32_t decode_utf8_(const std::string &bytes, size_t &i) {
+    uint8_t b0 = static_cast<uint8_t>(bytes[i]);
+    if (b0 < 0x80) { i++; return b0; }
+    auto cont = [&](size_t off) -> int {
+        if (i + off >= bytes.size()) return -1;
+        uint8_t b = static_cast<uint8_t>(bytes[i + off]);
+        return ((b & 0xC0) == 0x80) ? (b & 0x3F) : -1;
+    };
+    if ((b0 & 0xE0) == 0xC0) {
+        int c1 = cont(1);
+        if (c1 < 0) { i++; return 0xFFFD; }
+        uint32_t cp = ((b0 & 0x1F) << 6) | c1;
+        i += 2;
+        return cp;
+    }
+    if ((b0 & 0xF0) == 0xE0) {
+        int c1 = cont(1), c2 = cont(2);
+        if (c1 < 0 || c2 < 0) { i++; return 0xFFFD; }
+        uint32_t cp = ((b0 & 0x0F) << 12) | (c1 << 6) | c2;
+        i += 3;
+        return cp;
+    }
+    if ((b0 & 0xF8) == 0xF0) {
+        int c1 = cont(1), c2 = cont(2), c3 = cont(3);
+        if (c1 < 0 || c2 < 0 || c3 < 0) { i++; return 0xFFFD; }
+        uint32_t cp = ((b0 & 0x07) << 18) | (c1 << 12) | (c2 << 6) | c3;
+        i += 4;
+        return cp;
+    }
+    i++;
+    return 0xFFFD;
+}
+
+// Resolve a Unicode codepoint to a (modifier, keycode) pair using the active
+// layout. Returns {0,0} if unmapped.
+static HidKeyMapping resolve_codepoint_(const KeyboardLayout *layout, uint32_t cp) {
+    if (layout == nullptr) return {0, 0};
+    if (cp < 128) {
+        return layout->ascii_map[cp];
+    }
+    for (size_t i = 0; i < layout->unicode_map_len; i++) {
+        if (layout->unicode_map[i].codepoint == cp) {
+            return {layout->unicode_map[i].modifier, layout->unicode_map[i].keycode};
+        }
+    }
+    return {0, 0};
+}
+
 void EspidfBleKeyboard::send_string(const std::string &str) {
     // Dedup: ESPHome API can deliver the same service call twice within ~5ms
     uint32_t now = millis();
@@ -1346,13 +1298,77 @@ void EspidfBleKeyboard::send_string(const std::string &str) {
     last_send_string_ = str;
     last_send_string_ms_ = now;
 
-    ESP_LOGD(TAG, "send_string: \"%s\" (len=%u, queue=%u)",
-             str.c_str(), str.size(), type_queue_.size());
-    // Non-blocking: append to queue; loop() drains it one keystroke at a time.
     if (type_mutex_ == nullptr) return;
+    if (active_layout_ == nullptr) active_layout_ = default_layout();
+
+    // Pre-resolve keystrokes now so a mid-type layout switch can't garble what
+    // was already queued. Skip unmapped codepoints rather than queuing zeros.
+    std::vector<HidKeyMapping> strokes;
+    strokes.reserve(str.size());
+    size_t i = 0;
+    while (i < str.size()) {
+        uint32_t cp = decode_utf8_(str, i);
+        HidKeyMapping m = resolve_codepoint_(active_layout_, cp);
+        if (m.keycode != 0x00) {
+            strokes.push_back(m);
+        } else {
+            ESP_LOGD(TAG, "send_string: skipped unmapped codepoint U+%04X", cp);
+        }
+    }
+
+    ESP_LOGD(TAG, "send_string: \"%s\" (len=%u, strokes=%u, queue=%u, layout=%s)",
+             str.c_str(), str.size(), strokes.size(), type_queue_.size(),
+             active_layout_->id);
+
     xSemaphoreTake(type_mutex_, portMAX_DELAY);
-    type_queue_ += str;
+    type_queue_.insert(type_queue_.end(), strokes.begin(), strokes.end());
     xSemaphoreGive(type_mutex_);
+}
+
+// ── Keyboard layout: setters + NVS persistence ──────────────────────────────
+
+void EspidfBleKeyboard::set_keyboard_layout(const std::string &id) {
+    yaml_layout_id_ = id;
+    const KeyboardLayout *lay = get_layout_by_id(id.c_str());
+    active_layout_ = lay != nullptr ? lay : default_layout();
+    ESP_LOGI(TAG, "Keyboard layout (YAML default): %s", active_layout_->id);
+}
+
+void EspidfBleKeyboard::set_runtime_layout(const std::string &id) {
+    const KeyboardLayout *lay = get_layout_by_id(id.c_str());
+    if (lay == nullptr) {
+        ESP_LOGW(TAG, "Unknown keyboard layout '%s' — ignoring", id.c_str());
+        return;
+    }
+    active_layout_ = lay;
+    save_layout_(id);
+    ESP_LOGI(TAG, "Keyboard layout (runtime): %s", active_layout_->id);
+}
+
+void EspidfBleKeyboard::load_layout_() {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+    char buf[16];
+    size_t len = sizeof(buf);
+    if (nvs_get_str(handle, "layout", buf, &len) == ESP_OK) {
+        const KeyboardLayout *lay = get_layout_by_id(buf);
+        if (lay != nullptr) {
+            active_layout_ = lay;
+            ESP_LOGI(TAG, "Keyboard layout from NVS: %s", active_layout_->id);
+        } else {
+            ESP_LOGW(TAG, "NVS layout '%s' unknown; keeping YAML default '%s'",
+                     buf, active_layout_ != nullptr ? active_layout_->id : "us");
+        }
+    }
+    nvs_close(handle);
+}
+
+void EspidfBleKeyboard::save_layout_(const std::string &id) {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+    nvs_set_str(handle, "layout", id.c_str());
+    nvs_commit(handle);
+    nvs_close(handle);
 }
 
 void EspidfBleKeyboard::send_key_combo(uint8_t modifiers, uint8_t keycode) {

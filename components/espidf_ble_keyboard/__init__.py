@@ -20,8 +20,13 @@ CONF_SCROLL_SENSITIVITY = "scroll_sensitivity"
 CONF_HOSTS = "hosts"
 CONF_SLOT = "slot"
 CONF_CUSTOM_TEXT_ID = "custom_text_id"
+CONF_KEYBOARD_LAYOUT = "keyboard_layout"
 PASSKEY_MODE_LEGACY = "legacy"
 PASSKEY_MODE_SECURE_CONNECTIONS = "secure_connections"
+
+# To add a layout: register it in keyboard_layouts.cpp, add its id JS rows in
+# web_control.cpp, then append the id here.
+SUPPORTED_LAYOUTS = ["us", "uk"]
 
 espidf_ble_keyboard_ns = cg.esphome_ns.namespace("espidf_ble_keyboard")
 EspidfBleKeyboard = espidf_ble_keyboard_ns.class_("EspidfBleKeyboard", cg.Component)
@@ -72,6 +77,7 @@ CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_MOUSE_ACCEL, default=0.15): cv.float_range(min=0.0, max=2.0),
         cv.Optional(CONF_MOUSE_MAX_SPEED, default=4.0): cv.float_range(min=0.5, max=20.0),
         cv.Optional(CONF_SCROLL_SENSITIVITY, default=2.0): cv.float_range(min=0.1, max=10.0),
+        cv.Optional(CONF_KEYBOARD_LAYOUT, default="us"): cv.one_of(*SUPPORTED_LAYOUTS, lower=True),
         cv.Optional(CONF_CUSTOM_TEXT_ID): cv.ensure_list(cv.use_id(cg.EntityBase)),
         cv.Optional(CONF_HOST_SLOTS, default=4): cv.int_range(min=1, max=10),
         cv.Optional(CONF_HOSTS): cv.All(cv.ensure_list(HOST_SCHEMA)),
@@ -107,6 +113,7 @@ async def to_code(config):
     cg.add(var.set_mouse_accel(config[CONF_MOUSE_ACCEL]))
     cg.add(var.set_mouse_max_speed(config[CONF_MOUSE_MAX_SPEED]))
     cg.add(var.set_scroll_sensitivity(config[CONF_SCROLL_SENSITIVITY]))
+    cg.add(var.set_keyboard_layout(config[CONF_KEYBOARD_LAYOUT]))
 
     if CONF_HOSTS in config:
         for host in config[CONF_HOSTS]:

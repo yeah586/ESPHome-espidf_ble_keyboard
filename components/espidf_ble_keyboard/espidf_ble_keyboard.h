@@ -29,6 +29,31 @@ namespace espidf_ble_keyboard {
 // Maximum number of host slots for multi-host switching
 static const uint8_t MAX_HOST_SLOTS = 10;
 
+// ── Keyboard layout abstraction ──────────────────────────────────────────────
+struct HidKeyMapping {
+  uint8_t modifier;  // 0x00 none, 0x02 LShift, 0x40 RAlt/AltGr, etc.
+  uint8_t keycode;   // USB HID usage; 0x00 = unmapped
+};
+
+struct UnicodeKeyMapping {
+  uint32_t codepoint;
+  uint8_t modifier;
+  uint8_t keycode;
+};
+
+struct KeyboardLayout {
+  const char *id;                        // "us", "uk", ...
+  const char *display_name;              // "English (US)"
+  const HidKeyMapping *ascii_map;        // 128 entries
+  const UnicodeKeyMapping *unicode_map;  // may be nullptr if unicode_map_len == 0
+  size_t unicode_map_len;
+};
+
+const KeyboardLayout *get_layout_by_id(const char *id);
+const KeyboardLayout *default_layout();
+size_t layout_count();
+const KeyboardLayout *layout_at(size_t i);
+
 class EspidfBleKeyboard : public Component {
  public:
   void setup() override;
@@ -70,6 +95,12 @@ class EspidfBleKeyboard : public Component {
 
   void set_web_control(bool enabled) { web_control_enabled_ = enabled; }
   void set_host_slots(uint8_t slots) { host_slots_ = slots > MAX_HOST_SLOTS ? MAX_HOST_SLOTS : slots; }
+
+  // Keyboard layout
+  void set_keyboard_layout(const std::string &id);      // YAML default
+  void set_runtime_layout(const std::string &id);       // web UI; persists to NVS
+  const KeyboardLayout *active_layout() const { return active_layout_; }
+  const char *active_layout_id() const { return active_layout_ != nullptr ? active_layout_->id : "us"; }
 
   // Web mouse sensitivity
   void set_mouse_sensitivity(float s) { mouse_sensitivity_ = s; }
@@ -235,9 +266,17 @@ class EspidfBleKeyboard : public Component {
   std::vector<std::function<void(int8_t)>> rssi_above_callbacks_;
   std::vector<std::function<void(int8_t)>> rssi_below_callbacks_;
 
+  // Keyboard layout state
+  const KeyboardLayout *active_layout_{nullptr};
+  std::string yaml_layout_id_{"us"};
+  void load_layout_();
+  void save_layout_(const std::string &id);
+
   // Non-blocking string typing state machine (driven from loop())
+  // Keystrokes are pre-resolved (UTF-8 decoded + layout-mapped) at enqueue time,
+  // so a mid-type layout switch can't garble already-queued text.
   SemaphoreHandle_t type_mutex_{nullptr};
-  std::string type_queue_;
+  std::vector<HidKeyMapping> type_queue_;
   size_t type_index_{0};
   bool type_key_up_pending_{false};
   uint32_t type_next_ms_{0};
