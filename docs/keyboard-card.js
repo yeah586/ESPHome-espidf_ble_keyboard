@@ -187,7 +187,7 @@ uk: { name: 'English (UK)', ROWS: [
     { label: '=', shiftLabel: '+', type: 'char', char: '=', shiftChar: '+' },
     { label: 'Bksp', type: 'special', keycode: 0x2A, flex: 1.5 },
   ],
-  // QWERTY row \u2014 UK has 13 keys (no \| at the end; that key moves to shift row)
+  // QWERTY row \u2014 UK: ends with top portion of L-Enter (sends same Enter keycode)
   [
     { label: 'Tab', type: 'special', keycode: 0x2B, flex: 1.3 },
     { label: 'q', shiftLabel: 'Q', type: 'char', char: 'q', shiftChar: 'Q' },
@@ -202,6 +202,7 @@ uk: { name: 'English (UK)', ROWS: [
     { label: 'p', shiftLabel: 'P', type: 'char', char: 'p', shiftChar: 'P' },
     { label: '[', shiftLabel: '{', type: 'char', char: '[', shiftChar: '{' },
     { label: ']', shiftLabel: '}', type: 'char', char: ']', shiftChar: '}' },
+    { label: 'Enter', type: 'special', keycode: 0x28, flex: 1.5 },
   ],
   // Home row \u2014 UK adds #/~ between '@ and Enter; Shift+' = @
   [
@@ -218,11 +219,11 @@ uk: { name: 'English (UK)', ROWS: [
     { label: ';', shiftLabel: ':', type: 'char', char: ';', shiftChar: ':' },
     { label: "'", shiftLabel: '@', type: 'char', char: "'", shiftChar: '@' },
     { label: '#', shiftLabel: '~', type: 'char', char: '#', shiftChar: '~' },
-    { label: 'Enter', type: 'special', keycode: 0x28, flex: 1.5 },
+    { label: 'Enter', type: 'special', keycode: 0x28, flex: 1.8 },
   ],
-  // Shift row \u2014 UK adds the ISO \| key between LShift and Z
+  // Shift row \u2014 UK adds the ISO \| key between LShift and Z; narrower LShift, wider RShift
   [
-    { label: 'Shift', type: 'modifier', mod: 'shift', bit: 0x02, flex: 1.5 },
+    { label: 'Shift', type: 'modifier', mod: 'shift', bit: 0x02, flex: 1.25 },
     { label: '\\', shiftLabel: '|', type: 'char', char: '\\', shiftChar: '|' },
     { label: 'z', shiftLabel: 'Z', type: 'char', char: 'z', shiftChar: 'Z' },
     { label: 'x', shiftLabel: 'X', type: 'char', char: 'x', shiftChar: 'X' },
@@ -234,7 +235,7 @@ uk: { name: 'English (UK)', ROWS: [
     { label: ',', shiftLabel: '<', type: 'char', char: ',', shiftChar: '<' },
     { label: '.', shiftLabel: '>', type: 'char', char: '.', shiftChar: '>' },
     { label: '/', shiftLabel: '?', type: 'char', char: '/', shiftChar: '?' },
-    { label: 'Shift R', type: 'modifier', mod: 'rshift', bit: 0x20, flex: 2 },
+    { label: 'Shift R', type: 'modifier', mod: 'rshift', bit: 0x20, flex: 2.75 },
   ],
   // Bottom row
   [
