@@ -106,14 +106,16 @@ espidf_ble_keyboard:
   # Optional: link text entities for custom text input (shows Send button in web UI)
   custom_text_id:
     - custom_text
-  # Optional: per-slot passkey and pairing mode overrides
+  # Optional: per-slot passkey, pairing mode, and keyboard layout
   hosts:
     - slot: 0
       passkey: 111111
       passkey_mode: legacy
+      layout: us           # auto-apply this layout whenever slot 0 becomes active
     - slot: 1
       passkey: 222222
       passkey_mode: legacy
+      layout: uk           # ...and this one for slot 1
     - slot: 2
       passkey_mode: legacy
     - slot: 3
@@ -1047,6 +1049,19 @@ espidf_ble_keyboard:
 ```
 
 **Web UI (overrides YAML, persisted to NVS):** open `http://<device-ip>/ble_keyboard` and use the layout dropdown in the Keyboard card header. The choice is saved and survives reboot. Erasing NVS reverts to the YAML default.
+
+**Per host slot (YAML, auto-applied on switch):** add `layout:` to any entry in the `hosts:` list to bind a layout to that slot. When you switch to that host (via service, button, or web UI), the device flips to its layout automatically. This is ephemeral — it does not overwrite a manual web-UI pick in NVS, and switching to a slot with no `layout:` keeps whatever was active.
+
+```yaml
+espidf_ble_keyboard:
+  id: my_keyboard
+  host_slots: 4
+  hosts:
+    - slot: 0
+      layout: us
+    - slot: 1
+      layout: uk
+```
 
 ### Matching the host's layout
 

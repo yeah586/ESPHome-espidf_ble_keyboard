@@ -98,7 +98,7 @@ class EspidfBleKeyboard : public Component {
 
   // Keyboard layout
   void set_keyboard_layout(const std::string &id);      // YAML default
-  void set_runtime_layout(const std::string &id);       // web UI; persists to NVS
+  void set_runtime_layout(const std::string &id, bool persist = true);  // web UI persists; slot-driven does not
   const KeyboardLayout *active_layout() const { return active_layout_; }
   const char *active_layout_id() const { return active_layout_ != nullptr ? active_layout_->id : "us"; }
 
@@ -198,6 +198,11 @@ class EspidfBleKeyboard : public Component {
   bool get_active_slot_passkey(bool &has_passkey, uint32_t &passkey, bool &secure_connections) const;
   const HostSlotConfig &get_host_slot_config(uint8_t slot) const { return host_slot_configs_[slot]; }
 
+  void set_host_slot_layout(uint8_t slot, const std::string &id) {
+    if (slot < MAX_HOST_SLOTS) slot_layout_id_[slot] = id;
+  }
+  const std::string &get_host_slot_layout(uint8_t slot) const { return slot_layout_id_[slot]; }
+
   // Custom text entities
 #ifdef USE_TEXT
   void add_custom_text(text::Text *t) { custom_texts_.push_back(t); }
@@ -251,6 +256,7 @@ class EspidfBleKeyboard : public Component {
   uint8_t active_slot_{0};
   HostSlot hosts_[MAX_HOST_SLOTS];
   HostSlotConfig host_slot_configs_[MAX_HOST_SLOTS]{};
+  std::string slot_layout_id_[MAX_HOST_SLOTS]{};  // YAML per-slot layout; empty = no override
   esp_bd_addr_t slot_addrs_[MAX_HOST_SLOTS]{};  // per-slot random BLE address
   void load_host_slots_();
   void generate_slot_addrs_();

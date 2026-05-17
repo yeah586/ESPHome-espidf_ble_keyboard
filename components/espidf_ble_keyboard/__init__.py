@@ -21,6 +21,7 @@ CONF_HOSTS = "hosts"
 CONF_SLOT = "slot"
 CONF_CUSTOM_TEXT_ID = "custom_text_id"
 CONF_KEYBOARD_LAYOUT = "keyboard_layout"
+CONF_LAYOUT = "layout"
 PASSKEY_MODE_LEGACY = "legacy"
 PASSKEY_MODE_SECURE_CONNECTIONS = "secure_connections"
 
@@ -59,6 +60,7 @@ HOST_SCHEMA = cv.Schema({
         PASSKEY_MODE_SECURE_CONNECTIONS,
         lower=True,
     ),
+    cv.Optional(CONF_LAYOUT): cv.one_of(*SUPPORTED_LAYOUTS, lower=True),
 })
 
 CONFIG_SCHEMA = cv.All(
@@ -120,6 +122,8 @@ async def to_code(config):
             if CONF_PASSKEY in host:
                 sc = host[CONF_PASSKEY_MODE] == PASSKEY_MODE_SECURE_CONNECTIONS
                 cg.add(var.set_host_slot_passkey(host[CONF_SLOT], host[CONF_PASSKEY], sc))
+            if CONF_LAYOUT in host:
+                cg.add(var.set_host_slot_layout(host[CONF_SLOT], host[CONF_LAYOUT]))
 
     if CONF_CUSTOM_TEXT_ID in config:
         cg.add_define("USE_TEXT")

@@ -987,6 +987,9 @@ void EspidfBleKeyboard::switch_host(uint8_t slot) {
     get_active_slot_passkey(slot_has_pk, slot_pk, slot_sc);
     apply_security_params(slot_has_pk);
 
+    // Apply per-slot keyboard layout (ephemeral; does not overwrite the web UI's NVS choice).
+    if (!slot_layout_id_[slot].empty()) set_runtime_layout(slot_layout_id_[slot], false);
+
     ESP_LOGI(TAG, "Switching to host slot %u", slot);
 
     if (hosts_[slot].occupied) {
@@ -1082,6 +1085,10 @@ void EspidfBleKeyboard::setup() {
     // Apply YAML default if no setter ran (defensive), then let NVS override.
     if (active_layout_ == nullptr) active_layout_ = default_layout();
     load_layout_();
+    // Boot slot has a configured per-slot layout — apply ephemerally so it wins over the NVS default
+    // until the user manually picks something in the web UI for this slot.
+    if (!slot_layout_id_[active_slot_].empty())
+        set_runtime_layout(slot_layout_id_[active_slot_], false);
     generate_slot_addrs_();
     if (active_host_sensor_ != nullptr)
         active_host_sensor_->publish_state(active_slot_);
@@ -1334,15 +1341,15 @@ void EspidfBleKeyboard::set_keyboard_layout(const std::string &id) {
     ESP_LOGI(TAG, "Keyboard layout (YAML default): %s", active_layout_->id);
 }
 
-void EspidfBleKeyboard::set_runtime_layout(const std::string &id) {
+void EspidfBleKeyboard::set_runtime_layout(const std::string &id, bool persist) {
     const KeyboardLayout *lay = get_layout_by_id(id.c_str());
     if (lay == nullptr) {
         ESP_LOGW(TAG, "Unknown keyboard layout '%s' — ignoring", id.c_str());
         return;
     }
     active_layout_ = lay;
-    save_layout_(id);
-    ESP_LOGI(TAG, "Keyboard layout (runtime): %s", active_layout_->id);
+    if (persist) save_layout_(id);
+    ESP_LOGI(TAG, "Keyboard layout (runtime%s): %s", persist ? "" : ", ephemeral", active_layout_->id);
 }
 
 void EspidfBleKeyboard::load_layout_() {
