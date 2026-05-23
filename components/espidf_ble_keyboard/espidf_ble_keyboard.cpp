@@ -773,7 +773,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             if ((param->write.handle == s_hid_output_report_handle || param->write.handle == s_boot_kb_output_handle) &&
                 param->write.len > 0) {
                 ESP_LOGD(TAG, "GATTS: Keyboard LED report 0x%02X", param->write.value[0]);
-                s_instance->queue_led_state(param->write.value[0]);
+                if (s_instance) s_instance->queue_led_state(param->write.value[0]);
             }
             break;
         default:
