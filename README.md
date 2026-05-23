@@ -828,7 +828,7 @@ type: custom:ble-keyboard-card
 device: bluetooth_keyboard
 name: Living Room Keyboard    # card title (auto-detected from HA if omitted)
 show_fkeys: true             # hide F1-F12 row (default: true)
-layout: us                    # us (default) or uk — match the ESP's keyboard_layout
+layout: us                    # us (default), uk, or de — match the ESP's keyboard_layout
 host_slots: 4                 # show host switcher bar (default: 0 = hidden)
 host_names:                   # custom names for each slot (optional)
   - TV
