@@ -50,7 +50,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .row{display:flex;gap:3px;margin-bottom:3px}
 .row:last-child{margin-bottom:0}
 .k{flex:1;min-width:0;padding:9px 1px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .08s;outline:none;-webkit-tap-highlight-color:transparent;position:relative}
-.k[data-al]::after{content:attr(data-al);position:absolute;bottom:1px;right:3px;font-size:9px;opacity:.55;pointer-events:none}
+.k[data-al]::after{content:attr(data-al);position:absolute;bottom:1px;right:3px;font-size:10px;opacity:.55;pointer-events:none}
 .k:focus,.k:focus-visible{outline:none}
 .k:active,.k.p{background:var(--active);color:#fff;border-color:var(--active)}
 .k.active{background:var(--active);color:#fff;border-color:var(--active)}

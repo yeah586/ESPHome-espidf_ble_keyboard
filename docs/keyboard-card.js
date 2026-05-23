@@ -466,7 +466,7 @@ class BleKeyboardCard extends HTMLElement {
         position: absolute;
         bottom: 1px;
         right: 4px;
-        font-size: 9px;
+        font-size: 10px;
         opacity: 0.55;
         pointer-events: none;
       }
