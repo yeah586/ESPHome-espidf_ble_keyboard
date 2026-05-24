@@ -1,0 +1,21 @@
+ESPHome BLE Keyboard — send_string character test strings
+==========================================================
+Copy the test line for your active keyboard_layout and pass it to send_string.
+Every character on the line is reachable by send_string without modifier toggling.
+
+=== US Layout (95 chars) ===
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+
+=== UK Layout (98 chars) ===
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~£¬€
+
+=== DE Layout (117 chars) ===
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~äöüÄÖÜß§°€µ²³´@[]{}\|~
+
+Notes
+-----
+US  : full printable ASCII (0x20–0x7E).
+UK  : US + £ (Shift+3)  ¬ (AltGr+`)  € (AltGr+4).
+DE  : US + umlauts/special chars (äöüÄÖÜß§°€µ²³´) + AltGr symbols (@[]{}\\|~).
+      send_string resolves all DE characters via UTF-8 lookup — the AltGr modifier
+      is handled internally; no manual modifier toggle is needed.
