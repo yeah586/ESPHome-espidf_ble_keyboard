@@ -262,6 +262,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="string:">Type Text</option>
 <option value="delay:100">Delay 100ms</option>
 <option value="delay:500">Delay 500ms</option>
+<option value="mouse_abs:0:0">Cursor Top-Left</option>
+<option value="mouse_abs:50:50">Cursor Center</option>
+<option value="mouse_abs:100:100">Cursor Bottom-Right</option>
+<option value="mouse_abs_px:960:540">Cursor to px (edit x:y)</option>
+<option value="mouse_abs_mon:0:50:50">Cursor in Monitor (edit)</option>
+<option value="mouse_abs_save">Save Cursor Pos</option>
+<option value="mouse_abs_restore">Restore Cursor Pos</option>
 </optgroup>
 </select>
 <button id="macro-save">+ Add</button>

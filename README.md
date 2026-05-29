@@ -1124,6 +1124,46 @@ button:
             id(my_keyboard).execute_action("combo:2:6 | delay:100 | combo:2:25");
 ```
 
+### Triggering Macros from Home Assistant
+
+Web macros are created at runtime (stored in NVS), so they don't appear as individual Home Assistant entities — ESPHome entities are fixed at compile time. To reach them from HA, expose API services that call `execute_macro(index)` or `execute_action("...")`:
+
+```yaml
+api:
+  services:
+    # Run a stored web macro by its index ([0], [1], … shown in the web UI)
+    - service: run_macro
+      variables:
+        index: int
+      then:
+        - lambda: |-
+            id(my_keyboard).execute_macro(index);
+
+    # Run any action string directly (single or multi-step with "|")
+    - service: run_action
+      variables:
+        action: string
+      then:
+        - lambda: |-
+            id(my_keyboard).execute_action(action);
+```
+
+Then call them from a HA automation, script, or **Developer Tools → Actions**:
+
+```yaml
+# Run web macro #0
+action: esphome.<device_name>_run_macro
+data:
+  index: 0
+
+# Or run an ad-hoc action string (no stored macro needed)
+action: esphome.<device_name>_run_action
+data:
+  action: "mouse_abs_save | mouse_abs:0:0 | left_click | mouse_abs_restore"
+```
+
+> **Tip:** For a permanent, *named* clickable button in HA, define a `button:` platform entry instead (those auto-appear in HA and accept the same action strings, including multi-step). Web macros are best for ad-hoc, web-managed actions reached via `run_macro` / `run_action`.
+
 ### Macro REST API
 
 | Method | Endpoint | Parameters | Description |
