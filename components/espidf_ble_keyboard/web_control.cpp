@@ -138,6 +138,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="section-toggles" id="toggle-bar">
 <button class="toggle-btn on" data-section="keyboard">Keyboard</button>
 <button class="toggle-btn on" data-section="mouse-card">Mouse</button>
+<button class="toggle-btn on" data-section="finder-card">Finder</button>
 <button class="toggle-btn on" data-section="media-card">Remote</button>
 <button class="toggle-btn on" data-section="btns-card">Buttons</button>
 <button class="toggle-btn on" data-section="macros-card">Macros</button>
@@ -168,6 +169,17 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="scroll-row">
 <button class="sbtn" id="su">&#9650; Up</button>
 <button class="sbtn" id="sd">&#9660; Down</button>
+</div>
+</div>
+
+<div class="card" id="finder-card">
+<h2><svg viewBox="0 0 24 24"><path d="M11 2h2v6h-2zM2 11h6v2H2zm14 0h6v2h-6zm-5 5h2v6h-2zM7 7l3 3-1.4 1.4L5.6 8.4zm10 0l1.4 1.4-3 3L14 11zm0 10l-3-3 1.4-1.4 3 3zM7 17l-1.4-1.4 3-3L10 14z"/></svg>Position Finder</h2>
+<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Tap the map &mdash; the cursor jumps there. Copy the value into a button or macro.</div>
+<div id="finder-map" style="position:relative;width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:crosshair;touch-action:none"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+<code id="finder-val" style="font-size:14px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg)">mouse_abs:50.00:50.00</code>
+<button class="mbtn" id="finder-copy" style="flex:0 0 auto">Copy</button>
+<span id="finder-info" style="font-size:12px;color:var(--muted)"></span>
 </div>
 </div>
 
@@ -836,6 +848,59 @@ buildKeyboard();
   }
 })();
 
+// ── Position Finder ──
+(function(){
+  const map=document.getElementById('finder-map');
+  if(!map)return;
+  const val=document.getElementById('finder-val');
+  const info=document.getElementById('finder-info');
+  const copyBtn=document.getElementById('finder-copy');
+  let SW=1920,SH=1080,mons=[],lastW=-1;
+  function draw(){
+    const w=map.clientWidth||300;lastW=w;
+    map.style.height=Math.max(60,Math.round(w*SH/SW))+'px';
+    map.innerHTML='';
+    mons.forEach((m,i)=>{
+      const d=document.createElement('div');
+      d.style.cssText='position:absolute;box-sizing:border-box;border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);opacity:.85';
+      d.style.left=(m.x/SW*100)+'%';d.style.top=(m.y/SH*100)+'%';
+      d.style.width=(m.w/SW*100)+'%';d.style.height=(m.h/SH*100)+'%';
+      d.textContent=i;map.appendChild(d);
+    });
+    const mk=document.createElement('div');
+    mk.id='finder-marker';
+    mk.style.cssText='position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#e44;box-shadow:0 0 0 2px #fff;pointer-events:none;display:none';
+    map.appendChild(mk);
+  }
+  function load(){
+    fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
+      SW=d.w||1920;SH=d.h||1080;mons=d.mon||[];draw();
+    }).catch(()=>draw());
+  }
+  function pick(e){
+    const r=map.getBoundingClientRect();
+    let px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
+    px=Math.max(0,Math.min(1,px));py=Math.max(0,Math.min(1,py));
+    const xp=(px*100).toFixed(2),yp=(py*100).toFixed(2);
+    val.textContent='mouse_abs:'+xp+':'+yp;
+    const mk=document.getElementById('finder-marker');
+    if(mk){mk.style.display='';mk.style.left=(px*100)+'%';mk.style.top=(py*100)+'%'}
+    const gx=px*SW,gy=py*SH;let extra='';
+    for(let i=0;i<mons.length;i++){const m=mons[i];if(gx>=m.x&&gx<m.x+m.w&&gy>=m.y&&gy<m.y+m.h){const mx=((gx-m.x)/m.w*100).toFixed(1),my=((gy-m.y)/m.h*100).toFixed(1);extra=' · mon '+i+' → mouse_abs_mon:'+i+':'+mx+':'+my;break}}
+    info.textContent=Math.round(gx)+','+Math.round(gy)+' px'+extra;
+    api('mouse_abs',{x:xp,y:yp});
+  }
+  map.addEventListener('pointerdown',pick);
+  map.addEventListener('pointermove',e=>{if(e.buttons&1)pick(e)});
+  copyBtn.addEventListener('click',()=>{
+    if(navigator.clipboard)navigator.clipboard.writeText(val.textContent).catch(()=>{});
+    copyBtn.textContent='Copied';setTimeout(()=>copyBtn.textContent='Copy',1200);
+  });
+  if(window.ResizeObserver){new ResizeObserver(()=>{if(map.clientWidth!==lastW)draw()}).observe(map)}
+  else{window.addEventListener('resize',draw)}
+  load();
+})();
+
 // ── Section Toggles + Drag Reorder ──
 (function(){
   const bar=document.getElementById('toggle-bar');
@@ -1074,6 +1139,23 @@ class BleKbWebHandler : public AsyncWebHandler {
                kb_->mouse_sensitivity(), kb_->mouse_accel(),
                kb_->mouse_max_speed(), kb_->scroll_sensitivity());
       send_response(200, "application/json", buf);
+      return;
+    }
+
+    if (path == "screen") {
+      // Absolute-pointer geometry for the web Position Finder.
+      std::string json = "{\"w\":" + std::to_string(kb_->screen_width()) +
+                         ",\"h\":" + std::to_string(kb_->screen_height()) + ",\"mon\":[";
+      const auto &mons = kb_->get_monitors();
+      for (size_t i = 0; i < mons.size(); i++) {
+        if (i) json += ",";
+        json += "{\"x\":" + std::to_string(mons[i].x) +
+                ",\"y\":" + std::to_string(mons[i].y) +
+                ",\"w\":" + std::to_string(mons[i].width) +
+                ",\"h\":" + std::to_string(mons[i].height) + "}";
+      }
+      json += "]}";
+      send_response(200, "application/json", json.c_str());
       return;
     }
 

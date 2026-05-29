@@ -121,6 +121,9 @@ class EspidfBleKeyboard : public Component {
   void add_monitor(int32_t x, int32_t y, uint32_t w, uint32_t h) {
     monitors_.push_back({x, y, w, h});
   }
+  uint32_t screen_width() const { return screen_w_; }
+  uint32_t screen_height() const { return screen_h_; }
+  const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
   float mouse_sensitivity() const { return mouse_sensitivity_; }
   float mouse_accel() const { return mouse_accel_; }
   float mouse_max_speed() const { return mouse_max_speed_; }
