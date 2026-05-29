@@ -336,7 +336,7 @@
     <div class="feature">
       <div class="feature-icon">🖱️</div>
       <h3>Mouse Control</h3>
-      <p>Left, right and middle click, cursor movement, and scroll wheel via HID mouse reports. Drive from buttons or automations.</p>
+      <p>Left, right and middle click, relative movement, and scroll wheel via HID mouse reports — plus absolute positioning to move the cursor to an exact spot. Drive from buttons or automations.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">⌨️</div>
@@ -473,6 +473,10 @@
       <tr><td><code>"mouse_move:50:0"</code></td><td class="desc">Move mouse cursor — relative X:Y pixels (-127 to 127).</td></tr>
       <tr><td><code>"mouse_scroll:3"</code></td><td class="desc">Scroll mouse wheel — positive = up, negative = down (-127 to 127).</td></tr>
       <tr><td><code>type: mouse_click</code></td><td class="desc">Dict format — <code>type: mouse_click</code>, <code>buttons: 0x01</code>. 0x01=left, 0x02=right, 0x04=middle.</td></tr>
+      <tr><td><code>"mouse_abs:50:50"</code></td><td class="desc">Move cursor to an exact position — percent of screen (0–100). <code>mouse_abs:50:50</code> = center.</td></tr>
+      <tr><td><code>"mouse_abs_px:1280:720"</code></td><td class="desc">Move cursor to an exact position in pixels (uses <code>screen_width</code>/<code>screen_height</code>).</td></tr>
+      <tr><td><code>"mouse_abs_mon:1:50:50"</code></td><td class="desc">Move cursor to a percent within declared <code>monitors[1]</code> (multi-monitor).</td></tr>
+      <tr><td><code>"mouse_abs_save"</code> / <code>"mouse_abs_restore"</code></td><td class="desc">Remember the current absolute position and jump back to it later.</td></tr>
       <tr><td><code>"send_custom_text"</code></td><td class="desc">Send linked text entity content. Use <code>send_custom_text:N</code> for multiple entities. Requires <code>custom_text_id</code> in config.</td></tr>
       <tr><td><code>"switch_host:0"</code></td><td class="desc">Switch to host slot 0–9. Reconnects to stored host or advertises for new pairing.</td></tr>
       <tr><td><code>"forget_host:0"</code></td><td class="desc">Remove BLE bond for host slot 0–9 and clear the stored address.</td></tr>
@@ -543,6 +547,13 @@
       <span class="yaml-key">then</span><span class="yaml-val">:</span>
         <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
             id(my_keyboard).send_mouse_click(btn);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_abs</span>          <span class="yaml-comment"># move cursor to exact position, % of screen</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">x</span><span class="yaml-val">:</span> <span class="yaml-str">float</span>
+        <span class="yaml-key">y</span><span class="yaml-val">:</span> <span class="yaml-str">float</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).execute_action("mouse_abs:" + to_string(x) + ":" + to_string(y));</span>
     <span class="yaml-comment"># Keyboard card services</span>
     <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">send_string</span>
       <span class="yaml-key">variables</span><span class="yaml-val">:</span>

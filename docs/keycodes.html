@@ -505,7 +505,7 @@
 <!-- Mouse Actions -->
 <div class="full" style="margin-bottom:24px;">
   <div class="card">
-    <div class="card-header"><div class="dot"></div><h2>Mouse Actions — <code style="font-size:0.75rem;background:var(--code-bg);padding:2px 8px;border-radius:4px;border:1px solid rgba(0,212,170,0.15);color:var(--accent)">Report ID 4</code></h2></div>
+    <div class="card-header"><div class="dot"></div><h2>Mouse Actions — <code style="font-size:0.75rem;background:var(--code-bg);padding:2px 8px;border-radius:4px;border:1px solid rgba(0,212,170,0.15);color:var(--accent)">Report ID 4 + 5</code></h2></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
       <div style="border-right:1px solid var(--border);">
         <table>
@@ -514,6 +514,8 @@
           <tr><td>Left Click</td><td><code>left_click</code></td></tr>
           <tr><td>Right Click</td><td><code>right_click</code></td></tr>
           <tr><td>Middle Click</td><td><code>middle_click</code></td></tr>
+          <tr><td>Save abs. position</td><td><code>mouse_abs_save</code></td></tr>
+          <tr><td>Restore abs. position</td><td><code>mouse_abs_restore</code></td></tr>
         </table>
       </div>
       <div>
@@ -521,12 +523,15 @@
           <tr><th colspan="2">Parameterised Actions</th></tr>
           <tr><th>Format</th><th>Example</th></tr>
           <tr><td>Click by mask</td><td><code>mouse_click:0x01</code></td></tr>
-          <tr><td>Move cursor</td><td><code>mouse_move:50:-20</code></td></tr>
+          <tr><td>Move cursor (relative)</td><td><code>mouse_move:50:-20</code></td></tr>
           <tr><td>Scroll wheel</td><td><code>mouse_scroll:3</code></td></tr>
+          <tr><td>Move to % of screen</td><td><code>mouse_abs:50:50</code></td></tr>
+          <tr><td>Move to pixels</td><td><code>mouse_abs_px:1280:720</code></td></tr>
+          <tr><td>Move within monitor</td><td><code>mouse_abs_mon:1:50:50</code></td></tr>
         </table>
       </div>
     </div>
-    <div class="note">Button mask: <span>0x01</span> = left, <span>0x02</span> = right, <span>0x04</span> = middle. Combine for simultaneous buttons. Move/scroll values: <span>-127</span> to <span>127</span> (relative).</div>
+    <div class="note">Button mask: <span>0x01</span> = left, <span>0x02</span> = right, <span>0x04</span> = middle. Combine for simultaneous buttons. Relative move/scroll: <span>-127</span> to <span>127</span>. <strong>Absolute</strong> (<span>mouse_abs*</span>, Report ID 5) moves the cursor to an exact spot — percent of screen, pixels (uses <span>screen_width</span>/<span>screen_height</span>), or within a declared <span>monitors[]</span> region. Reliable on Windows/Linux; best-effort on macOS/iOS.</div>
   </div>
 </div>
 
@@ -561,6 +566,11 @@
     <span class="yaml-key">keyboard_id</span><span class="yaml-val">:</span> <span class="yaml-str">ble_keyboard</span>
     <span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">"Left Click"</span>
     <span class="yaml-key">action</span><span class="yaml-val">:</span> <span class="yaml-str">"left_click"</span>            <span class="yaml-comment"># mouse left click</span>
+
+  <span class="yaml-val">- </span><span class="yaml-key">platform</span><span class="yaml-val">:</span> <span class="yaml-str">espidf_ble_keyboard</span>
+    <span class="yaml-key">keyboard_id</span><span class="yaml-val">:</span> <span class="yaml-str">ble_keyboard</span>
+    <span class="yaml-key">name</span><span class="yaml-val">:</span> <span class="yaml-str">"Cursor to Center"</span>
+    <span class="yaml-key">action</span><span class="yaml-val">:</span> <span class="yaml-str">"mouse_abs:50:50"</span>       <span class="yaml-comment"># exact position, % of screen</span>
 
   <span class="yaml-val">- </span><span class="yaml-key">platform</span><span class="yaml-val">:</span> <span class="yaml-str">espidf_ble_keyboard</span>
     <span class="yaml-key">keyboard_id</span><span class="yaml-val">:</span> <span class="yaml-str">ble_keyboard</span>
