@@ -17,6 +17,14 @@ CONF_MOUSE_SENSITIVITY = "mouse_sensitivity"
 CONF_MOUSE_ACCEL = "mouse_acceleration"
 CONF_MOUSE_MAX_SPEED = "mouse_max_speed"
 CONF_SCROLL_SENSITIVITY = "scroll_sensitivity"
+CONF_SCREEN_WIDTH = "screen_width"
+CONF_SCREEN_HEIGHT = "screen_height"
+CONF_MONITORS = "monitors"
+CONF_WIDTH = "width"
+CONF_HEIGHT = "height"
+CONF_X = "x"
+CONF_Y = "y"
+CONF_NAME = "name"
 CONF_HOSTS = "hosts"
 CONF_SLOT = "slot"
 CONF_CUSTOM_TEXT_ID = "custom_text_id"
@@ -52,6 +60,15 @@ def _web_control_schema(config):
     return config
 
 
+# Absolute-pointer monitor region (virtual-desktop pixels)
+MONITOR_SCHEMA = cv.Schema({
+    cv.Optional(CONF_NAME): cv.string,
+    cv.Required(CONF_X): cv.int_,
+    cv.Required(CONF_Y): cv.int_,
+    cv.Required(CONF_WIDTH): cv.int_range(min=1),
+    cv.Required(CONF_HEIGHT): cv.int_range(min=1),
+})
+
 HOST_SCHEMA = cv.Schema({
     cv.Required(CONF_SLOT): cv.int_range(min=0, max=9),
     cv.Optional(CONF_PASSKEY): cv.int_range(min=0, max=999999),
@@ -79,6 +96,9 @@ CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_MOUSE_ACCEL, default=0.15): cv.float_range(min=0.0, max=2.0),
         cv.Optional(CONF_MOUSE_MAX_SPEED, default=4.0): cv.float_range(min=0.5, max=20.0),
         cv.Optional(CONF_SCROLL_SENSITIVITY, default=2.0): cv.float_range(min=0.1, max=10.0),
+        cv.Optional(CONF_SCREEN_WIDTH, default=1920): cv.int_range(min=1, max=32767),
+        cv.Optional(CONF_SCREEN_HEIGHT, default=1080): cv.int_range(min=1, max=32767),
+        cv.Optional(CONF_MONITORS): cv.ensure_list(MONITOR_SCHEMA),
         cv.Optional(CONF_KEYBOARD_LAYOUT, default="us"): cv.one_of(*SUPPORTED_LAYOUTS, lower=True),
         cv.Optional(CONF_CUSTOM_TEXT_ID): cv.ensure_list(cv.use_id(cg.EntityBase)),
         cv.Optional(CONF_HOST_SLOTS, default=4): cv.int_range(min=1, max=10),
@@ -115,6 +135,9 @@ async def to_code(config):
     cg.add(var.set_mouse_accel(config[CONF_MOUSE_ACCEL]))
     cg.add(var.set_mouse_max_speed(config[CONF_MOUSE_MAX_SPEED]))
     cg.add(var.set_scroll_sensitivity(config[CONF_SCROLL_SENSITIVITY]))
+    cg.add(var.set_screen_size(config[CONF_SCREEN_WIDTH], config[CONF_SCREEN_HEIGHT]))
+    for mon in config.get(CONF_MONITORS, []):
+        cg.add(var.add_monitor(mon[CONF_X], mon[CONF_Y], mon[CONF_WIDTH], mon[CONF_HEIGHT]))
     cg.add(var.set_keyboard_layout(config[CONF_KEYBOARD_LAYOUT]))
 
     if CONF_HOSTS in config:

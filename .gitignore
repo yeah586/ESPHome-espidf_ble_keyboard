@@ -1,2 +1,12 @@
 CLAUDE.md
 To_do.txt
+
+# ESPHome build output
+.esphome/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Local verification configs
+_verify_*.yaml

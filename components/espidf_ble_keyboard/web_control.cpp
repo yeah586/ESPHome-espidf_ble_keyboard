@@ -1134,6 +1134,26 @@ class BleKbWebHandler : public AsyncWebHandler {
       kb_->send_mouse_scroll((int8_t) amount);
       send_response(200, "text/plain", "OK");
 
+    } else if (path == "mouse_abs") {
+      // Move the pointer to an absolute position. x/y are percent by default,
+      // pixels when unit=px; monitor=<idx> selects a declared monitor region.
+      std::string sx = request->hasArg("x") ? request->arg("x").c_str() : "0";
+      std::string sy = request->hasArg("y") ? request->arg("y").c_str() : "0";
+      std::string action;
+      if (request->hasArg("monitor")) {
+        action = "mouse_abs_mon:" + std::string(request->arg("monitor").c_str()) + ":" + sx + ":" + sy;
+      } else if (request->hasArg("unit") && std::string(request->arg("unit").c_str()) == "px") {
+        action = "mouse_abs_px:" + sx + ":" + sy;
+      } else {
+        action = "mouse_abs:" + sx + ":" + sy;
+      }
+      kb_->execute_action(action);
+      if (request->hasArg("btn")) {
+        int btn = atoi(request->arg("btn").c_str());
+        if (btn != 0) kb_->send_mouse_click((uint8_t) btn);  // clicks at the new position
+      }
+      send_response(200, "text/plain", "OK");
+
     } else if (path == "string") {
       if (request->hasArg("keys")) {
         std::string keys = request->arg("keys").c_str();

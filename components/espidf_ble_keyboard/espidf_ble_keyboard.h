@@ -79,6 +79,9 @@ class EspidfBleKeyboard : public Component {
   void send_mouse_click(uint8_t buttons);
   void send_mouse_move(int8_t x, int8_t y);
   void send_mouse_scroll(int8_t wheel);
+  // Absolute pointer: x/y in 0..32767 (host maps onto the screen). Tracks the
+  // last commanded position for mouse_abs_save / mouse_abs_restore.
+  void send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t buttons = 0);
 
   void set_passkey(uint32_t passkey) {
     passkey_ = passkey;
@@ -109,6 +112,15 @@ class EspidfBleKeyboard : public Component {
   void set_mouse_accel(float a) { mouse_accel_ = a; }
   void set_mouse_max_speed(float m) { mouse_max_speed_ = m; }
   void set_scroll_sensitivity(float s) { scroll_sensitivity_ = s; }
+
+  // Absolute-pointer screen geometry (for pixel + multi-monitor addressing).
+  // screen size = the pixel space the host maps 0..32767 onto (a single
+  // resolution, or the whole virtual desktop for a spanned multi-monitor setup).
+  struct MonitorRect { int32_t x, y; uint32_t width, height; };
+  void set_screen_size(uint32_t w, uint32_t h) { screen_w_ = w; screen_h_ = h; }
+  void add_monitor(int32_t x, int32_t y, uint32_t w, uint32_t h) {
+    monitors_.push_back({x, y, w, h});
+  }
   float mouse_sensitivity() const { return mouse_sensitivity_; }
   float mouse_accel() const { return mouse_accel_; }
   float mouse_max_speed() const { return mouse_max_speed_; }
@@ -261,6 +273,13 @@ class EspidfBleKeyboard : public Component {
   float mouse_accel_{0.15f};
   float mouse_max_speed_{4.0f};
   float scroll_sensitivity_{2.0f};
+
+  // Absolute-pointer geometry + position tracking
+  uint32_t screen_w_{1920}, screen_h_{1080};   // pixel space mapped to 0..32767
+  std::vector<MonitorRect> monitors_;          // optional per-monitor regions
+  uint16_t cur_abs_x_{16384}, cur_abs_y_{16384};  // last position WE set (center default)
+  uint16_t saved_abs_x_{0}, saved_abs_y_{0};
+  bool has_saved_abs_{false};
   std::vector<ButtonInfo> buttons_;
   std::vector<ButtonInfo> macros_;   // user-editable, NVS-persisted
   void load_macros_();

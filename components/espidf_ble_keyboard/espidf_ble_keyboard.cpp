@@ -29,6 +29,7 @@ static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *rep
 // Report ID 2: Consumer control — media keys (2 bytes)
 // Report ID 3: System control — power/sleep (1 byte)
 // Report ID 4: Mouse — buttons + X/Y + scroll (4 bytes)
+// Report ID 5: Absolute mouse — buttons + absolute X/Y 0..32767 (5 bytes)
 static const uint8_t hid_report_map[] = {
     // ---- Keyboard (Report ID 1) ----
     0x05, 0x01, 0x09, 0x06, 0xA1, 0x01,
@@ -94,6 +95,36 @@ static const uint8_t hid_report_map[] = {
     0x75, 0x08,        //     Report Size (8)
     0x95, 0x03,        //     Report Count (3)
     0x81, 0x06,        //     Input (Data, Variable, Relative)
+    0xC0,              //   End Collection (Physical)
+    0xC0,              // End Collection (Application)
+    // ---- Absolute Mouse (Report ID 5) — exact-position pointer ----
+    // Reports absolute X/Y in 0..32767; host maps this range onto the screen
+    // (primary monitor or whole virtual desktop, depending on host).
+    0x05, 0x01,        // Usage Page (Generic Desktop)
+    0x09, 0x02,        // Usage (Mouse)
+    0xA1, 0x01,        // Collection (Application)
+    0x85, 0x05,        //   Report ID (5)
+    0x09, 0x01,        //   Usage (Pointer)
+    0xA1, 0x00,        //   Collection (Physical)
+    0x05, 0x09,        //     Usage Page (Button)
+    0x19, 0x01,        //     Usage Minimum (Button 1 — Left)
+    0x29, 0x03,        //     Usage Maximum (Button 3 — Middle)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0x01,        //     Logical Maximum (1)
+    0x75, 0x01,        //     Report Size (1)
+    0x95, 0x03,        //     Report Count (3)
+    0x81, 0x02,        //     Input (Data, Variable, Absolute)
+    0x75, 0x05,        //     Report Size (5) — padding
+    0x95, 0x01,        //     Report Count (1)
+    0x81, 0x01,        //     Input (Constant) — padding to byte boundary
+    0x05, 0x01,        //     Usage Page (Generic Desktop)
+    0x09, 0x30,        //     Usage (X)
+    0x09, 0x31,        //     Usage (Y)
+    0x16, 0x00, 0x00,  //     Logical Minimum (0)
+    0x26, 0xFF, 0x7F,  //     Logical Maximum (32767)
+    0x75, 0x10,        //     Report Size (16)
+    0x95, 0x02,        //     Report Count (2)
+    0x81, 0x02,        //     Input (Data, Variable, Absolute) — ABSOLUTE X/Y
     0xC0,              //   End Collection (Physical)
     0xC0               // End Collection (Application)
 };
@@ -535,6 +566,9 @@ static uint8_t  system_ref_val[2]     = {0x03, 0x01};
 static uint8_t  mouse_val[4]          = {0};  // buttons, X, Y, wheel
 static uint16_t mouse_ccc_val         = 0;
 static uint8_t  mouse_ref_val[2]      = {0x04, 0x01};
+static uint8_t  abs_mouse_val[5]      = {0};  // buttons, X_lo, X_hi, Y_lo, Y_hi
+static uint16_t abs_mouse_ccc_val     = 0;
+static uint8_t  abs_mouse_ref_val[2]  = {0x05, 0x01};
 
 enum {
     IDX_SVC,
@@ -559,6 +593,9 @@ enum {
     IDX_CHAR_MOUSE,        IDX_CHAR_MOUSE_VAL,
     IDX_CHAR_MOUSE_CCC,
     IDX_CHAR_MOUSE_REF,
+    IDX_CHAR_ABS_MOUSE,    IDX_CHAR_ABS_MOUSE_VAL,
+    IDX_CHAR_ABS_MOUSE_CCC,
+    IDX_CHAR_ABS_MOUSE_REF,
     HID_IDX_NB,
 };
 
@@ -577,6 +614,8 @@ static uint16_t s_system_report_handle = 0;
 static uint16_t s_system_ccc_handle = 0;
 static uint16_t s_mouse_report_handle = 0;
 static uint16_t s_mouse_ccc_handle = 0;
+static uint16_t s_abs_mouse_report_handle = 0;
+static uint16_t s_abs_mouse_ccc_handle = 0;
 
 static const esp_gatts_attr_db_t hid_attr_db[HID_IDX_NB] = {
     [IDX_SVC] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_PRI_SERVICE, PERM_R, sizeof(uint16_t), sizeof(uint16_t), (uint8_t *)&UUID_HID_SVC}},
@@ -617,6 +656,11 @@ static const esp_gatts_attr_db_t hid_attr_db[HID_IDX_NB] = {
     [IDX_CHAR_MOUSE_VAL] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_HID_REPORT, PERM_R_ENC, sizeof(mouse_val), sizeof(mouse_val), mouse_val}},
     [IDX_CHAR_MOUSE_CCC] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_CHAR_CLIENT_CONFIG, PERM_RW_ENC, sizeof(mouse_ccc_val), sizeof(mouse_ccc_val), (uint8_t *)&mouse_ccc_val}},
     [IDX_CHAR_MOUSE_REF] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_RPT_REF_DESCR, PERM_R_ENC, sizeof(mouse_ref_val), sizeof(mouse_ref_val), mouse_ref_val}},
+    // Absolute mouse report (Report ID 5)
+    [IDX_CHAR_ABS_MOUSE] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_CHAR_DECLARE, PERM_R, 1, 1, (uint8_t *)&PROP_READ_NOTIFY}},
+    [IDX_CHAR_ABS_MOUSE_VAL] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_HID_REPORT, PERM_R_ENC, sizeof(abs_mouse_val), sizeof(abs_mouse_val), abs_mouse_val}},
+    [IDX_CHAR_ABS_MOUSE_CCC] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_CHAR_CLIENT_CONFIG, PERM_RW_ENC, sizeof(abs_mouse_ccc_val), sizeof(abs_mouse_ccc_val), (uint8_t *)&abs_mouse_ccc_val}},
+    [IDX_CHAR_ABS_MOUSE_REF] = {{ESP_GATT_AUTO_RSP}, {ESP_UUID_LEN_16, (uint8_t *)&UUID_RPT_REF_DESCR, PERM_R_ENC, sizeof(abs_mouse_ref_val), sizeof(abs_mouse_ref_val), abs_mouse_ref_val}},
 };
 
 // Service instance IDs for create_attr_tab
@@ -665,6 +709,8 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                 s_system_ccc_handle = hid_handle_table[IDX_CHAR_SYSTEM_CCC];
                 s_mouse_report_handle = hid_handle_table[IDX_CHAR_MOUSE_VAL];
                 s_mouse_ccc_handle = hid_handle_table[IDX_CHAR_MOUSE_CCC];
+                s_abs_mouse_report_handle = hid_handle_table[IDX_CHAR_ABS_MOUSE_VAL];
+                s_abs_mouse_ccc_handle = hid_handle_table[IDX_CHAR_ABS_MOUSE_CCC];
                 esp_ble_gatts_start_service(hid_handle_table[IDX_SVC]);
             }
             break;
@@ -1518,6 +1564,29 @@ void EspidfBleKeyboard::send_mouse_scroll(int8_t wheel) {
     ESP_LOGD(TAG, "Mouse scroll sent: wheel=%d", wheel);
 }
 
+void EspidfBleKeyboard::send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t buttons) {
+    if (!is_connected_) return;
+    if (x > 0x7FFF) x = 0x7FFF;
+    if (y > 0x7FFF) y = 0x7FFF;
+    // Report ID 5 layout: [buttons, X_lo, X_hi, Y_lo, Y_hi]. No zero-release —
+    // a zeroed absolute report would snap the cursor to the top-left corner.
+    uint8_t report[5] = {buttons,
+                         static_cast<uint8_t>(x & 0xFF), static_cast<uint8_t>(x >> 8),
+                         static_cast<uint8_t>(y & 0xFF), static_cast<uint8_t>(y >> 8)};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_abs_mouse_report_handle, 5, report, false);
+    if (buttons != 0) {
+        // Click-at-position: release the button while staying at the same coords.
+        vTaskDelay(pdMS_TO_TICKS(50));
+        uint8_t release[5] = {0, report[1], report[2], report[3], report[4]};
+        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_abs_mouse_report_handle, 5, release, false);
+    }
+    // Remember where WE put the cursor (for save/restore). Note: this is only the
+    // device-commanded position; HID can't read the host's real cursor.
+    cur_abs_x_ = x;
+    cur_abs_y_ = y;
+    ESP_LOGD(TAG, "Mouse abs move sent: x=%u y=%u buttons=0x%02X", x, y, buttons);
+}
+
 void EspidfBleKeyboard::send_hibernate() {
     if (!is_connected_) return;
     // Win+R is a single blocking key combo (no watchdog risk).
@@ -1587,6 +1656,46 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
             send_mouse_scroll((int8_t) wheel);
         return;
     }
+    // Absolute pointer: percent of the mapped space (0..100).
+    if (action.find("mouse_abs:") == 0) {
+        float px = 0, py = 0;
+        if (sscanf(action.c_str(), "mouse_abs:%f:%f", &px, &py) == 2) {
+            px = px < 0 ? 0 : (px > 100 ? 100 : px);
+            py = py < 0 ? 0 : (py > 100 ? 100 : py);
+            send_mouse_move_abs((uint16_t)(px / 100.0f * 32767.0f),
+                                (uint16_t)(py / 100.0f * 32767.0f));
+        }
+        return;
+    }
+    // Absolute pointer: pixels within the configured screen/virtual-desktop size.
+    if (action.find("mouse_abs_px:") == 0) {
+        float px = 0, py = 0;
+        if (sscanf(action.c_str(), "mouse_abs_px:%f:%f", &px, &py) == 2 &&
+            screen_w_ > 0 && screen_h_ > 0) {
+            float fx = px / (float) screen_w_;
+            float fy = py / (float) screen_h_;
+            fx = fx < 0 ? 0 : (fx > 1 ? 1 : fx);
+            fy = fy < 0 ? 0 : (fy > 1 ? 1 : fy);
+            send_mouse_move_abs((uint16_t)(fx * 32767.0f), (uint16_t)(fy * 32767.0f));
+        }
+        return;
+    }
+    // Absolute pointer: percent within a declared monitor's region.
+    if (action.find("mouse_abs_mon:") == 0) {
+        int idx = 0; float px = 0, py = 0;
+        if (sscanf(action.c_str(), "mouse_abs_mon:%i:%f:%f", &idx, &px, &py) == 3 &&
+            idx >= 0 && idx < (int) monitors_.size() && screen_w_ > 0 && screen_h_ > 0) {
+            const auto &m = monitors_[idx];
+            px = px < 0 ? 0 : (px > 100 ? 100 : px);
+            py = py < 0 ? 0 : (py > 100 ? 100 : py);
+            float fx = (m.x + px / 100.0f * m.width) / (float) screen_w_;
+            float fy = (m.y + py / 100.0f * m.height) / (float) screen_h_;
+            fx = fx < 0 ? 0 : (fx > 1 ? 1 : fx);
+            fy = fy < 0 ? 0 : (fy > 1 ? 1 : fy);
+            send_mouse_move_abs((uint16_t)(fx * 32767.0f), (uint16_t)(fy * 32767.0f));
+        }
+        return;
+    }
     if (action.find("switch_host:") == 0) {
         int slot = 0;
         if (sscanf(action.c_str(), "switch_host:%i", &slot) == 1)
@@ -1616,6 +1725,12 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
     else if (action == "left_click")   send_mouse_click(0x01);
     else if (action == "right_click")  send_mouse_click(0x02);
     else if (action == "middle_click") send_mouse_click(0x04);
+    else if (action == "mouse_abs_save") {
+        saved_abs_x_ = cur_abs_x_; saved_abs_y_ = cur_abs_y_; has_saved_abs_ = true;
+    }
+    else if (action == "mouse_abs_restore") {
+        if (has_saved_abs_) send_mouse_move_abs(saved_abs_x_, saved_abs_y_);
+    }
 #ifdef USE_TEXT
     else if (action == "send_custom_text" || action.find("send_custom_text:") == 0) {
         int idx = 0;
