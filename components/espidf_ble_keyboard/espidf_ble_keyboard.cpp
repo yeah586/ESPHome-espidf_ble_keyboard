@@ -1612,7 +1612,13 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     vTaskDelay(pdMS_TO_TICKS(40));
     // 2) Step there relatively in <=127px chunks. Relative movement crosses
     //    monitor boundaries, so this reaches any monitor (incl. negative coords).
-    int32_t dx = x, dy = y;
+    //    Apply the calibration scale to compensate the host's pointer-speed/DPI
+    //    scaling (e.g. ~0.5 if the cursor otherwise travels twice as far).
+    float fx = (float) x * goto_scale_, fy = (float) y * goto_scale_;
+    int32_t dx = (int32_t)(fx < 0 ? fx - 0.5f : fx + 0.5f);
+    int32_t dy = (int32_t)(fy < 0 ? fy - 0.5f : fy + 0.5f);
+    if (dx < -32000) dx = -32000; else if (dx > 32000) dx = 32000;
+    if (dy < -32000) dy = -32000; else if (dy > 32000) dy = 32000;
     while (dx != 0 || dy != 0) {
         int32_t sx = dx > 127 ? 127 : (dx < -127 ? -127 : dx);
         int32_t sy = dy > 127 ? 127 : (dy < -127 ? -127 : dy);
