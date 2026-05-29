@@ -25,6 +25,7 @@ CONF_HEIGHT = "height"
 CONF_X = "x"
 CONF_Y = "y"
 CONF_NAME = "name"
+CONF_PRIMARY = "primary"
 CONF_HOSTS = "hosts"
 CONF_SLOT = "slot"
 CONF_CUSTOM_TEXT_ID = "custom_text_id"
@@ -67,6 +68,9 @@ MONITOR_SCHEMA = cv.Schema({
     cv.Required(CONF_Y): cv.int_,
     cv.Required(CONF_WIDTH): cv.int_range(min=1),
     cv.Required(CONF_HEIGHT): cv.int_range(min=1),
+    # Mark the Windows primary monitor (its top-left = Windows 0,0). Lets the web
+    # Position Finder emit mouse_goto values; only one should be primary.
+    cv.Optional(CONF_PRIMARY, default=False): cv.boolean,
 })
 
 HOST_SCHEMA = cv.Schema({
@@ -137,7 +141,7 @@ async def to_code(config):
     cg.add(var.set_scroll_sensitivity(config[CONF_SCROLL_SENSITIVITY]))
     cg.add(var.set_screen_size(config[CONF_SCREEN_WIDTH], config[CONF_SCREEN_HEIGHT]))
     for mon in config.get(CONF_MONITORS, []):
-        cg.add(var.add_monitor(mon[CONF_X], mon[CONF_Y], mon[CONF_WIDTH], mon[CONF_HEIGHT]))
+        cg.add(var.add_monitor(mon[CONF_X], mon[CONF_Y], mon[CONF_WIDTH], mon[CONF_HEIGHT], mon[CONF_PRIMARY]))
     cg.add(var.set_keyboard_layout(config[CONF_KEYBOARD_LAYOUT]))
 
     if CONF_HOSTS in config:

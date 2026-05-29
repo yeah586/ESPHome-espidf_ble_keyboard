@@ -120,14 +120,25 @@ class EspidfBleKeyboard : public Component {
   // Absolute-pointer screen geometry (for pixel + multi-monitor addressing).
   // screen size = the pixel space the host maps 0..32767 onto (a single
   // resolution, or the whole virtual desktop for a spanned multi-monitor setup).
-  struct MonitorRect { int32_t x, y; uint32_t width, height; };
+  struct MonitorRect { int32_t x, y; uint32_t width, height; bool primary; };
   void set_screen_size(uint32_t w, uint32_t h) { screen_w_ = w; screen_h_ = h; }
-  void add_monitor(int32_t x, int32_t y, uint32_t w, uint32_t h) {
-    monitors_.push_back({x, y, w, h});
+  void add_monitor(int32_t x, int32_t y, uint32_t w, uint32_t h, bool primary = false) {
+    monitors_.push_back({x, y, w, h, primary});
   }
   uint32_t screen_width() const { return screen_w_; }
   uint32_t screen_height() const { return screen_h_; }
   const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
+  // Device-space coords of the primary monitor's top-left = the Windows (0,0)
+  // origin that mouse_goto homes to. Used by the web Position Finder to emit
+  // mouse_goto values. Defaults to (0,0) if no monitor is marked primary.
+  int32_t primary_origin_x() const {
+    for (const auto &m : monitors_) if (m.primary) return m.x;
+    return 0;
+  }
+  int32_t primary_origin_y() const {
+    for (const auto &m : monitors_) if (m.primary) return m.y;
+    return 0;
+  }
   float mouse_sensitivity() const { return mouse_sensitivity_; }
   float mouse_accel() const { return mouse_accel_; }
   float mouse_max_speed() const { return mouse_max_speed_; }
