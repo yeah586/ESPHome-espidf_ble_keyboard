@@ -279,6 +279,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="mouse_abs:100:100">Cursor Bottom-Right</option>
 <option value="mouse_abs_px:960:540">Cursor to px (edit x:y)</option>
 <option value="mouse_abs_mon:0:50:50">Cursor in Monitor (edit)</option>
+<option value="mouse_goto:0:0">Goto desktop px — all monitors (edit x:y)</option>
 <option value="mouse_abs_save">Save Cursor Pos</option>
 <option value="mouse_abs_restore">Restore Cursor Pos</option>
 </optgroup>
