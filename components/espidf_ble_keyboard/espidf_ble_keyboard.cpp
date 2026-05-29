@@ -1600,7 +1600,14 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     if (x < -32000) x = -32000; else if (x > 32000) x = 32000;
     if (y < -32000) y = -32000; else if (y > 32000) y = 32000;
     // 1) Anchor at the desktop origin (primary monitor top-left = Windows 0,0),
-    //    which the absolute pointer reliably reaches.
+    //    which the absolute pointer reliably reaches. Prime with a DIFFERENT
+    //    coordinate first: hosts ignore an absolute report identical to the
+    //    previous one, and the previous goto also ended its homing at (0,0) — so
+    //    a bare (0,0) would be dropped, the cursor would NOT re-home, and the
+    //    relative steps would pile on from the last position (drifting the cursor
+    //    into the bottom-right corner over repeated calls).
+    send_mouse_move_abs(64, 64);
+    vTaskDelay(pdMS_TO_TICKS(20));
     send_mouse_move_abs(0, 0);
     vTaskDelay(pdMS_TO_TICKS(40));
     // 2) Step there relatively in <=127px chunks. Relative movement crosses
