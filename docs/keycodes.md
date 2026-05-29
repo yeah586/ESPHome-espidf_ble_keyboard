@@ -185,6 +185,7 @@ and an absolute pointer for exact-position moves (Report ID 5).
 | `mouse_abs:<x%>:<y%>` | `mouse_abs:50:50` | Move cursor to an **exact** position, percent of screen (0–100). Uses absolute Report ID 5. |
 | `mouse_abs_px:<x>:<y>` | `mouse_abs_px:1280:720` | Exact position in pixels (uses `screen_width` / `screen_height`). |
 | `mouse_abs_mon:<idx>:<x%>:<y%>` | `mouse_abs_mon:1:50:50` | Percent within declared `monitors[idx]` (multi-monitor). |
+| `mouse_goto:<x>:<y>` | `mouse_goto:4394:42` | Move to a Windows virtual-desktop pixel across **all** monitors (homes absolute to 0,0 then steps relatively). X/Y = Windows coords (primary top-left = 0,0; negatives allowed). Use when the absolute pointer is stuck on the primary monitor. Needs pointer acceleration off + 1:1 speed for accuracy. |
 
 ### Dict Format
 

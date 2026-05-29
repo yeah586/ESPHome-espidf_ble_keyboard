@@ -477,6 +477,7 @@
       <tr><td><code>"mouse_abs_px:1280:720"</code></td><td class="desc">Move cursor to an exact position in pixels (uses <code>screen_width</code>/<code>screen_height</code>).</td></tr>
       <tr><td><code>"mouse_abs_mon:1:50:50"</code></td><td class="desc">Move cursor to a percent within declared <code>monitors[1]</code> (multi-monitor).</td></tr>
       <tr><td><code>"mouse_abs_save"</code> / <code>"mouse_abs_restore"</code></td><td class="desc">Remember the current absolute position and jump back to it later.</td></tr>
+      <tr><td><code>"mouse_goto:4394:42"</code></td><td class="desc">Move to a Windows virtual-desktop pixel across <strong>all monitors</strong> (homes absolute to 0,0 then steps relatively). X/Y = Windows coords (primary top-left = 0,0; negatives allowed) — what Power Automate reports. Use when the absolute pointer is stuck on the primary monitor; needs pointer acceleration off + 1:1 speed.</td></tr>
       <tr><td><code>"send_custom_text"</code></td><td class="desc">Send linked text entity content. Use <code>send_custom_text:N</code> for multiple entities. Requires <code>custom_text_id</code> in config.</td></tr>
       <tr><td><code>"switch_host:0"</code></td><td class="desc">Switch to host slot 0–9. Reconnects to stored host or advertises for new pairing.</td></tr>
       <tr><td><code>"forget_host:0"</code></td><td class="desc">Remove BLE bond for host slot 0–9 and clear the stored address.</td></tr>

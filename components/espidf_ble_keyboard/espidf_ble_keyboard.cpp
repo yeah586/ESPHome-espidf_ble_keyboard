@@ -1594,6 +1594,31 @@ void EspidfBleKeyboard::send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t butt
     ESP_LOGD(TAG, "Mouse abs move sent: x=%u y=%u buttons=0x%02X", x, y, buttons);
 }
 
+void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
+    if (!is_connected_) return;
+    // Clamp to a sane virtual-desktop range to avoid runaway stepping.
+    if (x < -32000) x = -32000; else if (x > 32000) x = 32000;
+    if (y < -32000) y = -32000; else if (y > 32000) y = 32000;
+    // 1) Anchor at the desktop origin (primary monitor top-left = Windows 0,0),
+    //    which the absolute pointer reliably reaches.
+    send_mouse_move_abs(0, 0);
+    vTaskDelay(pdMS_TO_TICKS(40));
+    // 2) Step there relatively in <=127px chunks. Relative movement crosses
+    //    monitor boundaries, so this reaches any monitor (incl. negative coords).
+    int32_t dx = x, dy = y;
+    while (dx != 0 || dy != 0) {
+        int32_t sx = dx > 127 ? 127 : (dx < -127 ? -127 : dx);
+        int32_t sy = dy > 127 ? 127 : (dy < -127 ? -127 : dy);
+        uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(sx)),
+                             static_cast<uint8_t>(static_cast<int8_t>(sy)), 0};
+        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+        dx -= sx;
+        dy -= sy;
+        vTaskDelay(pdMS_TO_TICKS(8));
+    }
+    ESP_LOGD(TAG, "Mouse goto sent: x=%d y=%d", x, y);
+}
+
 void EspidfBleKeyboard::send_hibernate() {
     if (!is_connected_) return;
     // Win+R is a single blocking key combo (no watchdog risk).
@@ -1701,6 +1726,18 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
             fy = fy < 0 ? 0 : (fy > 1 ? 1 : fy);
             send_mouse_move_abs((uint16_t)(fx * 32767.0f), (uint16_t)(fy * 32767.0f));
         }
+        return;
+    }
+    // Absolute desktop pixel via home-then-relative: works across ALL monitors
+    // (relative movement spans the virtual desktop, unlike the absolute pointer
+    // which Windows confines to the primary monitor). X/Y are Windows virtual-
+    // desktop coordinates (the primary monitor's top-left is 0,0; screens left of
+    // it are negative). Requires "Enhance pointer precision" OFF + 1:1 pointer
+    // speed for pixel accuracy.
+    if (action.find("mouse_goto:") == 0) {
+        int tx = 0, ty = 0;
+        if (sscanf(action.c_str(), "mouse_goto:%i:%i", &tx, &ty) == 2)
+            send_mouse_goto(tx, ty);
         return;
     }
     if (action.find("switch_host:") == 0) {

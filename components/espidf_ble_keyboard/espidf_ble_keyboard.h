@@ -82,6 +82,10 @@ class EspidfBleKeyboard : public Component {
   // Absolute pointer: x/y in 0..32767 (host maps onto the screen). Tracks the
   // last commanded position for mouse_abs_save / mouse_abs_restore.
   void send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t buttons = 0);
+  // Go to a Windows virtual-desktop pixel (primary top-left = 0,0; can be
+  // negative) by homing absolute to the origin then stepping relatively. Spans
+  // all monitors. Needs pointer acceleration off + 1:1 speed for exactness.
+  void send_mouse_goto(int32_t x, int32_t y);
 
   void set_passkey(uint32_t passkey) {
     passkey_ = passkey;

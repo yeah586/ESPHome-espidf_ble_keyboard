@@ -58,13 +58,17 @@ def validate_action(value):
             x = float(value.get("x", 0))
             y = float(value.get("y", 0))
             return f"mouse_abs_mon:{monitor}:{x}:{y}"
+        elif action_type == "mouse_goto":
+            x = int(value.get("x", 0))
+            y = int(value.get("y", 0))
+            return f"mouse_goto:{x}:{y}"
         elif action_type == "switch_host":
             slot = int(value.get("slot", 0))
             return f"switch_host:{slot}"
         elif action_type == "forget_host":
             slot = int(value.get("slot", 0))
             return f"forget_host:{slot}"
-        raise cv.Invalid(f"Unknown action type '{action_type}'. Use 'combo', 'consumer', 'mouse_click', 'mouse_move', 'mouse_scroll', 'mouse_abs', 'mouse_abs_px', 'mouse_abs_mon', 'switch_host', or 'forget_host'.")
+        raise cv.Invalid(f"Unknown action type '{action_type}'. Use 'combo', 'consumer', 'mouse_click', 'mouse_move', 'mouse_scroll', 'mouse_abs', 'mouse_abs_px', 'mouse_abs_mon', 'mouse_goto', 'switch_host', or 'forget_host'.")
     raise cv.Invalid("Action must be a string or a mapping with 'type' key.")
 
 

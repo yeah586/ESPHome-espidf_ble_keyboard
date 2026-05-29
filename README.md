@@ -456,6 +456,7 @@ espidf_ble_keyboard:
 | `"mouse_abs_mon:<idx>:<x%>:<y%>"` | Move cursor to a percent within declared `monitors[idx]` (multi-monitor). |
 | `"mouse_abs_save"` | Remember the current absolute position (the one this device last set). |
 | `"mouse_abs_restore"` | Jump back to the last `mouse_abs_save` position. |
+| `"mouse_goto:<x>:<y>"` | Move to a **Windows virtual-desktop pixel** across **all monitors** (homes the absolute pointer to the desktop origin, then steps relatively). X/Y are Windows coordinates (primary monitor top-left = 0,0; screens left of it are negative) — exactly what Power Automate reports. Use this when the absolute pointer is confined to the primary monitor. Needs "Enhance pointer precision" **off** + 1:1 pointer speed for pixel accuracy. |
 | `"switch_host:N"` | Switch to host slot N (0–9). Reconnects to stored host or advertises for new pairing. |
 | `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
 | `"string:hello"` | Explicit text typing — useful in multi-step macros to distinguish text from action names. |
@@ -798,8 +799,14 @@ virtual desktop**:
   ```
 
 - On hosts that confine the absolute pointer to the **primary monitor** (a common
-  Windows default for a generic absolute mouse), only the primary monitor is
-  reachable regardless of configuration. There is no firmware-side workaround.
+  Windows default for a generic absolute mouse), `mouse_abs` / `mouse_abs_mon`
+  only reach the primary monitor regardless of configuration. **Use
+  `mouse_goto:<x>:<y>` instead** — it homes the absolute pointer to the desktop
+  origin (primary top-left = Windows 0,0) and then steps *relatively*, and
+  relative movement spans the whole virtual desktop, so it reaches every monitor.
+  Feed it Windows virtual-desktop coordinates (e.g. straight from Power Automate);
+  for pixel accuracy turn "Enhance pointer precision" off and set pointer speed to
+  the middle (1:1) notch.
 
 ### Host support
 
