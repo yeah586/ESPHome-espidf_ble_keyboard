@@ -175,7 +175,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="card" id="finder-card">
 <h2><svg viewBox="0 0 24 24"><path d="M11 2h2v6h-2zM2 11h6v2H2zm14 0h6v2h-6zm-5 5h2v6h-2zM7 7l3 3-1.4 1.4L5.6 8.4zm10 0l1.4 1.4-3 3L14 11zm0 10l-3-3 1.4-1.4 3 3zM7 17l-1.4-1.4 3-3L10 14z"/></svg>Position Finder</h2>
 <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Press &amp; drag to aim, release to move the cursor. Copy the <code>mouse_goto</code> value into a button or macro. (Mark your primary monitor with <code>primary: true</code> in YAML.)</div>
-<div id="finder-map" style="position:relative;width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:crosshair;touch-action:none"></div>
+<div id="finder-map" style="position:relative;width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"></div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <code id="finder-val" style="font-size:14px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg)">mouse_goto:0:0</code>
 <button class="mbtn" id="finder-copy" style="flex:0 0 auto">Copy</button>
@@ -891,8 +891,9 @@ buildKeyboard();
     for(let i=0;i<mons.length;i++){const m=mons[i];if(gx>=m.x&&gx<m.x+m.w&&gy>=m.y&&gy<m.y+m.h){mon=' · mon '+i;break}}
     info.textContent='Windows '+wx+','+wy+mon+' — release to move cursor';
   }
-  map.addEventListener('pointerdown',e=>{dragging=true;aim(e)});
-  map.addEventListener('pointermove',e=>{if(dragging)aim(e)});
+  map.addEventListener('contextmenu',e=>e.preventDefault());  // stop long-press / right-click menu
+  map.addEventListener('pointerdown',e=>{e.preventDefault();dragging=true;try{map.setPointerCapture(e.pointerId)}catch(_){}aim(e)});
+  map.addEventListener('pointermove',e=>{if(dragging){e.preventDefault();aim(e)}});
   map.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;aim(e);api('press',{action:'mouse_goto:'+wx+':'+wy})});
   map.addEventListener('pointercancel',()=>{dragging=false});
   copyBtn.addEventListener('click',()=>{
