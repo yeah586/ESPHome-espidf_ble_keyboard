@@ -734,6 +734,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             consumer_ccc_val = 0;
             system_ccc_val = 0;
             mouse_ccc_val = 0;
+            abs_mouse_ccc_val = 0;
             battery_ccc_val = 0;
             request_host_friendly_conn_params(param->connect.remote_bda);
             // Trigger encryption with security level matching configured pairing mode
@@ -782,6 +783,7 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
             consumer_ccc_val = 0;
             system_ccc_val = 0;
             mouse_ccc_val = 0;
+            abs_mouse_ccc_val = 0;
             battery_ccc_val = 0;
             do_start_advertising();
             break;
@@ -815,6 +817,11 @@ static void gatts_event_handler(esp_gatts_cb_event_t event, esp_gatt_if_t gatts_
                 mouse_ccc_val = static_cast<uint16_t>(param->write.value[0]) |
                                 (static_cast<uint16_t>(param->write.value[1]) << 8);
                 ESP_LOGI(TAG, "GATTS: Mouse CCC=0x%04X", mouse_ccc_val);
+            }
+            if (param->write.handle == s_abs_mouse_ccc_handle && param->write.len >= 2) {
+                abs_mouse_ccc_val = static_cast<uint16_t>(param->write.value[0]) |
+                                    (static_cast<uint16_t>(param->write.value[1]) << 8);
+                ESP_LOGI(TAG, "GATTS: Abs mouse CCC=0x%04X (absolute pointer)", abs_mouse_ccc_val);
             }
             if ((param->write.handle == s_hid_output_report_handle || param->write.handle == s_boot_kb_output_handle) &&
                 param->write.len > 0) {
