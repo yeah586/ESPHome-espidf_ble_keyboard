@@ -100,8 +100,8 @@ espidf_ble_keyboard:
   # Optional: number of host slots for multi-host switching (1–10, default: 4)
   host_slots: 4
   # Optional: web mouse sensitivity settings
-  mouse_sensitivity: 1.0       # base movement speed (default: 1.0)
-  mouse_acceleration: 0.15     # speed-based acceleration factor (default: 0.15)
+  mouse_sensitivity: 2.0       # base movement speed (default: 1.0)
+  mouse_acceleration: 2.0     # speed-based acceleration factor (default: 0.15)
   mouse_max_speed: 4.0         # max sensitivity cap (default: 4.0)
   scroll_sensitivity: 2.0      # scroll speed multiplier (default: 2.0)
   # Optional: screen geometry for absolute pointer (mouse_abs / mouse_abs_px / mouse_abs_mon)
