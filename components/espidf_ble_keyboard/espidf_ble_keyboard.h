@@ -33,7 +33,8 @@ static const uint8_t MAX_HOST_SLOTS = 10;
 struct HidKeyMapping {
   uint8_t modifier;  // 0x00 none, 0x02 LShift, 0x40 RAlt/AltGr, etc.
   uint8_t keycode;   // USB HID usage; 0x00 = unmapped
-  uint8_t followup_keycode;  // 0x00 = none; else send {0, followup_keycode} after main stroke (dead-key + space)
+  uint8_t followup_keycode;  // 0x00 = none; else send {followup_modifier, followup_keycode} after main stroke
+  uint8_t followup_modifier; // modifier on the second stroke (e.g. Shift for uppercase accented vowels)
 };
 
 struct UnicodeKeyMapping {
@@ -41,6 +42,7 @@ struct UnicodeKeyMapping {
   uint8_t modifier;
   uint8_t keycode;
   uint8_t followup_keycode;  // same semantics as HidKeyMapping
+  uint8_t followup_modifier;
 };
 
 struct KeyboardLayout {
