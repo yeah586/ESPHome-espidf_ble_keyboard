@@ -1111,6 +1111,8 @@ espidf_ble_keyboard:
 
 **Web UI (overrides YAML, persisted to NVS):** open `http://<device-ip>/ble_keyboard` and use the layout dropdown in the Keyboard card header. The choice is saved and survives reboot. Erasing NVS reverts to the YAML default.
 
+> **Precedence note:** if you change `keyboard_layout` in YAML and reflash, the new value takes effect on the next boot — any previous web-UI override is automatically cleared. Web-UI overrides only persist across reboots while the YAML value stays the same. No factory reset needed to "see" a YAML edit.
+
 **Per host slot (YAML, auto-applied on switch):** add `layout:` to any entry in the `hosts:` list to bind a layout to that slot. When you switch to that host (via service, button, or web UI), the device flips to its layout automatically. This is ephemeral — it does not overwrite a manual web-UI pick in NVS, and switching to a slot with no `layout:` keeps whatever was active.
 
 ```yaml

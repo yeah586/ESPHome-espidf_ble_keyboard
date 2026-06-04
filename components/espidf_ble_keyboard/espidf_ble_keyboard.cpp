@@ -1376,7 +1376,29 @@ void EspidfBleKeyboard::set_runtime_layout(const std::string &id, bool persist) 
 
 void EspidfBleKeyboard::load_layout_() {
     nvs_handle_t handle;
-    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+
+    // 1) Did the YAML keyboard_layout change since last boot?
+    //    "yaml_layout" snapshots the last YAML default we saw. Same idiom as
+    //    maybe_reset_bonds_after_security_config_change() does for passkey.
+    char saved_yaml[16] = {0};
+    size_t yaml_len = sizeof(saved_yaml);
+    esp_err_t yaml_get = nvs_get_str(handle, "yaml_layout", saved_yaml, &yaml_len);
+    const bool yaml_changed = (yaml_get != ESP_OK) || (yaml_layout_id_ != saved_yaml);
+
+    if (yaml_changed) {
+        // Persist the new YAML default and discard any stale runtime override
+        // so the user's flash actually takes effect without a factory reset.
+        nvs_set_str(handle, "yaml_layout", yaml_layout_id_.c_str());
+        nvs_erase_key(handle, "layout");
+        nvs_commit(handle);
+        ESP_LOGI(TAG, "YAML keyboard_layout changed (%s -> %s); cleared NVS override",
+                 (yaml_get == ESP_OK) ? saved_yaml : "<none>", yaml_layout_id_.c_str());
+        nvs_close(handle);
+        return;  // active_layout_ already points at the new YAML default
+    }
+
+    // 2) YAML unchanged — honour the user's runtime web-UI override, if any.
     char buf[16];
     size_t len = sizeof(buf);
     if (nvs_get_str(handle, "layout", buf, &len) == ESP_OK) {
