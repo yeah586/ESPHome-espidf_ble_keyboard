@@ -184,10 +184,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">goto scale (live)</label>
 <label style="font-size:12px;color:var(--muted)">X</label>
-<input id="finder-scale-x" type="number" step="0.01" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button id="sx-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<input id="finder-scale-x" type="number" step="0.001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button id="sx-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
 <label style="font-size:12px;color:var(--muted)">Y</label>
-<input id="finder-scale-y" type="number" step="0.01" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
-<span style="font-size:11px;color:var(--muted)">tune each until the cursor lands right, then put in YAML as <code>mouse_goto_scale_x</code> / <code>mouse_goto_scale_y</code></span>
+<button id="sy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<input id="finder-scale-y" type="number" step="0.001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button id="sy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<span style="font-size:11px;color:var(--muted)">&plusmn; nudges 0.001 (4 dp) · saved per host; also put in YAML as <code>mouse_goto_scale_x</code> / <code>_y</code></span>
 </div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">landed&nbsp;at</label>
@@ -925,6 +929,9 @@ buildKeyboard();
   // input = live preview; change (commit) = also persist to the active host
   if(scaleInX){scaleInX.addEventListener('input',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v})});scaleInX.addEventListener('change',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v,save:1})})}
   if(scaleInY){scaleInY.addEventListener('input',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v})});scaleInY.addEventListener('change',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v,save:1})})}
+  // +/- nudge buttons: step 0.001, applied live and saved to the active host
+  function nudge(inp,ax,d){if(!inp)return;let v=(parseFloat(inp.value)||1)+d;v=Math.round(Math.max(0.05,Math.min(20,v))*10000)/10000;inp.value=v.toFixed(4);api('goto_scale',ax==='x'?{vx:v,save:1}:{vy:v,save:1})}
+  [['sx-dn',scaleInX,'x',-0.001],['sx-up',scaleInX,'x',0.001],['sy-dn',scaleInY,'y',-0.001],['sy-up',scaleInY,'y',0.001]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudge(a[1],a[2],a[3]))});
   function aim(e){
     const r=map.getBoundingClientRect();
     let px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
