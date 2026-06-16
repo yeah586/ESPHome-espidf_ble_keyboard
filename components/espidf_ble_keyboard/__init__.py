@@ -20,6 +20,8 @@ CONF_SCROLL_SENSITIVITY = "scroll_sensitivity"
 CONF_SCREEN_WIDTH = "screen_width"
 CONF_SCREEN_HEIGHT = "screen_height"
 CONF_MOUSE_GOTO_SCALE = "mouse_goto_scale"
+CONF_MOUSE_GOTO_SCALE_X = "mouse_goto_scale_x"
+CONF_MOUSE_GOTO_SCALE_Y = "mouse_goto_scale_y"
 CONF_MONITORS = "monitors"
 CONF_WIDTH = "width"
 CONF_HEIGHT = "height"
@@ -104,6 +106,8 @@ CONFIG_SCHEMA = cv.All(
         cv.Optional(CONF_SCREEN_WIDTH, default=1920): cv.int_range(min=1, max=32767),
         cv.Optional(CONF_SCREEN_HEIGHT, default=1080): cv.int_range(min=1, max=32767),
         cv.Optional(CONF_MOUSE_GOTO_SCALE, default=1.0): cv.float_range(min=0.05, max=20.0),
+        cv.Optional(CONF_MOUSE_GOTO_SCALE_X): cv.float_range(min=0.05, max=20.0),
+        cv.Optional(CONF_MOUSE_GOTO_SCALE_Y): cv.float_range(min=0.05, max=20.0),
         cv.Optional(CONF_MONITORS): cv.ensure_list(MONITOR_SCHEMA),
         cv.Optional(CONF_KEYBOARD_LAYOUT, default="us"): cv.one_of(*SUPPORTED_LAYOUTS, lower=True),
         cv.Optional(CONF_CUSTOM_TEXT_ID): cv.ensure_list(cv.use_id(cg.EntityBase)),
@@ -143,6 +147,10 @@ async def to_code(config):
     cg.add(var.set_scroll_sensitivity(config[CONF_SCROLL_SENSITIVITY]))
     cg.add(var.set_screen_size(config[CONF_SCREEN_WIDTH], config[CONF_SCREEN_HEIGHT]))
     cg.add(var.set_mouse_goto_scale(config[CONF_MOUSE_GOTO_SCALE]))
+    if CONF_MOUSE_GOTO_SCALE_X in config:
+        cg.add(var.set_mouse_goto_scale_x(config[CONF_MOUSE_GOTO_SCALE_X]))
+    if CONF_MOUSE_GOTO_SCALE_Y in config:
+        cg.add(var.set_mouse_goto_scale_y(config[CONF_MOUSE_GOTO_SCALE_Y]))
     for mon in config.get(CONF_MONITORS, []):
         cg.add(var.add_monitor(mon[CONF_X], mon[CONF_Y], mon[CONF_WIDTH], mon[CONF_HEIGHT], mon[CONF_PRIMARY]))
     cg.add(var.set_keyboard_layout(config[CONF_KEYBOARD_LAYOUT]))

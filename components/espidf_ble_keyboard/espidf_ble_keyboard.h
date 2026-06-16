@@ -127,11 +127,14 @@ class EspidfBleKeyboard : public Component {
   void add_monitor(int32_t x, int32_t y, uint32_t w, uint32_t h, bool primary = false) {
     monitors_.push_back({x, y, w, h, primary});
   }
-  // Calibration multiplier for mouse_goto's relative step (compensates the host's
-  // pointer-speed / DPI scaling so a count maps 1:1 to a pixel). 1.0 = no scaling;
-  // if the cursor moves ~2x too far, set ~0.5.
-  void set_mouse_goto_scale(float s) { goto_scale_ = s; }
-  float mouse_goto_scale() const { return goto_scale_; }
+  // Calibration multipliers for mouse_goto's relative step (compensate the host's
+  // pointer-speed / DPI scaling so a count maps 1:1 to a pixel). 1.0 = no scaling.
+  // X and Y are independent because some hosts scale the axes differently.
+  void set_mouse_goto_scale(float s) { goto_scale_x_ = s; goto_scale_y_ = s; }  // both
+  void set_mouse_goto_scale_x(float s) { goto_scale_x_ = s; }
+  void set_mouse_goto_scale_y(float s) { goto_scale_y_ = s; }
+  float mouse_goto_scale_x() const { return goto_scale_x_; }
+  float mouse_goto_scale_y() const { return goto_scale_y_; }
   uint32_t screen_width() const { return screen_w_; }
   uint32_t screen_height() const { return screen_h_; }
   const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
@@ -302,7 +305,7 @@ class EspidfBleKeyboard : public Component {
   // Absolute-pointer geometry + position tracking
   uint32_t screen_w_{1920}, screen_h_{1080};   // pixel space mapped to 0..32767
   std::vector<MonitorRect> monitors_;          // optional per-monitor regions
-  float goto_scale_{1.0f};                     // mouse_goto relative-step calibration
+  float goto_scale_x_{1.0f}, goto_scale_y_{1.0f};  // mouse_goto per-axis calibration
   uint16_t cur_abs_x_{16384}, cur_abs_y_{16384};  // last position WE set (center default)
   uint16_t saved_abs_x_{0}, saved_abs_y_{0};
   bool has_saved_abs_{false};

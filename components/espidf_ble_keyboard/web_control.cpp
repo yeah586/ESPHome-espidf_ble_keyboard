@@ -182,9 +182,12 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <span id="finder-info" style="font-size:12px;color:var(--muted)"></span>
 </div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
-<label style="font-size:12px;color:var(--muted)">goto&nbsp;scale (live)</label>
-<input id="finder-scale" type="number" step="0.01" min="0.05" max="20" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
-<span style="font-size:11px;color:var(--muted)">tune until the cursor lands right, then put this in YAML as <code>mouse_goto_scale</code></span>
+<label style="font-size:12px;color:var(--muted)">goto scale (live)</label>
+<label style="font-size:12px;color:var(--muted)">X</label>
+<input id="finder-scale-x" type="number" step="0.01" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<label style="font-size:12px;color:var(--muted)">Y</label>
+<input id="finder-scale-y" type="number" step="0.01" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<span style="font-size:11px;color:var(--muted)">tune each until the cursor lands right, then put in YAML as <code>mouse_goto_scale_x</code> / <code>mouse_goto_scale_y</code></span>
 </div>
 </div>
 
@@ -1173,13 +1176,14 @@ class BleKbWebHandler : public AsyncWebHandler {
 
     if (path == "screen") {
       // Absolute-pointer geometry for the web Position Finder.
-      char gsbuf[16];
-      snprintf(gsbuf, sizeof(gsbuf), "%.4f", kb_->mouse_goto_scale());
+      char gsxbuf[16], gsybuf[16];
+      snprintf(gsxbuf, sizeof(gsxbuf), "%.4f", kb_->mouse_goto_scale_x());
+      snprintf(gsybuf, sizeof(gsybuf), "%.4f", kb_->mouse_goto_scale_y());
       std::string json = "{\"w\":" + std::to_string(kb_->screen_width()) +
                          ",\"h\":" + std::to_string(kb_->screen_height()) +
                          ",\"ox\":" + std::to_string(kb_->primary_origin_x()) +
                          ",\"oy\":" + std::to_string(kb_->primary_origin_y()) +
-                         ",\"gs\":" + gsbuf + ",\"mon\":[";
+                         ",\"gsx\":" + gsxbuf + ",\"gsy\":" + gsybuf + ",\"mon\":[";
       const auto &mons = kb_->get_monitors();
       for (size_t i = 0; i < mons.size(); i++) {
         if (i) json += ",";
@@ -1279,11 +1283,19 @@ class BleKbWebHandler : public AsyncWebHandler {
       send_response(200, "text/plain", "OK");
 
     } else if (path == "goto_scale") {
-      // Live mouse_goto calibration (in-memory; copy the dialed value into YAML
-      // to persist). Lets the web Finder tune the scale without reflashing.
+      // Live mouse_goto calibration (in-memory; copy the dialed values into YAML
+      // to persist). v sets both axes; vx/vy set each independently.
       if (request->hasArg("v")) {
         float v = atof(request->arg("v").c_str());
         if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale(v);
+      }
+      if (request->hasArg("vx")) {
+        float v = atof(request->arg("vx").c_str());
+        if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_x(v);
+      }
+      if (request->hasArg("vy")) {
+        float v = atof(request->arg("vy").c_str());
+        if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_y(v);
       }
       send_response(200, "text/plain", "OK");
 
