@@ -181,6 +181,11 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="mbtn" id="finder-copy" style="flex:0 0 auto">Copy</button>
 <span id="finder-info" style="font-size:12px;color:var(--muted)"></span>
 </div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+<label style="font-size:12px;color:var(--muted)">goto&nbsp;scale (live)</label>
+<input id="finder-scale" type="number" step="0.01" min="0.05" max="20" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<span style="font-size:11px;color:var(--muted)">tune until the cursor lands right, then put this in YAML as <code>mouse_goto_scale</code></span>
+</div>
 </div>
 
 <div class="card" id="media-card">
@@ -864,6 +869,7 @@ buildKeyboard();
   const val=document.getElementById('finder-val');
   const info=document.getElementById('finder-info');
   const copyBtn=document.getElementById('finder-copy');
+  const scaleIn=document.getElementById('finder-scale');
   let SW=1920,SH=1080,OX=0,OY=0,mons=[],lastW=-1,wx=0,wy=0,dragging=false;
   function draw(){
     const w=map.clientWidth||300;lastW=w;
@@ -883,8 +889,15 @@ buildKeyboard();
   }
   function load(){
     fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
-      SW=d.w||1920;SH=d.h||1080;OX=d.ox||0;OY=d.oy||0;mons=d.mon||[];draw();
+      SW=d.w||1920;SH=d.h||1080;OX=d.ox||0;OY=d.oy||0;mons=d.mon||[];
+      if(scaleIn&&d.gs!=null&&document.activeElement!==scaleIn)scaleIn.value=(+d.gs).toFixed(4);
+      draw();
     }).catch(()=>draw());
+  }
+  if(scaleIn){
+    const push=()=>{const v=parseFloat(scaleIn.value);if(v>=0.05&&v<=20)api('goto_scale',{v:v})};
+    scaleIn.addEventListener('change',push);
+    scaleIn.addEventListener('input',push);
   }
   function aim(e){
     const r=map.getBoundingClientRect();
@@ -1160,10 +1173,13 @@ class BleKbWebHandler : public AsyncWebHandler {
 
     if (path == "screen") {
       // Absolute-pointer geometry for the web Position Finder.
+      char gsbuf[16];
+      snprintf(gsbuf, sizeof(gsbuf), "%.4f", kb_->mouse_goto_scale());
       std::string json = "{\"w\":" + std::to_string(kb_->screen_width()) +
                          ",\"h\":" + std::to_string(kb_->screen_height()) +
                          ",\"ox\":" + std::to_string(kb_->primary_origin_x()) +
-                         ",\"oy\":" + std::to_string(kb_->primary_origin_y()) + ",\"mon\":[";
+                         ",\"oy\":" + std::to_string(kb_->primary_origin_y()) +
+                         ",\"gs\":" + gsbuf + ",\"mon\":[";
       const auto &mons = kb_->get_monitors();
       for (size_t i = 0; i < mons.size(); i++) {
         if (i) json += ",";
@@ -1259,6 +1275,15 @@ class BleKbWebHandler : public AsyncWebHandler {
       if (request->hasArg("btn")) {
         int btn = atoi(request->arg("btn").c_str());
         if (btn != 0) kb_->send_mouse_click((uint8_t) btn);  // clicks at the new position
+      }
+      send_response(200, "text/plain", "OK");
+
+    } else if (path == "goto_scale") {
+      // Live mouse_goto calibration (in-memory; copy the dialed value into YAML
+      // to persist). Lets the web Finder tune the scale without reflashing.
+      if (request->hasArg("v")) {
+        float v = atof(request->arg("v").c_str());
+        if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale(v);
       }
       send_response(200, "text/plain", "OK");
 
