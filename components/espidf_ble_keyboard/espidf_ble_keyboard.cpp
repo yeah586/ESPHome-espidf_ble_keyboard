@@ -1644,6 +1644,10 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     int32_t dy = (int32_t)(fy < 0 ? fy - 0.5f : fy + 0.5f);
     if (dx < -32000) dx = -32000; else if (dx > 32000) dx = 32000;
     if (dy < -32000) dy = -32000; else if (dy > 32000) dy = 32000;
+    // Ground-truth diagnostic: shows the actual scale in effect and the relative
+    // distance being sent. If scale != your YAML value, the config isn't reaching
+    // the firmware; if relative is right but the cursor overshoots, it's host-side.
+    ESP_LOGI(TAG, "Mouse goto: target=(%d,%d) scale=%.4f relative=(%d,%d)", x, y, goto_scale_, dx, dy);
     while (dx != 0 || dy != 0) {
         int32_t sx = dx > 127 ? 127 : (dx < -127 ? -127 : dx);
         int32_t sy = dy > 127 ? 127 : (dy < -127 ? -127 : dy);
@@ -1654,7 +1658,6 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
         dy -= sy;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
-    ESP_LOGD(TAG, "Mouse goto sent: x=%d y=%d", x, y);
 }
 
 void EspidfBleKeyboard::send_hibernate() {
