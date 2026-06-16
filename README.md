@@ -864,7 +864,7 @@ change the scale); click **Edit** to use it:
      **[`docs/cursorpos.bat`](docs/cursorpos.bat)** — double-click it on the target
      PC for a live **physical-pixel** readout (no install; uses `GetCursorPos` under
      `SetProcessDPIAware` so the numbers match the Finder).
-3. Fine-tune with the **goto scale ±** buttons (0.0001 steps, 5-dp), or **Reset**
+3. Fine-tune with the **goto scale ±** buttons (0.0001 steps, 4-dp), or **Reset**
    to the YAML default.
 
 Each **host slot keeps its own** X/Y scale in NVS, so a 4K/scaled host and a 1080p
