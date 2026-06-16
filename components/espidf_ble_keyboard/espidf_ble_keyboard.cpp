@@ -1692,23 +1692,35 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     // the firmware; if relative is right but the cursor overshoots, it's host-side.
     ESP_LOGI(TAG, "Mouse goto: target=(%d,%d) scale=(%.4f,%.4f) relative=(%d,%d)",
              x, y, goto_scale_x_, goto_scale_y_, dx, dy);
-    // Decoupled: ALL of X first, then ALL of Y, in separate reports (127 steps,
-    // 8ms). Keeps Y from inheriting X's diagonal speed (the location drift).
-    // Note: if X overshoots (uncalibrated scale) it can jam at a monitor's right
-    // edge (e.g. 3839) — calibrate X with a SMALL target near the origin first so
-    // it doesn't fly past the boundary, then large/cross-monitor goes work.
-    while (dx != 0) {
-        int32_t sx = dx > 127 ? 127 : (dx < -127 ? -127 : dx);
-        uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(sx)), 0, 0};
+    // Decoupled move that still crosses monitors. The cursor homes to the top-left
+    // corner, so a straight X run travels along the top edge and sticks at a
+    // monitor's top-right corner (can't change screens — the "3839" jam). So:
+    //   Phase 1: drop Y to MID-screen   Phase 2: cross X there   Phase 3: Y -> target
+    // Y is always moved on its own (never bundled with X), so it doesn't inherit
+    // X's diagonal speed — that's what caused the location drift.
+    int32_t dmid = (int32_t)((float)(screen_h_ / 2u) * goto_scale_y_ + 0.5f);
+    int32_t d = dmid;                       // Phase 1: Y -> mid-screen
+    while (d != 0) {
+        int32_t s = d > 127 ? 127 : (d < -127 ? -127 : d);
+        uint8_t report[4] = {0, 0, static_cast<uint8_t>(static_cast<int8_t>(s)), 0};
         esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
-        dx -= sx;
+        d -= s;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
-    while (dy != 0) {
-        int32_t sy = dy > 127 ? 127 : (dy < -127 ? -127 : dy);
-        uint8_t report[4] = {0, 0, static_cast<uint8_t>(static_cast<int8_t>(sy)), 0};
+    d = dx;                                 // Phase 2: X across (mid-screen Y)
+    while (d != 0) {
+        int32_t s = d > 127 ? 127 : (d < -127 ? -127 : d);
+        uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(s)), 0, 0};
         esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
-        dy -= sy;
+        d -= s;
+        vTaskDelay(pdMS_TO_TICKS(8));
+    }
+    d = dy - dmid;                          // Phase 3: Y from mid -> target
+    while (d != 0) {
+        int32_t s = d > 127 ? 127 : (d < -127 ? -127 : d);
+        uint8_t report[4] = {0, 0, static_cast<uint8_t>(static_cast<int8_t>(s)), 0};
+        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+        d -= s;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
     // Settle nudge: after a burst of injected moves Windows can leave the cursor
