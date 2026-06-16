@@ -1692,11 +1692,11 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     // the firmware; if relative is right but the cursor overshoots, it's host-side.
     ESP_LOGI(TAG, "Mouse goto: target=(%d,%d) scale=(%.4f,%.4f) relative=(%d,%d)",
              x, y, goto_scale_x_, goto_scale_y_, dx, dy);
-    // Decoupled: move ALL of X first, then ALL of Y, in SEPARATE reports — same
-    // 127-count step size and 8ms pacing as before, the ONLY difference being
-    // that X and Y are no longer combined in one report. Combining them lets the
-    // host's acceleration scale the diagonal speed, so Y inherits X's speed and
-    // its landing drifts with the target's X distance.
+    // Decoupled: ALL of X first, then ALL of Y, in separate reports (127 steps,
+    // 8ms). Keeps Y from inheriting X's diagonal speed (the location drift).
+    // Note: if X overshoots (uncalibrated scale) it can jam at a monitor's right
+    // edge (e.g. 3839) — calibrate X with a SMALL target near the origin first so
+    // it doesn't fly past the boundary, then large/cross-monitor goes work.
     while (dx != 0) {
         int32_t sx = dx > 127 ? 127 : (dx < -127 ? -127 : dx);
         uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(sx)), 0, 0};

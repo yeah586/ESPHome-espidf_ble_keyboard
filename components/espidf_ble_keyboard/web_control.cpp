@@ -993,10 +993,18 @@ buildKeyboard();
   // Auto-calibrate: new_scale = current_scale * target / actual, per axis.
   if(calBtn){calBtn.addEventListener('click',()=>{
     if(lastTx==null){calInfo.textContent='send to a target first (tap the map)';return}
-    const ax=parseFloat(actXIn.value),ay=parseFloat(actYIn.value);let out=[];
-    if(isFinite(ax)&&ax!==0&&lastTx!==0){const cur=parseFloat(scaleInX.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTx/ax));scaleInX.value=ns.toFixed(5);api('goto_scale',{vx:ns,save:1});out.push('X '+ns.toFixed(5))}
-    if(isFinite(ay)&&ay!==0&&lastTy!==0){const cur=parseFloat(scaleInY.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTy/ay));scaleInY.value=ns.toFixed(5);api('goto_scale',{vy:ns,save:1});out.push('Y '+ns.toFixed(5))}
-    calInfo.textContent=out.length?('new scale → '+out.join('  ')+' (applied live; copy to YAML)'):'enter the actual X and/or Y where it landed';
+    const ax=parseFloat(actXIn.value),ay=parseFloat(actYIn.value);let out=[],warn=[];
+    // Desktop bounds in Windows coords; a reading at the edge is clamped/unreliable.
+    const E=3,minWX=-OX,maxWX=SW-OX,minWY=-OY,maxWY=SH-OY;
+    const xClamp=isFinite(ax)&&(ax<=minWX+E||ax>=maxWX-E);
+    const yClamp=isFinite(ay)&&(ay<=minWY+E||ay>=maxWY-E);
+    if(isFinite(ax)&&ax!==0&&lastTx!==0&&!xClamp){const cur=parseFloat(scaleInX.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTx/ax));scaleInX.value=ns.toFixed(5);api('goto_scale',{vx:ns,save:1});out.push('X '+ns.toFixed(5))}
+    else if(xClamp)warn.push('X hit the screen edge');
+    if(isFinite(ay)&&ay!==0&&lastTy!==0&&!yClamp){const cur=parseFloat(scaleInY.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTy/ay));scaleInY.value=ns.toFixed(5);api('goto_scale',{vy:ns,save:1});out.push('Y '+ns.toFixed(5))}
+    else if(yClamp)warn.push('Y hit the screen edge');
+    let msg=out.length?('new scale → '+out.join('  ')):'';
+    if(warn.length)msg+=(msg?' · ':'')+warn.join('; ')+' (clamped — aim nearer the middle)';
+    calInfo.textContent=msg||'enter the actual X and/or Y where it landed';
   })}
   // Poll the last sent target so the green marker tracks goto's from any source.
   function pollSent(){fetch('/api/ble_keyboard/goto_last').then(r=>r.json()).then(d=>{if(d&&d.x!=null)placeSent(d.x,d.y)}).catch(()=>{})}
