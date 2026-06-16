@@ -25,7 +25,7 @@ static const char PAGE_HTML[] PROGMEM = R"rawhtml(<!DOCTYPE html>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#1a1e28;--fg:#e2e8f0;--card:#13161e;--border:#252a38;--muted:#7c8aad;--accent:#00d4aa;--active:#03a9f4;--caps:#ff9800;--name:var(--fg)}
 body.light{--bg:#f0f2f5;--fg:#1a1e28;--card:#ffffff;--border:#d0d5dd;--muted:#7c8aad;--accent:#00875a;--active:#0288d1;--caps:#e65100;--name:var(--fg)}
-body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:680px;margin:0 auto;user-select:none;-webkit-user-select:none;transition:background .2s,color .2s}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:100%;margin:0 auto;user-select:none;-webkit-user-select:none;transition:background .2s,color .2s}
 h2{font-size:15px;font-weight:600;margin:12px 0 8px;color:var(--accent);display:flex;align-items:center;gap:6px}
 h2 svg{width:18px;height:18px;fill:var(--accent)}
 .toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;gap:6px;overflow:hidden}
@@ -46,7 +46,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .kb-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;gap:8px}
 .kb-title{font-size:15px;font-weight:600;color:var(--accent)}
 .layout-sel{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:12px;font-family:inherit;cursor:pointer}
-.scalable{transform-origin:top left;transition:transform .15s}
+.scalable{transform-origin:top center;transition:transform .15s}
 .row{display:flex;gap:3px;margin-bottom:3px}
 .row:last-child{margin-bottom:0}
 .k{flex:1;min-width:0;padding:9px 1px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .08s;outline:none;-webkit-tap-highlight-color:transparent;position:relative}
@@ -872,7 +872,8 @@ buildKeyboard();
   const val=document.getElementById('finder-val');
   const info=document.getElementById('finder-info');
   const copyBtn=document.getElementById('finder-copy');
-  const scaleIn=document.getElementById('finder-scale');
+  const scaleInX=document.getElementById('finder-scale-x');
+  const scaleInY=document.getElementById('finder-scale-y');
   let SW=1920,SH=1080,OX=0,OY=0,mons=[],lastW=-1,wx=0,wy=0,dragging=false;
   function draw(){
     const w=map.clientWidth||300;lastW=w;
@@ -893,15 +894,13 @@ buildKeyboard();
   function load(){
     fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
       SW=d.w||1920;SH=d.h||1080;OX=d.ox||0;OY=d.oy||0;mons=d.mon||[];
-      if(scaleIn&&d.gs!=null&&document.activeElement!==scaleIn)scaleIn.value=(+d.gs).toFixed(4);
+      if(scaleInX&&d.gsx!=null&&document.activeElement!==scaleInX)scaleInX.value=(+d.gsx).toFixed(4);
+      if(scaleInY&&d.gsy!=null&&document.activeElement!==scaleInY)scaleInY.value=(+d.gsy).toFixed(4);
       draw();
     }).catch(()=>draw());
   }
-  if(scaleIn){
-    const push=()=>{const v=parseFloat(scaleIn.value);if(v>=0.05&&v<=20)api('goto_scale',{v:v})};
-    scaleIn.addEventListener('change',push);
-    scaleIn.addEventListener('input',push);
-  }
+  if(scaleInX){const p=()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v})};scaleInX.addEventListener('change',p);scaleInX.addEventListener('input',p)}
+  if(scaleInY){const p=()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v})};scaleInY.addEventListener('change',p);scaleInY.addEventListener('input',p)}
   function aim(e){
     const r=map.getBoundingClientRect();
     let px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
