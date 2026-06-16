@@ -924,10 +924,23 @@ buildKeyboard();
   }
   function placeSent(tx,ty){
     lastTx=tx;lastTy=ty;
-    const sm=document.getElementById('finder-sent');if(!sm)return;
     const dx=(tx+OX)/SW,dy=(ty+OY)/SH;
-    if(dx<0||dx>1||dy<0||dy>1){sm.style.display='none';return}
-    sm.style.display='';sm.style.left=(dx*100)+'%';sm.style.top=(dy*100)+'%';
+    const sm=document.getElementById('finder-sent');
+    if(sm){
+      if(dx<0||dx>1||dy<0||dy>1)sm.style.display='none';
+      else{sm.style.display='';sm.style.left=(dx*100)+'%';sm.style.top=(dy*100)+'%'}
+    }
+    // Reflect the last sent target (e.g. a mouse_goto from a button/Power Automate)
+    // in the value + main marker too — unless the user is actively aiming a tap.
+    if(!dragging){
+      wx=tx;wy=ty;
+      val.textContent='mouse_goto:'+tx+':'+ty;
+      const mk=document.getElementById('finder-marker');
+      if(mk){
+        if(dx<0||dx>1||dy<0||dy>1)mk.style.display='none';
+        else{mk.style.display='';mk.style.left=(dx*100)+'%';mk.style.top=(dy*100)+'%'}
+      }
+    }
   }
   function load(){
     fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
