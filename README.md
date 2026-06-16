@@ -851,11 +851,14 @@ change the scale); click **Edit** to use it:
 1. **Tap the desktop map** (or use the **nudge target** ±1 px buttons) to send the
    cursor to a spot. Start with a **small target near the primary's top-left** so
    an uncalibrated move can't fly off-screen.
-2. Read where the cursor **actually** landed (e.g. Power Automate's coordinates),
-   type it into **"landed at" X/Y**, and hit **Auto-calibrate** — it computes the
-   X/Y scale (`new = current × target ÷ actual`), applies it live, and **saves it
-   to the current host**. Re-tap and repeat to converge; aim more central if a
-   reading hits a screen edge.
+2. Read where the cursor **actually** landed, type it into **"landed at" X/Y**, and
+   hit **Auto-calibrate** — it computes the X/Y scale (`new = current × target ÷
+   actual`), applies it live, and **saves it to the current host**. Re-tap and
+   repeat to converge; aim more central if a reading hits a screen edge.
+   - To read the live cursor position you can use Power Automate, or the bundled
+     **[`docs/cursorpos.bat`](docs/cursorpos.bat)** — double-click it on the target
+     PC for a live **physical-pixel** readout (no install; uses `GetCursorPos` under
+     `SetProcessDPIAware` so the numbers match the Finder/Power Automate).
 3. Fine-tune with the **goto scale ±** buttons (0.0001 steps, 5-dp), or **Reset**
    to the YAML default.
 
