@@ -173,14 +173,15 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <div class="card" id="finder-card">
-<h2><svg viewBox="0 0 24 24"><path d="M11 2h2v6h-2zM2 11h6v2H2zm14 0h6v2h-6zm-5 5h2v6h-2zM7 7l3 3-1.4 1.4L5.6 8.4zm10 0l1.4 1.4-3 3L14 11zm0 10l-3-3 1.4-1.4 3 3zM7 17l-1.4-1.4 3-3L10 14z"/></svg>Position Finder</h2>
-<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Press &amp; drag to aim, release to move the cursor. Copy the <code>mouse_goto</code> value into a button or macro. (Mark your primary monitor with <code>primary: true</code> in YAML.)</div>
+<h2><svg viewBox="0 0 24 24"><path d="M11 2h2v6h-2zM2 11h6v2H2zm14 0h6v2h-6zm-5 5h2v6h-2zM7 7l3 3-1.4 1.4L5.6 8.4zm10 0l1.4 1.4-3 3L14 11zm0 10l-3-3 1.4-1.4 3 3zM7 17l-1.4-1.4 3-3L10 14z"/></svg>Position Finder<button class="macro-edit-btn" id="finder-edit-toggle">Edit</button></h2>
+<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Locked by default so a stray tap can't move the cursor &mdash; click <strong>Edit</strong> to aim &amp; calibrate. Then press &amp; drag the map to move the cursor; copy the <code>mouse_goto</code> value into a button/macro.</div>
 <div id="finder-map" style="position:relative;width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"></div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <code id="finder-val" style="font-size:14px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg)">mouse_goto:0:0</code>
 <button class="mbtn" id="finder-copy" style="flex:0 0 auto">Copy</button>
 <span id="finder-info" style="font-size:12px;color:var(--muted)"></span>
 </div>
+<div id="finder-edit-section">
 <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">nudge&nbsp;target</label>
 <label style="font-size:12px;color:var(--muted)">X</label>
@@ -210,6 +211,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <input id="finder-act-y" type="number" placeholder="actual Y" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <button class="mbtn" id="finder-cal" style="flex:0 0 auto">Auto‑calibrate</button>
 <span id="finder-cal-info" style="font-size:11px;color:var(--muted)">send to a target, then enter where it REALLY landed (Power Automate coords) → computes X/Y scale</span>
+</div>
 </div>
 </div>
 
@@ -901,6 +903,19 @@ buildKeyboard();
   const calBtn=document.getElementById('finder-cal');
   const calInfo=document.getElementById('finder-cal-info');
   let SW=1920,SH=1080,OX=0,OY=0,mons=[],lastW=-1,wx=0,wy=0,dragging=false,lastTx=null,lastTy=null;
+  // Lock: keep the map non-interactive and the calibration controls hidden until
+  // "Edit" is clicked, so a stray tap can't move the cursor or change the scale.
+  const editToggle=document.getElementById('finder-edit-toggle');
+  const editSection=document.getElementById('finder-edit-section');
+  let locked=localStorage.getItem('blekb_finder_unlocked')!=='1';
+  function applyLock(){
+    if(editSection)editSection.style.display=locked?'none':'';
+    if(editToggle)editToggle.textContent=locked?'Edit':'Lock';
+    map.style.cursor=locked?'default':'crosshair';
+    map.style.opacity=locked?'0.9':'1';
+  }
+  if(editToggle)editToggle.addEventListener('click',()=>{locked=!locked;localStorage.setItem('blekb_finder_unlocked',locked?'0':'1');applyLock()});
+  applyLock();
   function draw(){
     const w=map.clientWidth||300;lastW=w;
     map.style.height=Math.max(60,Math.round(w*SH/SW))+'px';
@@ -982,7 +997,7 @@ buildKeyboard();
     info.textContent='Windows '+wx+','+wy+mon+' — release to move cursor';
   }
   map.addEventListener('contextmenu',e=>e.preventDefault());  // stop long-press / right-click menu
-  map.addEventListener('pointerdown',e=>{e.preventDefault();dragging=true;try{map.setPointerCapture(e.pointerId)}catch(_){}aim(e)});
+  map.addEventListener('pointerdown',e=>{if(locked)return;e.preventDefault();dragging=true;try{map.setPointerCapture(e.pointerId)}catch(_){}aim(e)});
   map.addEventListener('pointermove',e=>{if(dragging){e.preventDefault();aim(e)}});
   map.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;aim(e);placeSent(wx,wy);api('press',{action:'mouse_goto:'+wx+':'+wy})});
   map.addEventListener('pointercancel',()=>{dragging=false});
