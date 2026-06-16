@@ -458,7 +458,7 @@ espidf_ble_keyboard:
 | `"mouse_abs_mon:<idx>:<x%>:<y%>"` | Move cursor to a percent within declared `monitors[idx]` (multi-monitor). |
 | `"mouse_abs_save"` | Remember the current absolute position (the one this device last set). |
 | `"mouse_abs_restore"` | Jump back to the last `mouse_abs_save` position. |
-| `"mouse_goto:<x>:<y>"` | Move to a **Windows virtual-desktop pixel** across **all monitors** (homes the absolute pointer to the desktop origin, then steps relatively). X/Y are Windows coordinates (primary monitor top-left = 0,0; screens left of it are negative). Use this when the absolute pointer is confined to the primary monitor. Needs "Enhance pointer precision" **off** + 1:1 pointer speed for pixel accuracy. |
+| `"mouse_goto:<x>:<y>"` | Move to a **Windows virtual-desktop pixel** across **all monitors** (homes the absolute pointer to the desktop origin, then steps relatively). X/Y are Windows coordinates (primary monitor top-left = 0,0; screens left of it are negative). Use this when the absolute pointer is confined to the primary monitor. Needs "Enhance pointer precision" **off** and a fixed pointer-speed slider position (the per-axis calibration is tied to it) for pixel accuracy. |
 | `"switch_host:N"` | Switch to host slot N (0–9). Reconnects to stored host or advertises for new pairing. |
 | `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
 | `"string:hello"` | Explicit text typing — useful in multi-step macros to distinguish text from action names. |
@@ -808,7 +808,8 @@ virtual desktop**:
   relative movement spans the whole virtual desktop, so it reaches every monitor.
   Feed it Windows virtual-desktop coordinates (read a spot's with the bundled
   [`docs/cursorpos.bat`](docs/cursorpos.bat)); for pixel accuracy turn "Enhance
-  pointer precision" off and set pointer speed to the middle (1:1) notch.
+  pointer precision" off and set the pointer-speed slider to a fixed position you then
+  calibrate to (don't move it afterward — even one notch loses accuracy).
 
 ### Cross-monitor positioning with `mouse_goto`
 
@@ -835,9 +836,13 @@ mid-screen so it doesn't jam at a monitor corner.
    caches the old HID descriptor, so the absolute report stays invisible until a
    fresh pairing — `mouse_abs`/`mouse_goto` do nothing otherwise).
 2. Mark the Windows primary monitor with **`primary: true`** in `monitors:`.
-3. In **Mouse Properties → Pointer Options**, turn **"Enhance pointer precision" off**
+3. In **Mouse Properties → Pointer Options**: turn **"Enhance pointer precision" off**
    (acceleration is non-linear and can't be calibrated out; vendor mouse software
-   such as Logitech Options+ can re-enable it).
+   such as Logitech Options+ can re-enable it), and set the **pointer-speed slider to a
+   fixed position and leave it there**. Each step is a different fixed multiplier and the
+   per-axis calibration is tied to the one you pick, so moving it even a single notch
+   makes `mouse_goto` land a few pixels off. (On Windows 11's 1–20 slider this rig is
+   dialed in at **14** — 13 and 15 are visibly inaccurate.)
 4. **Calibrate** the per-axis scale (next section). X and Y usually need different
    values. A residual of ~1–2 px is the integer mouse-count grid — host-side limit.
 

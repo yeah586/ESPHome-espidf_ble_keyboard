@@ -1847,8 +1847,9 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
     // (relative movement spans the virtual desktop, unlike the absolute pointer
     // which Windows confines to the primary monitor). X/Y are Windows virtual-
     // desktop coordinates (the primary monitor's top-left is 0,0; screens left of
-    // it are negative). Requires "Enhance pointer precision" OFF + 1:1 pointer
-    // speed for pixel accuracy.
+    // it are negative). Requires "Enhance pointer precision" OFF and a fixed
+    // pointer-speed slider position the per-axis scale is calibrated to (moving
+    // it even one notch loses pixel accuracy).
     if (action.find("mouse_goto:") == 0) {
         int tx = 0, ty = 0;
         if (sscanf(action.c_str(), "mouse_goto:%i:%i", &tx, &ty) == 2)
