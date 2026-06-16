@@ -1658,6 +1658,15 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
         dy -= sy;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
+    // Settle nudge: after a burst of injected moves Windows can leave the cursor
+    // sprite visually stale (it only redraws on a "real" mouse event), so it looks
+    // like nothing happened until you touch a physical mouse. A +1/-1 wiggle nets
+    // ~zero displacement but forces the cursor to redraw at the final spot.
+    uint8_t nudge1[4] = {0, 1, 0, 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, nudge1, false);
+    vTaskDelay(pdMS_TO_TICKS(10));
+    uint8_t nudge2[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(-1)), 0, 0};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, nudge2, false);
 }
 
 void EspidfBleKeyboard::send_hibernate() {
