@@ -143,6 +143,12 @@ class EspidfBleKeyboard : public Component {
   // each paired host (different DPI / pointer settings) keeps its own values.
   void save_goto_scale_for_host();
   void load_goto_scale_for_host(uint8_t slot);
+  // Reset the goto scale back to the YAML-configured defaults and save to host.
+  void reset_goto_scale_for_host() {
+    goto_scale_x_ = yaml_goto_scale_x_;
+    goto_scale_y_ = yaml_goto_scale_y_;
+    save_goto_scale_for_host();
+  }
   uint32_t screen_width() const { return screen_w_; }
   uint32_t screen_height() const { return screen_h_; }
   const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
@@ -314,6 +320,7 @@ class EspidfBleKeyboard : public Component {
   uint32_t screen_w_{1920}, screen_h_{1080};   // pixel space mapped to 0..32767
   std::vector<MonitorRect> monitors_;          // optional per-monitor regions
   float goto_scale_x_{1.0f}, goto_scale_y_{1.0f};  // mouse_goto per-axis calibration
+  float yaml_goto_scale_x_{1.0f}, yaml_goto_scale_y_{1.0f};  // YAML defaults (for Reset)
   int32_t last_goto_x_{0}, last_goto_y_{0};        // last mouse_goto target (Windows coords)
   uint16_t cur_abs_x_{16384}, cur_abs_y_{16384};  // last position WE set (center default)
   uint16_t saved_abs_x_{0}, saved_abs_y_{0};

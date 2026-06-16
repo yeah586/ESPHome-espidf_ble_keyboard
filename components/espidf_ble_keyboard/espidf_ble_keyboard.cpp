@@ -1138,6 +1138,8 @@ void EspidfBleKeyboard::setup() {
 
     maybe_reset_bonds_after_security_config_change();
     load_host_slots_();
+    yaml_goto_scale_x_ = goto_scale_x_;  // snapshot YAML defaults (for Reset) before NVS override
+    yaml_goto_scale_y_ = goto_scale_y_;
     load_goto_scale_for_host(active_slot_);  // per-host calibration override (if saved)
     load_macros_();
     // Apply YAML default if no setter ran (defensive), then let NVS override.

@@ -181,6 +181,16 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="mbtn" id="finder-copy" style="flex:0 0 auto">Copy</button>
 <span id="finder-info" style="font-size:12px;color:var(--muted)"></span>
 </div>
+<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+<label style="font-size:12px;color:var(--muted)">nudge&nbsp;target</label>
+<label style="font-size:12px;color:var(--muted)">X</label>
+<button id="gx-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<button id="gx-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<label style="font-size:12px;color:var(--muted)">Y</label>
+<button id="gy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<button id="gy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<span style="font-size:11px;color:var(--muted)">moves the cursor &amp; updates the value (5&nbsp;px steps)</span>
+</div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">goto scale (live)</label>
 <label style="font-size:12px;color:var(--muted)">X</label>
@@ -191,7 +201,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button id="sy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
 <input id="finder-scale-y" type="number" step="0.001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <button id="sy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
-<span style="font-size:11px;color:var(--muted)">&plusmn; nudges 0.001 (4 dp) · saved per host; also put in YAML as <code>mouse_goto_scale_x</code> / <code>_y</code></span>
+<button id="sc-reset" style="flex:0 0 auto;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:13px;cursor:pointer">Reset</button>
+<span style="font-size:11px;color:var(--muted)">&plusmn; nudges 0.001 (4 dp) · Reset = YAML default · saved per host (also YAML <code>mouse_goto_scale_x</code> / <code>_y</code>)</span>
 </div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">landed&nbsp;at</label>
@@ -932,6 +943,18 @@ buildKeyboard();
   // +/- nudge buttons: step 0.001, applied live and saved to the active host
   function nudge(inp,ax,d){if(!inp)return;let v=(parseFloat(inp.value)||1)+d;v=Math.round(Math.max(0.05,Math.min(20,v))*10000)/10000;inp.value=v.toFixed(4);api('goto_scale',ax==='x'?{vx:v,save:1}:{vy:v,save:1})}
   [['sx-dn',scaleInX,'x',-0.001],['sx-up',scaleInX,'x',0.001],['sy-dn',scaleInY,'y',-0.001],['sy-up',scaleInY,'y',0.001]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudge(a[1],a[2],a[3]))});
+  // Goto-target nudge (5px): move the cursor and update the value + markers
+  function nudgeGoto(ax,d){
+    if(ax==='x')wx+=d;else wy+=d;
+    val.textContent='mouse_goto:'+wx+':'+wy;
+    const mk=document.getElementById('finder-marker');
+    if(mk){mk.style.display='';mk.style.left=((wx+OX)/SW*100)+'%';mk.style.top=((wy+OY)/SH*100)+'%'}
+    placeSent(wx,wy);
+    api('press',{action:'mouse_goto:'+wx+':'+wy});
+  }
+  [['gx-dn','x',-5],['gx-up','x',5],['gy-dn','y',-5],['gy-up','y',5]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudgeGoto(a[1],a[2]))});
+  // Reset scale to YAML defaults (per host), then refresh the inputs
+  {const rb=document.getElementById('sc-reset');if(rb)rb.addEventListener('click',()=>{api('goto_scale',{reset:1});setTimeout(load,200)})}
   function aim(e){
     const r=map.getBoundingClientRect();
     let px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
@@ -1333,21 +1356,25 @@ class BleKbWebHandler : public AsyncWebHandler {
       send_response(200, "text/plain", "OK");
 
     } else if (path == "goto_scale") {
-      // Live mouse_goto calibration (in-memory; copy the dialed values into YAML
-      // to persist). v sets both axes; vx/vy set each independently.
-      if (request->hasArg("v")) {
-        float v = atof(request->arg("v").c_str());
-        if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale(v);
+      // Live mouse_goto calibration. v sets both axes; vx/vy set each; reset
+      // restores the YAML defaults; save persists to the active host (NVS).
+      if (request->hasArg("reset")) {
+        kb_->reset_goto_scale_for_host();
+      } else {
+        if (request->hasArg("v")) {
+          float v = atof(request->arg("v").c_str());
+          if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale(v);
+        }
+        if (request->hasArg("vx")) {
+          float v = atof(request->arg("vx").c_str());
+          if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_x(v);
+        }
+        if (request->hasArg("vy")) {
+          float v = atof(request->arg("vy").c_str());
+          if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_y(v);
+        }
+        if (request->hasArg("save")) kb_->save_goto_scale_for_host();  // persist to active host
       }
-      if (request->hasArg("vx")) {
-        float v = atof(request->arg("vx").c_str());
-        if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_x(v);
-      }
-      if (request->hasArg("vy")) {
-        float v = atof(request->arg("vy").c_str());
-        if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_y(v);
-      }
-      if (request->hasArg("save")) kb_->save_goto_scale_for_host();  // persist to active host
       send_response(200, "text/plain", "OK");
 
     } else if (path == "string") {
