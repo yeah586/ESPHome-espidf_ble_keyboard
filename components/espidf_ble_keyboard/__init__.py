@@ -37,7 +37,7 @@ PASSKEY_MODE_SECURE_CONNECTIONS = "secure_connections"
 
 # To add a layout: register it in keyboard_layouts.cpp, add its id JS rows in
 # web_control.cpp, then append the id here.
-SUPPORTED_LAYOUTS = ["us", "uk", "de"]
+SUPPORTED_LAYOUTS = ["us", "uk", "de", "be"]
 
 espidf_ble_keyboard_ns = cg.esphome_ns.namespace("espidf_ble_keyboard")
 EspidfBleKeyboard = espidf_ble_keyboard_ns.class_("EspidfBleKeyboard", cg.Component)

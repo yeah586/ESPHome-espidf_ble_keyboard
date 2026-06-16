@@ -569,6 +569,14 @@ de:{ROWS:[
 [{l:'Caps',t:'caps',kc:0x39,f:1.5},{l:'a',sl:'A',t:'c',c:'a',sc:'A'},{l:'s',sl:'S',t:'c',c:'s',sc:'S'},{l:'d',sl:'D',t:'c',c:'d',sc:'D'},{l:'f',sl:'F',t:'c',c:'f',sc:'F'},{l:'g',sl:'G',t:'c',c:'g',sc:'G'},{l:'h',sl:'H',t:'c',c:'h',sc:'H'},{l:'j',sl:'J',t:'c',c:'j',sc:'J'},{l:'k',sl:'K',t:'c',c:'k',sc:'K'},{l:'l',sl:'L',t:'c',c:'l',sc:'L'},{l:'\u00f6',sl:'\u00d6',t:'c',c:'\u00f6',sc:'\u00d6'},{l:'\u00e4',sl:'\u00c4',t:'c',c:'\u00e4',sc:'\u00c4'},{l:'#',sl:"'",t:'c',c:'#',sc:"'"},{l:'Enter',t:'s',kc:0x28,f:1.75,cls:'kb-l-bot'}],
 [{l:'Shift',t:'m',mod:'shift',bit:0x02,f:1.25},{l:'<',sl:'>',t:'c',c:'<',sc:'>',al:'|'},{l:'y',sl:'Y',t:'c',c:'y',sc:'Y'},{l:'x',sl:'X',t:'c',c:'x',sc:'X'},{l:'c',sl:'C',t:'c',c:'c',sc:'C'},{l:'v',sl:'V',t:'c',c:'v',sc:'V'},{l:'b',sl:'B',t:'c',c:'b',sc:'B'},{l:'n',sl:'N',t:'c',c:'n',sc:'N'},{l:'m',sl:'M',t:'c',c:'m',sc:'M',al:'µ'},{l:',',sl:';',t:'c',c:',',sc:';'},{l:'.',sl:':',t:'c',c:'.',sc:':'},{l:'-',sl:'_',t:'c',c:'-',sc:'_'},{l:'Shift R',t:'m',mod:'rshift',bit:0x20,f:2.75}],
 [{l:'Strg',t:'m',mod:'ctrl',bit:0x01,f:1.2},{l:'Win',t:'m',mod:'win',bit:0x08,f:1.2},{l:'Alt',t:'m',mod:'alt',bit:0x04,f:1.2},{l:'',t:'c',c:' ',sc:' ',f:6},{l:'AltGr',t:'m',mod:'altgr',bit:0x40,f:1.2},{l:'Entf',t:'s',kc:0x4C,f:1.2},{l:'\u2190',t:'s',kc:0x50},{l:'\u2191',t:'s',kc:0x52},{l:'\u2193',t:'s',kc:0x51},{l:'\u2192',t:'s',kc:0x4F}]
+]},
+be:{ROWS:[
+[{l:'Esc',t:'s',kc:0x29,f:1.2},{l:'F1',t:'s',kc:0x3A},{l:'F2',t:'s',kc:0x3B},{l:'F3',t:'s',kc:0x3C},{l:'F4',t:'s',kc:0x3D},{l:'F5',t:'s',kc:0x3E},{l:'F6',t:'s',kc:0x3F},{l:'F7',t:'s',kc:0x40},{l:'F8',t:'s',kc:0x41},{l:'F9',t:'s',kc:0x42},{l:'F10',t:'s',kc:0x43},{l:'F11',t:'s',kc:0x44},{l:'F12',t:'s',kc:0x45}],
+[{l:'\u00b2',sl:'\u00b3',t:'c',c:'\u00b2',sc:'\u00b3'},{l:'&',sl:'1',t:'c',c:'&',sc:'1',al:'|'},{l:'\u00e9',sl:'2',t:'c',c:'\u00e9',sc:'2',al:'@'},{l:'"',sl:'3',t:'c',c:'"',sc:'3',al:'#'},{l:"'",sl:'4',t:'c',c:"'",sc:'4',al:'{'},{l:'(',sl:'5',t:'c',c:'(',sc:'5',al:'['},{l:'\u00a7',sl:'6',t:'c',c:'\u00a7',sc:'6',al:'^'},{l:'\u00e8',sl:'7',t:'c',c:'\u00e8',sc:'7',al:'`'},{l:'!',sl:'8',t:'c',c:'!',sc:'8'},{l:'\u00e7',sl:'9',t:'c',c:'\u00e7',sc:'9'},{l:'\u00e0',sl:'0',t:'c',c:'\u00e0',sc:'0',al:'}'},{l:')',sl:'\u00b0',t:'c',c:')',sc:'\u00b0'},{l:'-',sl:'_',t:'c',c:'-',sc:'_'},{l:'Bksp',t:'s',kc:0x2A,f:1.5}],
+[{l:'Tab',t:'s',kc:0x2B,f:1.5},{l:'a',sl:'A',t:'c',c:'a',sc:'A'},{l:'z',sl:'Z',t:'c',c:'z',sc:'Z'},{l:'e',sl:'E',t:'c',c:'e',sc:'E',al:'\u20ac'},{l:'r',sl:'R',t:'c',c:'r',sc:'R'},{l:'t',sl:'T',t:'c',c:'t',sc:'T'},{l:'y',sl:'Y',t:'c',c:'y',sc:'Y'},{l:'u',sl:'U',t:'c',c:'u',sc:'U'},{l:'i',sl:'I',t:'c',c:'i',sc:'I'},{l:'o',sl:'O',t:'c',c:'o',sc:'O'},{l:'p',sl:'P',t:'c',c:'p',sc:'P'},{l:'^',sl:'\u00a8',t:'c',c:'^',sc:'\u00a8',al:'['},{l:'$',sl:'*',t:'c',c:'$',sc:'*',al:']'},{l:'Enter',t:'s',kc:0x28,f:1.25,cls:'kb-l-top'}],
+[{l:'Caps',t:'caps',kc:0x39,f:1.5},{l:'q',sl:'Q',t:'c',c:'q',sc:'Q'},{l:'s',sl:'S',t:'c',c:'s',sc:'S'},{l:'d',sl:'D',t:'c',c:'d',sc:'D'},{l:'f',sl:'F',t:'c',c:'f',sc:'F'},{l:'g',sl:'G',t:'c',c:'g',sc:'G'},{l:'h',sl:'H',t:'c',c:'h',sc:'H'},{l:'j',sl:'J',t:'c',c:'j',sc:'J'},{l:'k',sl:'K',t:'c',c:'k',sc:'K'},{l:'l',sl:'L',t:'c',c:'l',sc:'L'},{l:'m',sl:'M',t:'c',c:'m',sc:'M'},{l:'\u00f9',sl:'%',t:'c',c:'\u00f9',sc:'%'},{l:'\u00b5',sl:'\u00a3',t:'c',c:'\u00b5',sc:'\u00a3'},{l:'Enter',t:'s',kc:0x28,f:1.75,cls:'kb-l-bot'}],
+[{l:'Shift',t:'m',mod:'shift',bit:0x02,f:1.25},{l:'<',sl:'>',t:'c',c:'<',sc:'>',al:'\\'},{l:'w',sl:'W',t:'c',c:'w',sc:'W'},{l:'x',sl:'X',t:'c',c:'x',sc:'X'},{l:'c',sl:'C',t:'c',c:'c',sc:'C'},{l:'v',sl:'V',t:'c',c:'v',sc:'V'},{l:'b',sl:'B',t:'c',c:'b',sc:'B'},{l:'n',sl:'N',t:'c',c:'n',sc:'N'},{l:',',sl:'?',t:'c',c:',',sc:'?'},{l:';',sl:'.',t:'c',c:';',sc:'.'},{l:':',sl:'/',t:'c',c:':',sc:'/'},{l:'=',sl:'+',t:'c',c:'=',sc:'+'},{l:'Shift R',t:'m',mod:'rshift',bit:0x20,f:2.75}],
+[{l:'Ctrl',t:'m',mod:'ctrl',bit:0x01,f:1.2},{l:'Win',t:'m',mod:'win',bit:0x08,f:1.2},{l:'Alt',t:'m',mod:'alt',bit:0x04,f:1.2},{l:'',t:'c',c:' ',sc:' ',f:6},{l:'AltGr',t:'m',mod:'altgr',bit:0x40,f:1.2},{l:'Suppr',t:'s',kc:0x4C,f:1.2},{l:'\u2190',t:'s',kc:0x50},{l:'\u2191',t:'s',kc:0x52},{l:'\u2193',t:'s',kc:0x51},{l:'\u2192',t:'s',kc:0x4F}]
 ]}};
 let currentLayout='us';
 
@@ -1056,6 +1064,10 @@ class BleKbWebHandler : public AsyncWebHandler {
           200, "text/html",
           reinterpret_cast<const uint8_t *>(PAGE_HTML), sizeof(PAGE_HTML) - 1);
       response->addHeader("Connection", "close");
+      // Force the browser to revalidate PAGE_HTML on every load so a firmware
+      // flash always brings UI changes (new layouts, fixes, etc.) without
+      // needing a manual hard-reload.
+      response->addHeader("Cache-Control", "no-cache");
       request->send(response);
       return;
     }

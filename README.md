@@ -8,8 +8,8 @@ This is a custom ESPHome component that transforms an ESP32 into a Bluetooth Low
 * **Secure Pairing:** Supports a configurable 6-digit static passkey (PIN) for secure bonding on Windows and iOS. Android uses Just Works pairing (no PIN) due to HID compatibility limitations.
 * **Efficient Memory Usage:** Direct API implementation ensures stability even with complex ESPHome configurations.
 * **Key Combos:** Send any modifier + key combination using hex keycodes (e.g. Win+R, Ctrl+C).
-* **String Typing:** Type any string directly. The active **keyboard layout** (`us`, `uk`, `de`) controls how each character is mapped to HID keycodes. UK adds `£`, `¬`, `€`; DE adds `ä`, `ö`, `ü`, `ß`, `€`, `§`, `°` via UTF-8.
-* **Keyboard Layouts:** Choose `us` (default), `uk`, or `de` in YAML, or switch live from the web UI (persisted to NVS). Layout is fully extensible — see [Keyboard layouts](#keyboard-layouts).
+* **String Typing:** Type any string directly. The active **keyboard layout** (`us`, `uk`, `de`, `be`) controls how each character is mapped to HID keycodes. UK adds `£`, `¬`, `€`; DE adds `ä`, `ö`, `ü`, `ß`, `€`, `§`, `°`; BE adds `é`, `è`, `à`, `ç`, `ù`, `€`, `£`, `²`, `§`, `µ` plus dead-key sequences (`â ê î ô û ä ë ï ö ü` + uppercase) via UTF-8.
+* **Keyboard Layouts:** Choose `us` (default), `uk`, `de`, or `be` in YAML, or switch live from the web UI (persisted to NVS). Layout is fully extensible — see [Keyboard layouts](#keyboard-layouts).
 * **Pre-defined Actions:** Built-in helpers for `ctrl_alt_del`, `sleep`, `hibernate` and `shutdown`.
 * **Media Keys:** Control volume, playback, mute and more via HID consumer control.
 * **Power Button:** Native HID power/sleep signals — no Run dialog, clean OS-level control.
@@ -285,7 +285,7 @@ binary_sensor:
 * **monitors** (Optional, list): Per-monitor regions (in virtual-desktop pixels) for `mouse_abs_mon:<idx>:<x%>:<y%>`. Each entry has optional `name`, required `x`, `y`, `width`, `height`, and optional `primary` (mark the Windows primary monitor — its top-left is the Windows `0,0` origin that `mouse_goto` homes to, and the web Position Finder needs it to emit correct `mouse_goto` values). See [Absolute mouse positioning](#absolute-mouse-positioning).
 * **mouse_goto_scale** (Optional, float): Calibration multiplier for `mouse_goto`'s relative step, to compensate for the host's pointer-speed / DPI scaling. Defaults to `1.0`. If the cursor travels about **twice** as far as intended, set `0.5`; tune until a `mouse_goto` lands on target. (Requires "Enhance pointer precision" **off** — acceleration is non-linear and can't be calibrated out.) Range: 0.05–20.0.
 * **custom_text_id** (Optional, ID or list of IDs): Link one or more ESPHome `text` entities for custom text input. Automatically registers a "Send" button in the web UI for each. Use `send_custom_text` or `send_custom_text:N` action to trigger.
-* **keyboard_layout** (Optional, string): Default keyboard layout. One of `us` (default), `uk`. Controls how `send_string` maps each character to USB HID keycodes — must match the *host's* keyboard layout. Can be overridden at runtime from the web UI (persisted to NVS, survives reboot). See [Keyboard layouts](#keyboard-layouts) below.
+* **keyboard_layout** (Optional, string): Default keyboard layout. One of `us` (default), `uk`, `de`, `be`. Controls how `send_string` maps each character to USB HID keycodes — must match the *host's* keyboard layout. Can be overridden at runtime from the web UI (persisted to NVS, survives reboot). See [Keyboard layouts](#keyboard-layouts) below.
 * **hosts** (Optional, list): Per-slot passkey and pairing mode overrides. Each entry has:
   * **slot** (Required, int): Host slot number (0–9).
   * **passkey** (Optional, int): 6-digit PIN for this slot (000000–999999). If omitted, the slot uses the global `passkey` setting (or Just Works if no global passkey).
@@ -949,7 +949,7 @@ type: custom:ble-keyboard-card
 device: bluetooth_keyboard
 name: Living Room Keyboard    # card title (auto-detected from HA if omitted)
 show_fkeys: true             # hide F1-F12 row (default: true)
-layout: us                    # us (default), uk, or de — match the ESP's keyboard_layout
+layout: us                    # us (default), uk, de, or be — match the ESP's keyboard_layout
 host_slots: 4                 # show host switcher bar (default: 0 = hidden)
 host_names:                   # custom names for each slot (optional)
   - TV
@@ -973,7 +973,7 @@ Optional configuration:
 |---|---|---|
 | `name` | Auto from HA | Card title. Auto-detected from HA device registry if omitted. |
 | `show_fkeys` | `true` | Show the F1–F12 function key row. |
-| `layout` | `us` | Keyboard layout for the on-screen card: `us`, `uk`, or `de`. UK draws the ISO shape (extra `\|` key, `£` on Shift+3); DE draws QWERTZ (Y/Z swapped, `ü`/`ö`/`ä`/`ß` keys, German modifier labels). Set this to match the ESP's `keyboard_layout` option so the visual matches what gets typed. |
+| `layout` | `us` | Keyboard layout for the on-screen card: `us`, `uk`, `de`, or `be`. UK draws the ISO shape (extra `\|` key, `£` on Shift+3); DE draws QWERTZ (Y/Z swapped, `ü`/`ö`/`ä`/`ß` keys, German modifier labels); BE draws AZERTY (A↔Q and Z↔W swapped, `M` on home row, `é è à ç ù` on the digit row). Set this to match the ESP's `keyboard_layout` option so the visual matches what gets typed. |
 | `host_slots` | `0` | Number of host slots. Set to match your `host_slots` config to show a host switcher bar with prev/next buttons, host name, and MAC address. `0` hides the bar. |
 | `host_names` | `[]` | List of custom names for each host slot (e.g., `["TV", "Phone"]`). Index 0 = slot 0, etc. Falls back to switch_host button names from the ESP32, then "Host N". |
 | `active_host_entity` | Auto | Entity ID of the active host sensor. Auto-detected by name pattern (`sensor.*_active_host`). Set explicitly if auto-detection fails. |
@@ -987,7 +987,7 @@ Features:
 - **Shift labels** — key labels update to show shifted characters when Shift is active.
 - **Host switcher** — prev/next buttons to switch hosts, shows current host name and MAC address (requires `host_slots` and `switch_host` ESPHome service).
 - **Auto device name** — card title is auto-detected from Home Assistant's device registry.
-- **Keyboard layouts** — `layout: us` (default), `layout: uk`, or `layout: de` renders the matching ANSI/ISO/QWERTZ shape with the correct shifted labels.
+- **Keyboard layouts** — `layout: us` (default), `layout: uk`, `layout: de`, or `layout: be` renders the matching ANSI/ISO/QWERTZ/AZERTY shape with the correct shifted labels.
 
 > **Note:** Caps Lock state is tracked locally in the card. If Caps Lock is toggled from another keyboard, the card indicator may be out of sync.
 
@@ -1245,6 +1245,7 @@ The component supports multiple keyboard layouts. The active layout affects how 
 | `us` | English (US) | Default. ANSI shape. |
 | `uk` | English (UK) | ISO shape. Adds `£`, `¬`, `€` via UTF-8 (AltGr for `€`). |
 | `de` | German (QWERTZ) | ISO shape. Y/Z swapped. Adds `ä`, `ö`, `ü`, `ß`, `€`, `§`, `°`, `µ`, `²`, `³` via UTF-8. Dead keys (`^`, `` ` ``, `~`, `´`) auto-completed with a trailing space so they type as bare characters via `send_string`. |
+| `be` | Belgian (AZERTY) | ISO shape. A↔Q, Z↔W swapped, `M` moves to home row right of `L`. Digits 0–9 require Shift (unshifted digit row is `& é " ' ( § è ! ç à`). Direct accented chars: `é è à ç ù € £ ² ³ § µ`. **Dead-key + vowel sequences** auto-composed by `send_string` for `â ê î ô û` (circumflex), `Â Ê Î Ô Û` (uppercase circumflex via Shift on the 2nd stroke), `ä ë ï ö ü` (diaeresis), and `Ä Ë Ï Ö Ü`. Literal `^` `` ` `` `~` use dead-key + space (DE-style). AltGr layer: `@ # { } [ ] | \`. |
 
 #### German (DE) AltGr characters
 
@@ -1271,6 +1272,8 @@ espidf_ble_keyboard:
 ```
 
 **Web UI (overrides YAML, persisted to NVS):** open `http://<device-ip>/ble_keyboard` and use the layout dropdown in the Keyboard card header. The choice is saved and survives reboot. Erasing NVS reverts to the YAML default.
+
+> **Precedence note:** if you change `keyboard_layout` in YAML and reflash, the new value takes effect on the next boot — any previous web-UI override is automatically cleared. Web-UI overrides only persist across reboots while the YAML value stays the same. No factory reset needed to "see" a YAML edit.
 
 **Per host slot (YAML, auto-applied on switch):** add `layout:` to any entry in the `hosts:` list to bind a layout to that slot. When you switch to that host (via service, button, or web UI), the device flips to its layout automatically. This is ephemeral — it does not overwrite a manual web-UI pick in NVS, and switching to a slot with no `layout:` keeps whatever was active.
 

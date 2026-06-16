@@ -1349,17 +1349,18 @@ static uint32_t decode_utf8_(const std::string &bytes, size_t &i) {
 // Resolve a Unicode codepoint to a (modifier, keycode) pair using the active
 // layout. Returns {0,0} if unmapped.
 static HidKeyMapping resolve_codepoint_(const KeyboardLayout *layout, uint32_t cp) {
-    if (layout == nullptr) return {0, 0, 0};
+    if (layout == nullptr) return {0, 0, 0, 0};
     if (cp < 128) {
         return layout->ascii_map[cp];
     }
     for (size_t i = 0; i < layout->unicode_map_len; i++) {
         if (layout->unicode_map[i].codepoint == cp) {
             return {layout->unicode_map[i].modifier, layout->unicode_map[i].keycode,
-                    layout->unicode_map[i].followup_keycode};
+                    layout->unicode_map[i].followup_keycode,
+                    layout->unicode_map[i].followup_modifier};
         }
     }
-    return {0, 0, 0};
+    return {0, 0, 0, 0};
 }
 
 void EspidfBleKeyboard::send_string(const std::string &str) {
@@ -1385,11 +1386,12 @@ void EspidfBleKeyboard::send_string(const std::string &str) {
         HidKeyMapping m = resolve_codepoint_(active_layout_, cp);
         if (m.keycode != 0x00) {
             strokes.push_back(m);
-            // Dead-key compose: emit a bare space after the dead key so the host
-            // produces the literal character (e.g. bare ^ instead of waiting to
-            // combine with the next letter).
+            // Dead-key compose: emit the followup stroke after the dead key.
+            // Used either to emit a bare literal accent (followup = space) or
+            // to compose an accented letter (followup = a/e/i/o/u with optional
+            // Shift for uppercase variants like Â Ê).
             if (m.followup_keycode != 0x00) {
-                strokes.push_back({0x00, m.followup_keycode, 0x00});
+                strokes.push_back({m.followup_modifier, m.followup_keycode, 0x00, 0x00});
             }
         } else {
             ESP_LOGD(TAG, "send_string: skipped unmapped codepoint U+%04X", cp);
@@ -1427,7 +1429,29 @@ void EspidfBleKeyboard::set_runtime_layout(const std::string &id, bool persist) 
 
 void EspidfBleKeyboard::load_layout_() {
     nvs_handle_t handle;
-    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+
+    // 1) Did the YAML keyboard_layout change since last boot?
+    //    "yaml_layout" snapshots the last YAML default we saw. Same idiom as
+    //    maybe_reset_bonds_after_security_config_change() does for passkey.
+    char saved_yaml[16] = {0};
+    size_t yaml_len = sizeof(saved_yaml);
+    esp_err_t yaml_get = nvs_get_str(handle, "yaml_layout", saved_yaml, &yaml_len);
+    const bool yaml_changed = (yaml_get != ESP_OK) || (yaml_layout_id_ != saved_yaml);
+
+    if (yaml_changed) {
+        // Persist the new YAML default and discard any stale runtime override
+        // so the user's flash actually takes effect without a factory reset.
+        nvs_set_str(handle, "yaml_layout", yaml_layout_id_.c_str());
+        nvs_erase_key(handle, "layout");
+        nvs_commit(handle);
+        ESP_LOGI(TAG, "YAML keyboard_layout changed (%s -> %s); cleared NVS override",
+                 (yaml_get == ESP_OK) ? saved_yaml : "<none>", yaml_layout_id_.c_str());
+        nvs_close(handle);
+        return;  // active_layout_ already points at the new YAML default
+    }
+
+    // 2) YAML unchanged — honour the user's runtime web-UI override, if any.
     char buf[16];
     size_t len = sizeof(buf);
     if (nvs_get_str(handle, "layout", buf, &len) == ESP_OK) {
