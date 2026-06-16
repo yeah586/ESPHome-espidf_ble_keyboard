@@ -189,7 +189,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <label style="font-size:12px;color:var(--muted)">Y</label>
 <button id="gy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
 <button id="gy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
-<span style="font-size:11px;color:var(--muted)">moves the cursor &amp; updates the value (5&nbsp;px steps)</span>
+<span style="font-size:11px;color:var(--muted)">moves the cursor &amp; updates the value (1&nbsp;px steps)</span>
 </div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">goto scale (live)</label>
@@ -952,7 +952,7 @@ buildKeyboard();
     placeSent(wx,wy);
     api('press',{action:'mouse_goto:'+wx+':'+wy});
   }
-  [['gx-dn','x',-5],['gx-up','x',5],['gy-dn','y',-5],['gy-up','y',5]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudgeGoto(a[1],a[2]))});
+  [['gx-dn','x',-1],['gx-up','x',1],['gy-dn','y',-1],['gy-up','y',1]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudgeGoto(a[1],a[2]))});
   // Reset scale to YAML defaults (per host), then refresh the inputs
   {const rb=document.getElementById('sc-reset');if(rb)rb.addEventListener('click',()=>{api('goto_scale',{reset:1});setTimeout(load,200)})}
   function aim(e){
