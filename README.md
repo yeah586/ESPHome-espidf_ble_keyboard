@@ -875,7 +875,8 @@ per-host value **overrides** the YAML default — use the Finder's **Reset** to 
 a new YAML default onto a host.)
 
 The Finder can't read the real cursor (HID is one-way), so it's "send and read the
-value back," not a live cursor display.
+value back," not a live cursor display. To capture and put back the *real* cursor,
+see [Saving and restoring the cursor](#saving-and-restoring-the-cursor).
 
 ### Host support
 
@@ -883,6 +884,41 @@ Absolute pointers are reliable on **Windows** and **Linux**. **macOS and iOS**
 frequently ignore or mishandle absolute USB/BLE pointers — treat as best-effort.
 The relative mouse (touchpad / `mouse_move`) is unaffected and keeps working on
 all hosts.
+
+### Saving and restoring the cursor
+
+The named actions `mouse_abs_save` / `mouse_abs_restore` only remember the **last
+position the device itself commanded** — not where a physical mouse left the cursor,
+and not a `mouse_goto` target (HID is one-way, so the device can never read the real
+cursor). For a *real* save/restore, run a tiny **host-side** helper and trigger it
+from the keyboard with a **shortcut key**:
+
+1. Copy **[`docs/cursor_saverestore.bat`](docs/cursor_saverestore.bat)** to the PC
+   (e.g. `C:\Tools\`). It reads/writes the live cursor with `GetCursorPos` /
+   `SetCursorPos` (physical px, DPI-aware — same coordinates as `mouse_goto`) and has
+   **no BLE/ESP32 link**. Run it as `cursor_saverestore.bat save` / `... restore`.
+2. Make two **Windows shortcuts** to it and give each a **Shortcut key**:
+   - Right-click the `.bat` → *Create shortcut*; set the shortcut's **Target** to
+     `cmd /c "C:\Tools\cursor_saverestore.bat" save`; put it on the **Desktop or Start
+     Menu** (required for the hotkey to be global); then Properties → **Shortcut key**
+     = e.g. `Ctrl+Alt+C` (and **Run: Minimized** to hide the console flash).
+   - A second shortcut the same way with `... restore` and `Ctrl+Alt+R`.
+3. Fire those combos from the keyboard (Ctrl+Alt = `0x01 + 0x04` = `0x05`; `c` = `0x06`,
+   `r` = `0x15`): **save** → `combo:0x05:0x06`, **restore** → `combo:0x05:0x15`.
+
+Because combos and `mouse_goto` chain, **one button** can do the whole round-trip:
+
+```yaml
+button:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Click monitor 2, then put the cursor back"
+    action: "combo:0x05:0x06 | mouse_goto:4394:42 | left_click | combo:0x05:0x15"
+```
+
+The keyboard never touches the cursor file or the ESP32 — it only sends the shortcut
+keys; **Windows** runs the helper. (Windows requires Ctrl+Alt or Ctrl+Shift in a
+shortcut key — a bare letter won't register.)
 
 ---
 
