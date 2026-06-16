@@ -1692,13 +1692,22 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     // the firmware; if relative is right but the cursor overshoots, it's host-side.
     ESP_LOGI(TAG, "Mouse goto: target=(%d,%d) scale=(%.4f,%.4f) relative=(%d,%d)",
              x, y, goto_scale_x_, goto_scale_y_, dx, dy);
-    while (dx != 0 || dy != 0) {
+    // Decoupled: move ALL of X first, then ALL of Y, in SEPARATE reports — same
+    // 127-count step size and 8ms pacing as before, the ONLY difference being
+    // that X and Y are no longer combined in one report. Combining them lets the
+    // host's acceleration scale the diagonal speed, so Y inherits X's speed and
+    // its landing drifts with the target's X distance.
+    while (dx != 0) {
         int32_t sx = dx > 127 ? 127 : (dx < -127 ? -127 : dx);
-        int32_t sy = dy > 127 ? 127 : (dy < -127 ? -127 : dy);
-        uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(sx)),
-                             static_cast<uint8_t>(static_cast<int8_t>(sy)), 0};
+        uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(sx)), 0, 0};
         esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
         dx -= sx;
+        vTaskDelay(pdMS_TO_TICKS(8));
+    }
+    while (dy != 0) {
+        int32_t sy = dy > 127 ? 127 : (dy < -127 ? -127 : dy);
+        uint8_t report[4] = {0, 0, static_cast<uint8_t>(static_cast<int8_t>(sy)), 0};
+        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
         dy -= sy;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
