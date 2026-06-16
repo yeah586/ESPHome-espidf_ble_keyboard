@@ -195,14 +195,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <label style="font-size:12px;color:var(--muted)">goto scale (live)</label>
 <label style="font-size:12px;color:var(--muted)">X</label>
 <button id="sx-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
-<input id="finder-scale-x" type="number" step="0.001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<input id="finder-scale-x" type="number" step="0.0001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <button id="sx-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
 <label style="font-size:12px;color:var(--muted)">Y</label>
 <button id="sy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
-<input id="finder-scale-y" type="number" step="0.001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<input id="finder-scale-y" type="number" step="0.0001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <button id="sy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
 <button id="sc-reset" style="flex:0 0 auto;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:13px;cursor:pointer">Reset</button>
-<span style="font-size:11px;color:var(--muted)">&plusmn; nudges 0.001 (4 dp) · Reset = YAML default · saved per host (also YAML <code>mouse_goto_scale_x</code> / <code>_y</code>)</span>
+<span style="font-size:11px;color:var(--muted)">&plusmn; nudges 0.0001 (5 dp) · Reset = YAML default · saved per host (also YAML <code>mouse_goto_scale_x</code> / <code>_y</code>)</span>
 </div>
 <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
 <label style="font-size:12px;color:var(--muted)">landed&nbsp;at</label>
@@ -932,8 +932,8 @@ buildKeyboard();
   function load(){
     fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
       SW=d.w||1920;SH=d.h||1080;OX=d.ox||0;OY=d.oy||0;mons=d.mon||[];
-      if(scaleInX&&d.gsx!=null&&document.activeElement!==scaleInX)scaleInX.value=(+d.gsx).toFixed(4);
-      if(scaleInY&&d.gsy!=null&&document.activeElement!==scaleInY)scaleInY.value=(+d.gsy).toFixed(4);
+      if(scaleInX&&d.gsx!=null&&document.activeElement!==scaleInX)scaleInX.value=(+d.gsx).toFixed(5);
+      if(scaleInY&&d.gsy!=null&&document.activeElement!==scaleInY)scaleInY.value=(+d.gsy).toFixed(5);
       draw();
     }).catch(()=>draw());
   }
@@ -941,8 +941,8 @@ buildKeyboard();
   if(scaleInX){scaleInX.addEventListener('input',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v})});scaleInX.addEventListener('change',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v,save:1})})}
   if(scaleInY){scaleInY.addEventListener('input',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v})});scaleInY.addEventListener('change',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v,save:1})})}
   // +/- nudge buttons: step 0.001, applied live and saved to the active host
-  function nudge(inp,ax,d){if(!inp)return;let v=(parseFloat(inp.value)||1)+d;v=Math.round(Math.max(0.05,Math.min(20,v))*10000)/10000;inp.value=v.toFixed(4);api('goto_scale',ax==='x'?{vx:v,save:1}:{vy:v,save:1})}
-  [['sx-dn',scaleInX,'x',-0.001],['sx-up',scaleInX,'x',0.001],['sy-dn',scaleInY,'y',-0.001],['sy-up',scaleInY,'y',0.001]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudge(a[1],a[2],a[3]))});
+  function nudge(inp,ax,d){if(!inp)return;let v=(parseFloat(inp.value)||1)+d;v=Math.round(Math.max(0.05,Math.min(20,v))*100000)/100000;inp.value=v.toFixed(5);api('goto_scale',ax==='x'?{vx:v,save:1}:{vy:v,save:1})}
+  [['sx-dn',scaleInX,'x',-0.0001],['sx-up',scaleInX,'x',0.0001],['sy-dn',scaleInY,'y',-0.0001],['sy-up',scaleInY,'y',0.0001]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudge(a[1],a[2],a[3]))});
   // Goto-target nudge (5px): move the cursor and update the value + markers
   function nudgeGoto(ax,d){
     if(ax==='x')wx+=d;else wy+=d;
@@ -981,8 +981,8 @@ buildKeyboard();
   if(calBtn){calBtn.addEventListener('click',()=>{
     if(lastTx==null){calInfo.textContent='send to a target first (tap the map)';return}
     const ax=parseFloat(actXIn.value),ay=parseFloat(actYIn.value);let out=[];
-    if(isFinite(ax)&&ax!==0&&lastTx!==0){const cur=parseFloat(scaleInX.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTx/ax));scaleInX.value=ns.toFixed(4);api('goto_scale',{vx:ns,save:1});out.push('X '+ns.toFixed(4))}
-    if(isFinite(ay)&&ay!==0&&lastTy!==0){const cur=parseFloat(scaleInY.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTy/ay));scaleInY.value=ns.toFixed(4);api('goto_scale',{vy:ns,save:1});out.push('Y '+ns.toFixed(4))}
+    if(isFinite(ax)&&ax!==0&&lastTx!==0){const cur=parseFloat(scaleInX.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTx/ax));scaleInX.value=ns.toFixed(5);api('goto_scale',{vx:ns,save:1});out.push('X '+ns.toFixed(5))}
+    if(isFinite(ay)&&ay!==0&&lastTy!==0){const cur=parseFloat(scaleInY.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTy/ay));scaleInY.value=ns.toFixed(5);api('goto_scale',{vy:ns,save:1});out.push('Y '+ns.toFixed(5))}
     calInfo.textContent=out.length?('new scale → '+out.join('  ')+' (applied live; copy to YAML)'):'enter the actual X and/or Y where it landed';
   })}
   // Poll the last sent target so the green marker tracks goto's from any source.
@@ -1241,8 +1241,8 @@ class BleKbWebHandler : public AsyncWebHandler {
     if (path == "screen") {
       // Absolute-pointer geometry for the web Position Finder.
       char gsxbuf[16], gsybuf[16];
-      snprintf(gsxbuf, sizeof(gsxbuf), "%.4f", kb_->mouse_goto_scale_x());
-      snprintf(gsybuf, sizeof(gsybuf), "%.4f", kb_->mouse_goto_scale_y());
+      snprintf(gsxbuf, sizeof(gsxbuf), "%.5f", kb_->mouse_goto_scale_x());
+      snprintf(gsybuf, sizeof(gsybuf), "%.5f", kb_->mouse_goto_scale_y());
       std::string json = "{\"w\":" + std::to_string(kb_->screen_width()) +
                          ",\"h\":" + std::to_string(kb_->screen_height()) +
                          ",\"ox\":" + std::to_string(kb_->primary_origin_x()) +
