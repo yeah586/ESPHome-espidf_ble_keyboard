@@ -532,7 +532,8 @@
         </table>
       </div>
     </div>
-    <div class="note">Button mask: <span>0x01</span> = left, <span>0x02</span> = right, <span>0x04</span> = middle. Combine for simultaneous buttons. Relative move/scroll: <span>-127</span> to <span>127</span>. <strong>Absolute</strong> (<span>mouse_abs*</span>, Report ID 5) moves the cursor to an exact spot — percent of screen, pixels (uses <span>screen_width</span>/<span>screen_height</span>), or within a declared <span>monitors[]</span> region. Reliable on Windows/Linux; best-effort on macOS/iOS.</div>
+    <div class="note">Button mask: <span>0x01</span> = left, <span>0x02</span> = right, <span>0x04</span> = middle. Combine for simultaneous buttons. Relative move/scroll: <span>-127</span> to <span>127</span>. <strong>Absolute</strong> (<span>mouse_abs*</span>, Report ID 5) moves the cursor to an exact spot — percent of screen, pixels (uses <span>screen_width</span>/<span>screen_height</span>), or within a declared <span>monitors[]</span> region; Windows often confines it to the <strong>primary monitor</strong>. Reliable on Windows/Linux; best-effort on macOS/iOS. After flashing, <strong>re-pair</strong> the host or absolute moves do nothing.</div>
+    <div class="note"><strong>mouse_goto</strong> reaches <em>every</em> monitor (homes to the desktop origin, then steps relatively) — feed it Windows desktop coords (e.g. from Power Automate). For accuracy: turn <span>Enhance pointer precision</span> <strong>and</strong> <span>Display pointer trails</span> <strong>off</strong> (pointer speed at the middle/1:1 notch), set per-axis <span>mouse_goto_scale_x</span>/<span>mouse_goto_scale_y</span>, and mark the primary screen with <span>primary: true</span>. Easiest to calibrate live in the web <strong>Position Finder</strong>, which saves the scale per host.</div>
   </div>
 </div>
 

@@ -336,7 +336,7 @@
     <div class="feature">
       <div class="feature-icon">🖱️</div>
       <h3>Mouse Control</h3>
-      <p>Left, right and middle click, relative movement, and scroll wheel via HID mouse reports — plus absolute positioning to move the cursor to an exact spot. Drive from buttons or automations.</p>
+      <p>Left, right and middle click, relative movement, and scroll wheel via HID mouse reports — plus absolute positioning (and <code>mouse_goto</code> for an exact pixel on <em>any</em> monitor). A web Position Finder calibrates and saves it per host. Drive from buttons or automations.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">⌨️</div>
@@ -359,7 +359,7 @@
     <div class="feature">
       <div class="feature-icon">🌐</div>
       <h3>Web Control</h3>
-      <p>Built-in web page with full keyboard, mouse, and remote UI. Access from any browser — no Home Assistant needed. Enable with <code>web_control: true</code>.</p>
+      <p>Built-in web page with full keyboard, mouse, remote, and a <strong>Position Finder</strong> (calibrates <code>mouse_goto</code> per host). Access from any browser — no Home Assistant needed. Enable with <code>web_control: true</code>.</p>
       <img src="web_server.png" alt="Web Control Page" style="max-width:100%;border-radius:8px;margin-top:8px;">
     </div>
     <div class="feature">
@@ -401,6 +401,12 @@
   <span class="yaml-key">mouse_acceleration</span><span class="yaml-val">:</span> <span class="yaml-str">0.15</span>  <span class="yaml-comment"># optional, web mouse accel factor (default: 0.15)</span>
   <span class="yaml-key">mouse_max_speed</span><span class="yaml-val">:</span> <span class="yaml-str">4.0</span>  <span class="yaml-comment"># optional, web mouse max sensitivity (default: 4.0)</span>
   <span class="yaml-key">scroll_sensitivity</span><span class="yaml-val">:</span> <span class="yaml-str">2.0</span>  <span class="yaml-comment"># optional, web mouse scroll speed (default: 2.0)</span>
+  <span class="yaml-key">screen_width</span><span class="yaml-val">:</span> <span class="yaml-str">3840</span>   <span class="yaml-comment"># optional, desktop px for mouse_abs_px / mouse_goto</span>
+  <span class="yaml-key">screen_height</span><span class="yaml-val">:</span> <span class="yaml-str">2160</span>  <span class="yaml-comment"># optional</span>
+  <span class="yaml-key">mouse_goto_scale_x</span><span class="yaml-val">:</span> <span class="yaml-str">0.57</span>  <span class="yaml-comment"># optional, mouse_goto X calibration (tune in Position Finder; saved per host)</span>
+  <span class="yaml-key">mouse_goto_scale_y</span><span class="yaml-val">:</span> <span class="yaml-str">0.57</span>  <span class="yaml-comment"># optional, mouse_goto Y calibration</span>
+  <span class="yaml-key">monitors</span><span class="yaml-val">:</span>            <span class="yaml-comment"># optional, multi-monitor — mark the Windows primary</span>
+    <span class="yaml-val">-</span> <span class="yaml-str">{ name: main, x: 0, y: 0, width: 3840, height: 2160, primary: true }</span>
   <span class="yaml-key">keyboard_layout</span><span class="yaml-val">:</span> <span class="yaml-str">us</span>  <span class="yaml-comment"># optional, us | uk | de | be — must match host PC layout (default: us)</span>
   <span class="yaml-key">custom_text_id</span><span class="yaml-val">:</span>        <span class="yaml-comment"># optional, link text entities for Send buttons</span>
     <span class="yaml-val">-</span> <span class="yaml-str">custom_text</span>
@@ -477,7 +483,7 @@
       <tr><td><code>"mouse_abs_px:1280:720"</code></td><td class="desc">Move cursor to an exact position in pixels (uses <code>screen_width</code>/<code>screen_height</code>).</td></tr>
       <tr><td><code>"mouse_abs_mon:1:50:50"</code></td><td class="desc">Move cursor to a percent within declared <code>monitors[1]</code> (multi-monitor).</td></tr>
       <tr><td><code>"mouse_abs_save"</code> / <code>"mouse_abs_restore"</code></td><td class="desc">Remember the current absolute position and jump back to it later.</td></tr>
-      <tr><td><code>"mouse_goto:4394:42"</code></td><td class="desc">Move to a Windows virtual-desktop pixel across <strong>all monitors</strong> (homes absolute to 0,0 then steps relatively). X/Y = Windows coords (primary top-left = 0,0; negatives allowed) — what Power Automate reports. Use when the absolute pointer is stuck on the primary monitor; needs pointer acceleration off + 1:1 speed.</td></tr>
+      <tr><td><code>"mouse_goto:4394:42"</code></td><td class="desc">Move to a Windows virtual-desktop pixel across <strong>all monitors</strong> (homes absolute to 0,0 then steps relatively). X/Y = Windows coords (primary top-left = 0,0; negatives allowed) — what Power Automate reports. Use when the absolute pointer is stuck on the primary monitor. Needs <strong>"Enhance pointer precision" and "Display pointer trails" off</strong> + per-axis calibration (<code>mouse_goto_scale_x</code>/<code>_y</code>), dialed in via the web Position Finder.</td></tr>
       <tr><td><code>"send_custom_text"</code></td><td class="desc">Send linked text entity content. Use <code>send_custom_text:N</code> for multiple entities. Requires <code>custom_text_id</code> in config.</td></tr>
       <tr><td><code>"switch_host:0"</code></td><td class="desc">Switch to host slot 0–9. Reconnects to stored host or advertises for new pairing.</td></tr>
       <tr><td><code>"forget_host:0"</code></td><td class="desc">Remove BLE bond for host slot 0–9 and clear the stored address.</td></tr>

@@ -283,7 +283,8 @@ binary_sensor:
 * **scroll_sensitivity** (Optional, float): Web mouse scroll speed multiplier. Defaults to `2.0`. Range: 0.1–10.0.
 * **screen_width** / **screen_height** (Optional, int): The pixel space the host maps the absolute pointer's `0..32767` range onto, used by `mouse_abs_px` and `mouse_abs_mon`. For a single screen, set to its resolution; for a spanned multi-monitor setup, set to the whole **virtual desktop** size. Defaults to `1920` / `1080`. Range: 1–32767. See [Absolute mouse positioning](#absolute-mouse-positioning).
 * **monitors** (Optional, list): Per-monitor regions (in virtual-desktop pixels) for `mouse_abs_mon:<idx>:<x%>:<y%>`. Each entry has optional `name`, required `x`, `y`, `width`, `height`, and optional `primary` (mark the Windows primary monitor — its top-left is the Windows `0,0` origin that `mouse_goto` homes to, and the web Position Finder needs it to emit correct `mouse_goto` values). See [Absolute mouse positioning](#absolute-mouse-positioning).
-* **mouse_goto_scale** (Optional, float): Calibration multiplier for `mouse_goto`'s relative step, to compensate for the host's pointer-speed / DPI scaling. Defaults to `1.0`. If the cursor travels about **twice** as far as intended, set `0.5`; tune until a `mouse_goto` lands on target. (Requires "Enhance pointer precision" **off** — acceleration is non-linear and can't be calibrated out.) Range: 0.05–20.0.
+* **mouse_goto_scale** (Optional, float): Calibration multiplier for `mouse_goto`'s relative step, to compensate for the host's pointer-speed / DPI scaling — sets **both** axes. Defaults to `1.0`. If the cursor travels about **twice** as far as intended, set `0.5`; tune until a `mouse_goto` lands on target. (Requires "Enhance pointer precision" **off** — acceleration is non-linear and can't be calibrated out.) Range: 0.05–20.0.
+* **mouse_goto_scale_x** / **mouse_goto_scale_y** (Optional, float): Per-axis override of `mouse_goto_scale`. X and Y often need **different** values (a host can scale the axes differently), so calibrate each independently. Range: 0.05–20.0. Easiest to dial in live via the web Position Finder, which also saves the values per host. See [Absolute mouse positioning](#absolute-mouse-positioning).
 * **custom_text_id** (Optional, ID or list of IDs): Link one or more ESPHome `text` entities for custom text input. Automatically registers a "Send" button in the web UI for each. Use `send_custom_text` or `send_custom_text:N` action to trigger.
 * **keyboard_layout** (Optional, string): Default keyboard layout. One of `us` (default), `uk`, `de`, `be`. Controls how `send_string` maps each character to USB HID keycodes — must match the *host's* keyboard layout. Can be overridden at runtime from the web UI (persisted to NVS, survives reboot). See [Keyboard layouts](#keyboard-layouts) below.
 * **hosts** (Optional, list): Per-slot passkey and pairing mode overrides. Each entry has:
@@ -647,7 +648,7 @@ api:
 
 ### Web Control
 
-When `web_control: true` is enabled, a full control page is available at `http://<device-ip>/ble_keyboard` with keyboard, mouse, and remote sections. Section toggle buttons in the toolbar let you show/hide each section. When `host_slots` > 1, a host bar appears below the toolbar showing all slots. Click a slot to switch. The active slot is highlighted. Occupied slots show the stored Bluetooth address.
+When `web_control: true` is enabled, a full control page is available at `http://<device-ip>/ble_keyboard` with **keyboard, mouse, Position Finder, remote, buttons, and macro** sections. Section toggle buttons in the toolbar let you show/hide (and reorder) each section. When `host_slots` > 1, a host bar appears below the toolbar showing all slots. Click a slot to switch. The active slot is highlighted. Occupied slots show the stored Bluetooth address. The **Position Finder** (locked by default; click **Edit** to use) sends the cursor to an exact spot and calibrates `mouse_goto` per host — see [Absolute mouse positioning](#absolute-mouse-positioning).
 
 <img src="docs/web_server.png" width="427" alt="Web Control Page">
 
@@ -806,8 +807,67 @@ virtual desktop**:
   origin (primary top-left = Windows 0,0) and then steps *relatively*, and
   relative movement spans the whole virtual desktop, so it reaches every monitor.
   Feed it Windows virtual-desktop coordinates (e.g. straight from Power Automate);
-  for pixel accuracy turn "Enhance pointer precision" off and set pointer speed to
-  the middle (1:1) notch.
+  for pixel accuracy turn "Enhance pointer precision" **and "Display pointer trails"**
+  off and set pointer speed to the middle (1:1) notch.
+
+### Cross-monitor positioning with `mouse_goto`
+
+`mouse_goto:<x>:<y>` is the **reliable way to hit an exact pixel on any monitor**
+when the host confines the absolute pointer to the primary screen (the usual
+Windows case). `x`/`y` are **Windows virtual-desktop coordinates** — the primary
+monitor's top-left is `0,0`, and monitors to its left are negative. These are
+exactly the numbers **Power Automate** reports, so you can feed them straight in:
+
+```yaml
+button:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Click that button on monitor 2"
+    action: "mouse_goto:4394:42 | left_click"
+```
+
+It works by homing the absolute pointer to the desktop origin, then stepping the
+cursor there with **relative** moves (relative movement crosses monitors), routed
+mid-screen so it doesn't jam at a monitor corner.
+
+**Requirements for accuracy:**
+1. **Re-pair** the host after first flashing the absolute-mouse feature (Windows
+   caches the old HID descriptor, so the absolute report stays invisible until a
+   fresh pairing — `mouse_abs`/`mouse_goto` do nothing otherwise).
+2. Mark the Windows primary monitor with **`primary: true`** in `monitors:`.
+3. In **Mouse Properties → Pointer Options**, turn **"Enhance pointer precision" off**
+   (acceleration is non-linear and can't be calibrated out; vendor mouse software
+   such as Logitech Options+ can re-enable it) **and turn "Display pointer trails" off**.
+4. **Calibrate** the per-axis scale (next section). X and Y usually need different
+   values. A residual of ~1–2 px is the integer mouse-count grid — host-side limit.
+
+### Calibrating with the Position Finder
+
+Enable the web UI (`web_control: true` + `web_server`) and open
+`http://<device-ip>/ble_keyboard`. The **Position Finder** card makes calibration
+a few taps — it's **locked by default** (so a stray tap can't move the cursor or
+change the scale); click **Edit** to use it:
+
+1. **Tap the desktop map** (or use the **nudge target** ±1 px buttons) to send the
+   cursor to a spot. Start with a **small target near the primary's top-left** so
+   an uncalibrated move can't fly off-screen.
+2. Read where the cursor **actually** landed (e.g. Power Automate's coordinates),
+   type it into **"landed at" X/Y**, and hit **Auto-calibrate** — it computes the
+   X/Y scale (`new = current × target ÷ actual`), applies it live, and **saves it
+   to the current host**. Re-tap and repeat to converge; aim more central if a
+   reading hits a screen edge.
+3. Fine-tune with the **goto scale ±** buttons (0.0001 steps, 5-dp), or **Reset**
+   to the YAML default.
+
+Each **host slot keeps its own** X/Y scale in NVS, so a 4K/scaled host and a 1080p
+host each remember their own calibration. It **survives firmware updates** (NVS is
+a separate partition; only a full chip erase wipes it). For belt-and-braces, copy
+the dialed values into YAML as `mouse_goto_scale_x` / `_y` too. (Note: a saved
+per-host value **overrides** the YAML default — use the Finder's **Reset** to push
+a new YAML default onto a host.)
+
+The Finder can't read the real cursor (HID is one-way), so it's "send and read the
+value back," not a live cursor display.
 
 ### Host support
 
@@ -885,7 +945,11 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/mouse_move` | POST | `x` (int), `y` (int) | Move cursor |
 | `/api/ble_keyboard/mouse_click` | POST | `btn` (int) | Click button |
 | `/api/ble_keyboard/mouse_scroll` | POST | `amount` (int) | Scroll wheel |
-| `/api/ble_keyboard/mouse_abs` | POST | `x`, `y` (percent; `unit=px` for pixels; `monitor=<idx>`; optional `btn`) | Move cursor to an exact position |
+| `/api/ble_keyboard/mouse_abs` | POST | `x`, `y` (percent; `unit=px` for pixels; `monitor=<idx>`; optional `btn`) | Move cursor to an exact position (absolute) |
+| `/api/ble_keyboard/press` | POST | `action=mouse_goto:<x>:<y>` | Cross-monitor exact move (any action string) |
+| `/api/ble_keyboard/screen` | GET | — | Desktop geometry (size, origin, monitors, goto scales) for the Position Finder |
+| `/api/ble_keyboard/goto_scale` | POST | `v` / `vx` / `vy` (scale), `save=1`, `reset=1` | Set `mouse_goto` calibration live (persist per host with `save`) |
+| `/api/ble_keyboard/goto_last` | GET | — | Last `mouse_goto` target (Windows coords) |
 | `/api/ble_keyboard/status` | GET | — | Returns `{"connected":bool,"paired":bool,"device_name":"..."}` |
 | `/api/ble_keyboard/buttons` | GET | — | Returns JSON array of programmed buttons |
 | `/api/ble_keyboard/press` | POST | `action` (string) | Trigger a programmed button action |
