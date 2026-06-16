@@ -211,7 +211,7 @@ action:
 
 > **Note:** Relative mouse uses HID Report ID 4; absolute positioning uses Report ID 5. Absolute pointers are reliable on Windows/Linux but inconsistent on macOS/iOS. After changing the HID descriptor, hosts that previously paired the keyboard must **re-pair** to discover the updated descriptor (otherwise `mouse_abs`/`mouse_goto` do nothing).
 
-> **`mouse_goto` accuracy:** `mouse_goto` reaches every monitor but its relative step is scaled by the host's pointer speed/DPI, so it needs calibrating. In **Mouse Properties → Pointer Options** turn **"Enhance pointer precision"** and **"Display pointer trails"** *off* (and pointer speed to the middle/1:1 notch). Set per-axis `mouse_goto_scale_x` / `mouse_goto_scale_y` in YAML (X and Y usually differ), or dial it in live with the web **Position Finder** (which saves the calibration per host). Mark your Windows primary monitor with `primary: true` in `monitors:`. See the README's *Absolute Mouse Positioning* section.
+> **`mouse_goto` accuracy:** `mouse_goto` reaches every monitor but its relative step is scaled by the host's pointer speed/DPI, so it needs calibrating. In **Mouse Properties → Pointer Options** turn **"Enhance pointer precision"** *off* (and pointer speed to the middle/1:1 notch). Set per-axis `mouse_goto_scale_x` / `mouse_goto_scale_y` in YAML (X and Y usually differ), or dial it in live with the web **Position Finder** (which saves the calibration per host). Mark your Windows primary monitor with `primary: true` in `monitors:`. See the README's *Absolute Mouse Positioning* section.
 
 ---
 

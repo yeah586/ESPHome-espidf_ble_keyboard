@@ -210,7 +210,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <input id="finder-act-x" type="number" placeholder="actual X" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <input id="finder-act-y" type="number" placeholder="actual Y" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <button class="mbtn" id="finder-cal" style="flex:0 0 auto">Auto‑calibrate</button>
-<span id="finder-cal-info" style="font-size:11px;color:var(--muted)">send to a target, then enter where it REALLY landed (Power Automate coords) → computes X/Y scale</span>
+<span id="finder-cal-info" style="font-size:11px;color:var(--muted)">send to a target, then enter where it REALLY landed (read with cursorpos.bat) → computes X/Y scale</span>
 </div>
 </div>
 </div>
@@ -945,7 +945,7 @@ buildKeyboard();
       if(dx<0||dx>1||dy<0||dy>1)sm.style.display='none';
       else{sm.style.display='';sm.style.left=(dx*100)+'%';sm.style.top=(dy*100)+'%'}
     }
-    // Reflect the last sent target (e.g. a mouse_goto from a button/Power Automate)
+    // Reflect the last sent target (e.g. a mouse_goto from a button or macro)
     // in the value + main marker too — unless the user is actively aiming a tap.
     if(!dragging){
       wx=tx;wy=ty;

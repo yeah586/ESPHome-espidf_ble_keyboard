@@ -458,7 +458,7 @@ espidf_ble_keyboard:
 | `"mouse_abs_mon:<idx>:<x%>:<y%>"` | Move cursor to a percent within declared `monitors[idx]` (multi-monitor). |
 | `"mouse_abs_save"` | Remember the current absolute position (the one this device last set). |
 | `"mouse_abs_restore"` | Jump back to the last `mouse_abs_save` position. |
-| `"mouse_goto:<x>:<y>"` | Move to a **Windows virtual-desktop pixel** across **all monitors** (homes the absolute pointer to the desktop origin, then steps relatively). X/Y are Windows coordinates (primary monitor top-left = 0,0; screens left of it are negative) — exactly what Power Automate reports. Use this when the absolute pointer is confined to the primary monitor. Needs "Enhance pointer precision" **off** + 1:1 pointer speed for pixel accuracy. |
+| `"mouse_goto:<x>:<y>"` | Move to a **Windows virtual-desktop pixel** across **all monitors** (homes the absolute pointer to the desktop origin, then steps relatively). X/Y are Windows coordinates (primary monitor top-left = 0,0; screens left of it are negative). Use this when the absolute pointer is confined to the primary monitor. Needs "Enhance pointer precision" **off** + 1:1 pointer speed for pixel accuracy. |
 | `"switch_host:N"` | Switch to host slot N (0–9). Reconnects to stored host or advertises for new pairing. |
 | `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
 | `"string:hello"` | Explicit text typing — useful in multi-step macros to distinguish text from action names. |
@@ -806,17 +806,17 @@ virtual desktop**:
   `mouse_goto:<x>:<y>` instead** — it homes the absolute pointer to the desktop
   origin (primary top-left = Windows 0,0) and then steps *relatively*, and
   relative movement spans the whole virtual desktop, so it reaches every monitor.
-  Feed it Windows virtual-desktop coordinates (e.g. straight from Power Automate);
-  for pixel accuracy turn "Enhance pointer precision" **and "Display pointer trails"**
-  off and set pointer speed to the middle (1:1) notch.
+  Feed it Windows virtual-desktop coordinates (read a spot's with the bundled
+  [`docs/cursorpos.bat`](docs/cursorpos.bat)); for pixel accuracy turn "Enhance
+  pointer precision" off and set pointer speed to the middle (1:1) notch.
 
 ### Cross-monitor positioning with `mouse_goto`
 
 `mouse_goto:<x>:<y>` is the **reliable way to hit an exact pixel on any monitor**
 when the host confines the absolute pointer to the primary screen (the usual
 Windows case). `x`/`y` are **Windows virtual-desktop coordinates** — the primary
-monitor's top-left is `0,0`, and monitors to its left are negative. These are
-exactly the numbers **Power Automate** reports, so you can feed them straight in:
+monitor's top-left is `0,0`, and monitors to its left are negative. Read a spot's
+coordinates by hovering it with the bundled [`docs/cursorpos.bat`](docs/cursorpos.bat):
 
 ```yaml
 button:
@@ -837,7 +837,7 @@ mid-screen so it doesn't jam at a monitor corner.
 2. Mark the Windows primary monitor with **`primary: true`** in `monitors:`.
 3. In **Mouse Properties → Pointer Options**, turn **"Enhance pointer precision" off**
    (acceleration is non-linear and can't be calibrated out; vendor mouse software
-   such as Logitech Options+ can re-enable it) **and turn "Display pointer trails" off**.
+   such as Logitech Options+ can re-enable it).
 4. **Calibrate** the per-axis scale (next section). X and Y usually need different
    values. A residual of ~1–2 px is the integer mouse-count grid — host-side limit.
 
@@ -855,10 +855,10 @@ change the scale); click **Edit** to use it:
    hit **Auto-calibrate** — it computes the X/Y scale (`new = current × target ÷
    actual`), applies it live, and **saves it to the current host**. Re-tap and
    repeat to converge; aim more central if a reading hits a screen edge.
-   - To read the live cursor position you can use Power Automate, or the bundled
+   - To read the live cursor position, use the bundled
      **[`docs/cursorpos.bat`](docs/cursorpos.bat)** — double-click it on the target
      PC for a live **physical-pixel** readout (no install; uses `GetCursorPos` under
-     `SetProcessDPIAware` so the numbers match the Finder/Power Automate).
+     `SetProcessDPIAware` so the numbers match the Finder).
 3. Fine-tune with the **goto scale ±** buttons (0.0001 steps, 5-dp), or **Reset**
    to the YAML default.
 
