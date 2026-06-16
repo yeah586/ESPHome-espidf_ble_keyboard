@@ -189,6 +189,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <input id="finder-scale-y" type="number" step="0.01" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
 <span style="font-size:11px;color:var(--muted)">tune each until the cursor lands right, then put in YAML as <code>mouse_goto_scale_x</code> / <code>mouse_goto_scale_y</code></span>
 </div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+<label style="font-size:12px;color:var(--muted)">landed&nbsp;at</label>
+<input id="finder-act-x" type="number" placeholder="actual X" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<input id="finder-act-y" type="number" placeholder="actual Y" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button class="mbtn" id="finder-cal" style="flex:0 0 auto">Auto‑calibrate</button>
+<span id="finder-cal-info" style="font-size:11px;color:var(--muted)">send to a target, then enter where it REALLY landed (Power Automate coords) → computes X/Y scale</span>
+</div>
 </div>
 
 <div class="card" id="media-card">
@@ -1193,6 +1200,15 @@ class BleKbWebHandler : public AsyncWebHandler {
                 ",\"p\":" + (mons[i].primary ? "1" : "0") + "}";
       }
       json += "]}";
+      send_response(200, "application/json", json.c_str());
+      return;
+    }
+
+    if (path == "goto_last") {
+      // Last mouse_goto target (Windows coords) so the Finder can mark where the
+      // cursor was last sent, from any source. Lightweight — safe to poll.
+      std::string json = "{\"x\":" + std::to_string(kb_->last_goto_x()) +
+                         ",\"y\":" + std::to_string(kb_->last_goto_y()) + "}";
       send_response(200, "application/json", json.c_str());
       return;
     }

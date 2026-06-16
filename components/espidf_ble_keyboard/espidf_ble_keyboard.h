@@ -135,6 +135,10 @@ class EspidfBleKeyboard : public Component {
   void set_mouse_goto_scale_y(float s) { goto_scale_y_ = s; }
   float mouse_goto_scale_x() const { return goto_scale_x_; }
   float mouse_goto_scale_y() const { return goto_scale_y_; }
+  // Last mouse_goto target (Windows virtual-desktop coords) — for the web Finder
+  // to mark where the cursor was last sent, from any source.
+  int32_t last_goto_x() const { return last_goto_x_; }
+  int32_t last_goto_y() const { return last_goto_y_; }
   uint32_t screen_width() const { return screen_w_; }
   uint32_t screen_height() const { return screen_h_; }
   const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
@@ -306,6 +310,7 @@ class EspidfBleKeyboard : public Component {
   uint32_t screen_w_{1920}, screen_h_{1080};   // pixel space mapped to 0..32767
   std::vector<MonitorRect> monitors_;          // optional per-monitor regions
   float goto_scale_x_{1.0f}, goto_scale_y_{1.0f};  // mouse_goto per-axis calibration
+  int32_t last_goto_x_{0}, last_goto_y_{0};        // last mouse_goto target (Windows coords)
   uint16_t cur_abs_x_{16384}, cur_abs_y_{16384};  // last position WE set (center default)
   uint16_t saved_abs_x_{0}, saved_abs_y_{0};
   bool has_saved_abs_{false};

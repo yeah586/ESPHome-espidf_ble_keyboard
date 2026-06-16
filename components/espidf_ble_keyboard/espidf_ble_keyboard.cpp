@@ -1623,6 +1623,8 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     // Clamp to a sane virtual-desktop range to avoid runaway stepping.
     if (x < -32000) x = -32000; else if (x > 32000) x = 32000;
     if (y < -32000) y = -32000; else if (y > 32000) y = 32000;
+    last_goto_x_ = x;
+    last_goto_y_ = y;
     // 1) Anchor at ~the desktop origin (primary monitor top-left = Windows 0,0),
     //    which the absolute pointer reliably reaches. Two sends, for two reasons:
     //    (a) hosts ignore an absolute report IDENTICAL to the previous one (the
