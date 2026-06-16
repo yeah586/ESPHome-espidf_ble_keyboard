@@ -1044,6 +1044,9 @@ void EspidfBleKeyboard::switch_host(uint8_t slot) {
     // Apply per-slot keyboard layout (ephemeral; does not overwrite the web UI's NVS choice).
     if (!slot_layout_id_[slot].empty()) set_runtime_layout(slot_layout_id_[slot], false);
 
+    // Apply this host's saved goto calibration (if any).
+    load_goto_scale_for_host(slot);
+
     ESP_LOGI(TAG, "Switching to host slot %u", slot);
 
     if (hosts_[slot].occupied) {
@@ -1135,6 +1138,7 @@ void EspidfBleKeyboard::setup() {
 
     maybe_reset_bonds_after_security_config_change();
     load_host_slots_();
+    load_goto_scale_for_host(active_slot_);  // per-host calibration override (if saved)
     load_macros_();
     // Apply YAML default if no setter ran (defensive), then let NVS override.
     if (active_layout_ == nullptr) active_layout_ = default_layout();
@@ -1473,6 +1477,41 @@ void EspidfBleKeyboard::save_layout_(const std::string &id) {
     nvs_set_str(handle, "layout", id.c_str());
     nvs_commit(handle);
     nvs_close(handle);
+}
+
+void EspidfBleKeyboard::save_goto_scale_for_host() {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+    char kx[12], ky[12];
+    snprintf(kx, sizeof(kx), "gsx%u", active_slot_);
+    snprintf(ky, sizeof(ky), "gsy%u", active_slot_);
+    uint32_t bx, by;
+    memcpy(&bx, &goto_scale_x_, sizeof(bx));  // store the float bit pattern as u32
+    memcpy(&by, &goto_scale_y_, sizeof(by));
+    nvs_set_u32(handle, kx, bx);
+    nvs_set_u32(handle, ky, by);
+    nvs_commit(handle);
+    nvs_close(handle);
+    ESP_LOGI(TAG, "Saved goto scale for host %u: x=%.4f y=%.4f", active_slot_, goto_scale_x_, goto_scale_y_);
+}
+
+void EspidfBleKeyboard::load_goto_scale_for_host(uint8_t slot) {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+    char kx[12], ky[12];
+    snprintf(kx, sizeof(kx), "gsx%u", slot);
+    snprintf(ky, sizeof(ky), "gsy%u", slot);
+    uint32_t b;
+    if (nvs_get_u32(handle, kx, &b) == ESP_OK) {
+        float f; memcpy(&f, &b, sizeof(f));
+        if (f >= 0.05f && f <= 20.0f) goto_scale_x_ = f;
+    }
+    if (nvs_get_u32(handle, ky, &b) == ESP_OK) {
+        float f; memcpy(&f, &b, sizeof(f));
+        if (f >= 0.05f && f <= 20.0f) goto_scale_y_ = f;
+    }
+    nvs_close(handle);
+    ESP_LOGI(TAG, "Goto scale for host %u: x=%.4f y=%.4f", slot, goto_scale_x_, goto_scale_y_);
 }
 
 void EspidfBleKeyboard::send_key_combo(uint8_t modifiers, uint8_t keycode) {

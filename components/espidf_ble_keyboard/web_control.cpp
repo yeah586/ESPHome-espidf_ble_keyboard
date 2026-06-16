@@ -881,7 +881,11 @@ buildKeyboard();
   const copyBtn=document.getElementById('finder-copy');
   const scaleInX=document.getElementById('finder-scale-x');
   const scaleInY=document.getElementById('finder-scale-y');
-  let SW=1920,SH=1080,OX=0,OY=0,mons=[],lastW=-1,wx=0,wy=0,dragging=false;
+  const actXIn=document.getElementById('finder-act-x');
+  const actYIn=document.getElementById('finder-act-y');
+  const calBtn=document.getElementById('finder-cal');
+  const calInfo=document.getElementById('finder-cal-info');
+  let SW=1920,SH=1080,OX=0,OY=0,mons=[],lastW=-1,wx=0,wy=0,dragging=false,lastTx=null,lastTy=null;
   function draw(){
     const w=map.clientWidth||300;lastW=w;
     map.style.height=Math.max(60,Math.round(w*SH/SW))+'px';
@@ -897,6 +901,18 @@ buildKeyboard();
     mk.id='finder-marker';
     mk.style.cssText='position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#e44;box-shadow:0 0 0 2px #fff;pointer-events:none;display:none';
     map.appendChild(mk);
+    const sm=document.createElement('div');
+    sm.id='finder-sent';
+    sm.style.cssText='position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #2ec27e;background:rgba(46,194,126,.4);box-shadow:0 0 0 1px #fff;pointer-events:none;display:none';
+    map.appendChild(sm);
+    if(lastTx!=null)placeSent(lastTx,lastTy);
+  }
+  function placeSent(tx,ty){
+    lastTx=tx;lastTy=ty;
+    const sm=document.getElementById('finder-sent');if(!sm)return;
+    const dx=(tx+OX)/SW,dy=(ty+OY)/SH;
+    if(dx<0||dx>1||dy<0||dy>1){sm.style.display='none';return}
+    sm.style.display='';sm.style.left=(dx*100)+'%';sm.style.top=(dy*100)+'%';
   }
   function load(){
     fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
@@ -906,8 +922,9 @@ buildKeyboard();
       draw();
     }).catch(()=>draw());
   }
-  if(scaleInX){const p=()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v})};scaleInX.addEventListener('change',p);scaleInX.addEventListener('input',p)}
-  if(scaleInY){const p=()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v})};scaleInY.addEventListener('change',p);scaleInY.addEventListener('input',p)}
+  // input = live preview; change (commit) = also persist to the active host
+  if(scaleInX){scaleInX.addEventListener('input',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v})});scaleInX.addEventListener('change',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v,save:1})})}
+  if(scaleInY){scaleInY.addEventListener('input',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v})});scaleInY.addEventListener('change',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v,save:1})})}
   function aim(e){
     const r=map.getBoundingClientRect();
     let px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
@@ -924,12 +941,23 @@ buildKeyboard();
   map.addEventListener('contextmenu',e=>e.preventDefault());  // stop long-press / right-click menu
   map.addEventListener('pointerdown',e=>{e.preventDefault();dragging=true;try{map.setPointerCapture(e.pointerId)}catch(_){}aim(e)});
   map.addEventListener('pointermove',e=>{if(dragging){e.preventDefault();aim(e)}});
-  map.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;aim(e);api('press',{action:'mouse_goto:'+wx+':'+wy})});
+  map.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;aim(e);placeSent(wx,wy);api('press',{action:'mouse_goto:'+wx+':'+wy})});
   map.addEventListener('pointercancel',()=>{dragging=false});
   copyBtn.addEventListener('click',()=>{
     if(navigator.clipboard)navigator.clipboard.writeText(val.textContent).catch(()=>{});
     copyBtn.textContent='Copied';setTimeout(()=>copyBtn.textContent='Copy',1200);
   });
+  // Auto-calibrate: new_scale = current_scale * target / actual, per axis.
+  if(calBtn){calBtn.addEventListener('click',()=>{
+    if(lastTx==null){calInfo.textContent='send to a target first (tap the map)';return}
+    const ax=parseFloat(actXIn.value),ay=parseFloat(actYIn.value);let out=[];
+    if(isFinite(ax)&&ax!==0&&lastTx!==0){const cur=parseFloat(scaleInX.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTx/ax));scaleInX.value=ns.toFixed(4);api('goto_scale',{vx:ns,save:1});out.push('X '+ns.toFixed(4))}
+    if(isFinite(ay)&&ay!==0&&lastTy!==0){const cur=parseFloat(scaleInY.value)||1;const ns=Math.max(0.05,Math.min(20,cur*lastTy/ay));scaleInY.value=ns.toFixed(4);api('goto_scale',{vy:ns,save:1});out.push('Y '+ns.toFixed(4))}
+    calInfo.textContent=out.length?('new scale → '+out.join('  ')+' (applied live; copy to YAML)'):'enter the actual X and/or Y where it landed';
+  })}
+  // Poll the last sent target so the green marker tracks goto's from any source.
+  function pollSent(){fetch('/api/ble_keyboard/goto_last').then(r=>r.json()).then(d=>{if(d&&d.x!=null)placeSent(d.x,d.y)}).catch(()=>{})}
+  setInterval(pollSent,1200);pollSent();
   if(window.ResizeObserver){new ResizeObserver(()=>{if(map.clientWidth!==lastW)draw()}).observe(map)}
   else{window.addEventListener('resize',draw)}
   load();
@@ -1312,6 +1340,7 @@ class BleKbWebHandler : public AsyncWebHandler {
         float v = atof(request->arg("vy").c_str());
         if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_y(v);
       }
+      if (request->hasArg("save")) kb_->save_goto_scale_for_host();  // persist to active host
       send_response(200, "text/plain", "OK");
 
     } else if (path == "string") {

@@ -139,6 +139,10 @@ class EspidfBleKeyboard : public Component {
   // to mark where the cursor was last sent, from any source.
   int32_t last_goto_x() const { return last_goto_x_; }
   int32_t last_goto_y() const { return last_goto_y_; }
+  // Per-host calibration: persist/restore the goto scale per host slot in NVS, so
+  // each paired host (different DPI / pointer settings) keeps its own values.
+  void save_goto_scale_for_host();
+  void load_goto_scale_for_host(uint8_t slot);
   uint32_t screen_width() const { return screen_w_; }
   uint32_t screen_height() const { return screen_h_; }
   const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
