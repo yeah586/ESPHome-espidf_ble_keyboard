@@ -25,7 +25,7 @@ static const char PAGE_HTML[] PROGMEM = R"rawhtml(<!DOCTYPE html>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#1a1e28;--fg:#e2e8f0;--card:#13161e;--border:#252a38;--muted:#7c8aad;--accent:#00d4aa;--active:#03a9f4;--caps:#ff9800;--name:var(--fg)}
 body.light{--bg:#f0f2f5;--fg:#1a1e28;--card:#ffffff;--border:#d0d5dd;--muted:#7c8aad;--accent:#00875a;--active:#0288d1;--caps:#e65100;--name:var(--fg)}
-body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:680px;margin:0 auto;user-select:none;-webkit-user-select:none;transition:background .2s,color .2s}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:1024px;margin:0 auto;user-select:none;-webkit-user-select:none;transition:background .2s,color .2s}
 h2{font-size:15px;font-weight:600;margin:12px 0 8px;color:var(--accent);display:flex;align-items:center;gap:6px}
 h2 svg{width:18px;height:18px;fill:var(--accent)}
 .toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;gap:6px;overflow:hidden}
@@ -133,7 +133,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
 <span class="dev-name" id="dname"></span>
-<span id="webver" style="font-size:12px;color:#fff;background:#e44;font-weight:700;border-radius:4px;padding:2px 7px;margin-left:6px;letter-spacing:.5px">BUILD A1</span>
+<span id="webver" style="font-size:12px;color:#fff;background:#e44;font-weight:700;border-radius:4px;padding:2px 7px;margin-left:6px;letter-spacing:.5px">BUILD A2</span>
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
