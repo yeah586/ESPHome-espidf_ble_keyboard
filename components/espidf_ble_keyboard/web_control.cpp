@@ -387,9 +387,10 @@ thmBtn.addEventListener('click',toggleTheme);
 let zoom=100;
 const scalable=document.getElementById('scalable');
 const zlbl=document.getElementById('zlbl');
-function setZoom(v){zoom=Math.max(50,Math.min(200,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%'}
+function setZoom(v){zoom=Math.max(50,Math.min(200,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%';localStorage.setItem('blekb_zoom',zoom)}
 document.getElementById('zin').addEventListener('click',()=>setZoom(zoom+5));
 document.getElementById('zout').addEventListener('click',()=>setZoom(zoom-5));
+setZoom(parseInt(localStorage.getItem('blekb_zoom'))||100);
 
 // ── Status polling ──
 const sdot=document.getElementById('sdot');
