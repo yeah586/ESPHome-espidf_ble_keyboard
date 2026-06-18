@@ -463,6 +463,7 @@ espidf_ble_keyboard:
 | `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
 | `"string:hello"` | Explicit text typing — useful in multi-step macros to distinguish text from action names. |
 | `"delay:N"` | Pause for N milliseconds (max 10000). Used between steps in multi-step macros. |
+| `"repeat:N:<action>"` | Run `<action>` N times (max 1000). Put it at the start of a macro to repeat the whole sequence, e.g. `repeat:3:combo:0:40 \| delay:200`. |
 | `"send_custom_text"` | Send the first linked text entity's content. Requires `custom_text_id` in config. |
 | `"send_custom_text:N"` | Send the Nth linked text entity (0-based). E.g. `send_custom_text:1` for the second. |
 
@@ -1201,7 +1202,7 @@ The web UI provides:
 
 ### Multi-Step Macros
 
-Macros support multiple commands separated by `|`. A 50ms delay is automatically inserted between steps. Use `delay:N` for explicit pauses (max 10000ms).
+Macros support multiple commands separated by `|`. A 50ms delay is automatically inserted between steps. Use `delay:N` for explicit pauses (max 10000ms). Prefix a macro with `repeat:N:` to run the whole sequence N times (max 1000).
 
 Examples:
 | Action string | Description |
@@ -1210,6 +1211,7 @@ Examples:
 | `combo:2:4 \| delay:50 \| combo:2:6` | Select All, Copy |
 | `play_pause \| delay:500 \| next_track` | Play/Pause, wait 500ms, Next Track |
 | `combo:0:40 \| delay:200 \| combo:0:40` | Enter twice with 200ms gap |
+| `repeat:3:combo:0:40 \| delay:200` | Press Enter 3 times, 200ms apart |
 | `combo:2:4 \| delay:50 \| string:hello` | Select All, type "hello" |
 | `mouse_abs_save \| mouse_abs:90:10 \| left_click \| mouse_abs_restore` | Click top-right corner, then return the cursor |
 

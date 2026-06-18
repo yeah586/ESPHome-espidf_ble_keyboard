@@ -307,6 +307,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="string:">Type Text</option>
 <option value="delay:100">Delay 100ms</option>
 <option value="delay:500">Delay 500ms</option>
+<option value="repeat:3:">Repeat 3&times; (edit)</option>
 <option value="mouse_abs:0:0">Cursor Top-Left</option>
 <option value="mouse_abs:50:50">Cursor Center</option>
 <option value="mouse_abs:100:100">Cursor Bottom-Right</option>

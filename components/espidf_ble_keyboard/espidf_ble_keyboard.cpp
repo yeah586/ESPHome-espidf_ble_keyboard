@@ -1746,6 +1746,22 @@ void EspidfBleKeyboard::send_hibernate() {
 // ── Centralized action executor ──────────────────────────────────
 
 void EspidfBleKeyboard::execute_action(const std::string &action) {
+    // Repeat: run the rest of the action N times. Checked before the '|' split
+    // so the count covers the whole remaining sequence. Runs inline/synchronously
+    // like other multi-step macros, so the count is capped to bound how long it
+    // can block the caller; unbounded/background looping is handled separately.
+    if (action.find("repeat:") == 0) {
+        int count = 0;
+        size_t sep = action.find(':', 7);  // ':' after the count
+        if (sep != std::string::npos && sscanf(action.c_str(), "repeat:%i", &count) == 1) {
+            std::string body = action.substr(sep + 1);
+            const int MAX_REPEAT = 1000;  // inline safety cap
+            if (count > MAX_REPEAT) count = MAX_REPEAT;
+            for (int i = 0; i < count && !body.empty(); i++)
+                execute_action(body);
+        }
+        return;
+    }
     // Multi-step actions: split on '|' and execute each step
     if (action.find('|') != std::string::npos) {
         size_t start = 0;
