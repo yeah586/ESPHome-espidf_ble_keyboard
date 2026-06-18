@@ -133,7 +133,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
 <span class="dev-name" id="dname"></span>
-<span id="webver" style="font-size:12px;color:#fff;background:#e44;font-weight:700;border-radius:4px;padding:2px 7px;margin-left:6px;letter-spacing:.5px">BUILD A2</span>
+<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">2026.6.0</span>
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
