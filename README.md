@@ -970,7 +970,7 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Scroll controls** — buttons + mouse wheel on the touchpad
 - **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
-- **Zoom controls** — resize keyboard and mouse with +/- buttons (50%–150%)
+- **Zoom controls** — resize keyboard and mouse with +/- buttons in 5% steps (50%–200%), zoom level saved in browser
 - **Light/dark theme** — toggle between dark and light mode, preference saved in browser
 - **BLE connection status** — live indicator shows Connected, Paired, or Disconnected (polls every 3s)
 - **Device name display** — shows the configured `device_name` in the toolbar and browser tab title
