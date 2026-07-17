@@ -802,6 +802,20 @@ buildKeyboard();
   }).catch(()=>{});
 
   function onStart(x,y){tracking=true;lastX=startSX=x;lastY=startSY=y;lastTime=startTime=Date.now();moved=false;accumX=0;accumY=0;moveAC=new AbortController();pad.classList.add('active')}
+  // Single request in flight; deltas keep merging into accumX/accumY while it
+  // runs, so a direction reversal cancels in the accumulator instead of
+  // queueing stale moves (a queued backlog was why reversals only registered
+  // after lifting the finger — lift aborts the queue).
+  let sendBusy=false;
+  function flushMove(){
+    if(sendBusy||!moveAC)return;
+    const dx=Math.trunc(accumX),dy=Math.trunc(accumY);
+    if(dx===0&&dy===0)return;
+    const cx=Math.max(-127,Math.min(127,dx)),cy=Math.max(-127,Math.min(127,dy));
+    accumX-=dx;accumY-=dy;moved=true;sendBusy=true;
+    fetch('/api/ble_keyboard/mouse_move?'+new URLSearchParams({x:cx,y:cy}),{method:'POST',signal:moveAC.signal})
+      .catch(()=>{}).finally(()=>{sendBusy=false;flushMove()});
+  }
   function onMove(x,y){
     if(!tracking)return;
     if(!moved){const td=Math.abs(x-startSX)+Math.abs(y-startSY);if(td<tapDeadZone)return}
@@ -811,13 +825,8 @@ buildKeyboard();
     const speed=dist/dt;
     const sens=Math.min(baseSens+speed*accelFactor,maxSens);
     accumX+=rawDx*sens;accumY+=rawDy*sens;
-    const dx=Math.trunc(accumX),dy=Math.trunc(accumY);
-    if(dx!==0||dy!==0){
-      const cx=Math.max(-127,Math.min(127,dx)),cy=Math.max(-127,Math.min(127,dy));
-      fetch('/api/ble_keyboard/mouse_move?'+new URLSearchParams({x:cx,y:cy}),{method:'POST',signal:moveAC.signal}).catch(()=>{});
-      accumX-=dx;accumY-=dy;moved=true;
-    }
     lastX=x;lastY=y;lastTime=now;
+    flushMove();
   }
   function onEnd(){
     if(!tracking)return;tracking=false;pad.classList.remove('active');
@@ -847,12 +856,19 @@ buildKeyboard();
     window.addEventListener('touchcancel',winTouchCancel,{passive:false});
   },{passive:true});
 
-  let wheelAccum=0;
+  let wheelAccum=0,wheelBusy=false;
+  function flushWheel(){
+    if(wheelBusy)return;
+    const s=Math.trunc(wheelAccum);
+    if(s===0)return;
+    wheelAccum-=s;wheelBusy=true;
+    fetch('/api/ble_keyboard/mouse_scroll?'+new URLSearchParams({amount:Math.max(-127,Math.min(127,s))}),{method:'POST'})
+      .catch(()=>{}).finally(()=>{wheelBusy=false;flushWheel()});
+  }
   pad.addEventListener('wheel',e=>{
     e.preventDefault();
     wheelAccum+=-e.deltaY*scrollSens*0.02;
-    const s=Math.trunc(wheelAccum);
-    if(s!==0){api('mouse_scroll',{amount:Math.max(-127,Math.min(127,s))});wheelAccum-=s}
+    flushWheel();
   },{passive:false});
 
   // Mouse buttons: tap = click; long-press (400ms) = hold (for dragging via the

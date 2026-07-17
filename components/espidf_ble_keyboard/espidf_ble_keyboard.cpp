@@ -1641,20 +1641,20 @@ void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
     send_mouse_click_release();
 }
 
+// Moves/scrolls are a single report each — no delay, no trailing idle report.
+// Relative reports need no "release" (hosts don't dedupe them; only absolute
+// reports get deduped), and blocking here stalls the web server's HTTP task,
+// which is the touchpad hot path.
 void EspidfBleKeyboard::send_mouse_move(int8_t x, int8_t y) {
     if (!is_connected_) return;
     send_mouse_report_(held_mouse_buttons_, x, y, 0);
-    vTaskDelay(pdMS_TO_TICKS(20));
-    send_mouse_report_(held_mouse_buttons_, 0, 0, 0);
-    ESP_LOGD(TAG, "Mouse move sent: x=%d y=%d", x, y);
+    ESP_LOGV(TAG, "Mouse move sent: x=%d y=%d", x, y);
 }
 
 void EspidfBleKeyboard::send_mouse_scroll(int8_t wheel) {
     if (!is_connected_) return;
     send_mouse_report_(held_mouse_buttons_, 0, 0, wheel);
-    vTaskDelay(pdMS_TO_TICKS(20));
-    send_mouse_report_(held_mouse_buttons_, 0, 0, 0);
-    ESP_LOGD(TAG, "Mouse scroll sent: wheel=%d", wheel);
+    ESP_LOGV(TAG, "Mouse scroll sent: wheel=%d", wheel);
 }
 
 void EspidfBleKeyboard::send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t buttons) {
