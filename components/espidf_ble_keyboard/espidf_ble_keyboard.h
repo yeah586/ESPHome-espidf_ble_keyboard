@@ -83,6 +83,13 @@ class EspidfBleKeyboard : public Component {
   void send_mouse_click(uint8_t buttons);
   void send_mouse_move(int8_t x, int8_t y);
   void send_mouse_scroll(int8_t wheel);
+  // Absolute pointer: x/y in 0..32767 (host maps onto the screen). Tracks the
+  // last commanded position for mouse_abs_save / mouse_abs_restore.
+  void send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t buttons = 0);
+  // Go to a Windows virtual-desktop pixel (primary top-left = 0,0; can be
+  // negative) by homing absolute to the origin then stepping relatively. Spans
+  // all monitors. Needs pointer acceleration off + 1:1 speed for exactness.
+  void send_mouse_goto(int32_t x, int32_t y);
 
   void set_passkey(uint32_t passkey) {
     passkey_ = passkey;
@@ -113,6 +120,51 @@ class EspidfBleKeyboard : public Component {
   void set_mouse_accel(float a) { mouse_accel_ = a; }
   void set_mouse_max_speed(float m) { mouse_max_speed_ = m; }
   void set_scroll_sensitivity(float s) { scroll_sensitivity_ = s; }
+
+  // Absolute-pointer screen geometry (for pixel + multi-monitor addressing).
+  // screen size = the pixel space the host maps 0..32767 onto (a single
+  // resolution, or the whole virtual desktop for a spanned multi-monitor setup).
+  struct MonitorRect { int32_t x, y; uint32_t width, height; bool primary; };
+  void set_screen_size(uint32_t w, uint32_t h) { screen_w_ = w; screen_h_ = h; }
+  void add_monitor(int32_t x, int32_t y, uint32_t w, uint32_t h, bool primary = false) {
+    monitors_.push_back({x, y, w, h, primary});
+  }
+  // Calibration multipliers for mouse_goto's relative step (compensate the host's
+  // pointer-speed / DPI scaling so a count maps 1:1 to a pixel). 1.0 = no scaling.
+  // X and Y are independent because some hosts scale the axes differently.
+  void set_mouse_goto_scale(float s) { goto_scale_x_ = s; goto_scale_y_ = s; }  // both
+  void set_mouse_goto_scale_x(float s) { goto_scale_x_ = s; }
+  void set_mouse_goto_scale_y(float s) { goto_scale_y_ = s; }
+  float mouse_goto_scale_x() const { return goto_scale_x_; }
+  float mouse_goto_scale_y() const { return goto_scale_y_; }
+  // Last mouse_goto target (Windows virtual-desktop coords) — for the web Finder
+  // to mark where the cursor was last sent, from any source.
+  int32_t last_goto_x() const { return last_goto_x_; }
+  int32_t last_goto_y() const { return last_goto_y_; }
+  // Per-host calibration: persist/restore the goto scale per host slot in NVS, so
+  // each paired host (different DPI / pointer settings) keeps its own values.
+  void save_goto_scale_for_host();
+  void load_goto_scale_for_host(uint8_t slot);
+  // Reset the goto scale back to the YAML-configured defaults and save to host.
+  void reset_goto_scale_for_host() {
+    goto_scale_x_ = yaml_goto_scale_x_;
+    goto_scale_y_ = yaml_goto_scale_y_;
+    save_goto_scale_for_host();
+  }
+  uint32_t screen_width() const { return screen_w_; }
+  uint32_t screen_height() const { return screen_h_; }
+  const std::vector<MonitorRect> &get_monitors() const { return monitors_; }
+  // Device-space coords of the primary monitor's top-left = the Windows (0,0)
+  // origin that mouse_goto homes to. Used by the web Position Finder to emit
+  // mouse_goto values. Defaults to (0,0) if no monitor is marked primary.
+  int32_t primary_origin_x() const {
+    for (const auto &m : monitors_) if (m.primary) return m.x;
+    return 0;
+  }
+  int32_t primary_origin_y() const {
+    for (const auto &m : monitors_) if (m.primary) return m.y;
+    return 0;
+  }
   float mouse_sensitivity() const { return mouse_sensitivity_; }
   float mouse_accel() const { return mouse_accel_; }
   float mouse_max_speed() const { return mouse_max_speed_; }
@@ -266,6 +318,16 @@ class EspidfBleKeyboard : public Component {
   float mouse_accel_{0.15f};
   float mouse_max_speed_{4.0f};
   float scroll_sensitivity_{2.0f};
+
+  // Absolute-pointer geometry + position tracking
+  uint32_t screen_w_{1920}, screen_h_{1080};   // pixel space mapped to 0..32767
+  std::vector<MonitorRect> monitors_;          // optional per-monitor regions
+  float goto_scale_x_{1.0f}, goto_scale_y_{1.0f};  // mouse_goto per-axis calibration
+  float yaml_goto_scale_x_{1.0f}, yaml_goto_scale_y_{1.0f};  // YAML defaults (for Reset)
+  int32_t last_goto_x_{0}, last_goto_y_{0};        // last mouse_goto target (Windows coords)
+  uint16_t cur_abs_x_{16384}, cur_abs_y_{16384};  // last position WE set (center default)
+  uint16_t saved_abs_x_{0}, saved_abs_y_{0};
+  bool has_saved_abs_{false};
   std::vector<ButtonInfo> buttons_;
   std::vector<ButtonInfo> macros_;   // user-editable, NVS-persisted
   void load_macros_();

@@ -25,7 +25,7 @@ static const char PAGE_HTML[] PROGMEM = R"rawhtml(<!DOCTYPE html>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#1a1e28;--fg:#e2e8f0;--card:#13161e;--border:#252a38;--muted:#7c8aad;--accent:#00d4aa;--active:#03a9f4;--caps:#ff9800;--name:var(--fg)}
 body.light{--bg:#f0f2f5;--fg:#1a1e28;--card:#ffffff;--border:#d0d5dd;--muted:#7c8aad;--accent:#00875a;--active:#0288d1;--caps:#e65100;--name:var(--fg)}
-body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:680px;margin:0 auto;user-select:none;-webkit-user-select:none;transition:background .2s,color .2s}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:12px;max-width:640px;margin:0 auto;user-select:none;-webkit-user-select:none;transition:background .2s,color .2s}
 h2{font-size:15px;font-weight:600;margin:12px 0 8px;color:var(--accent);display:flex;align-items:center;gap:6px}
 h2 svg{width:18px;height:18px;fill:var(--accent)}
 .toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;gap:6px;overflow:hidden}
@@ -46,7 +46,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .kb-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;gap:8px}
 .kb-title{font-size:15px;font-weight:600;color:var(--accent)}
 .layout-sel{padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--fg);font-size:12px;font-family:inherit;cursor:pointer}
-.scalable{transform-origin:top left;transition:transform .15s}
+.scalable{transform-origin:top center;transition:transform .15s}
 .row{display:flex;gap:3px;margin-bottom:3px}
 .row:last-child{margin-bottom:0}
 .k{flex:1;min-width:0;padding:9px 1px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .08s;outline:none;-webkit-tap-highlight-color:transparent;position:relative}
@@ -61,13 +61,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .k.kb-l-top::after{content:'';position:absolute;top:100%;left:-1px;right:-1px;height:5px;background:var(--bg);border-left:1px solid var(--border);border-right:1px solid var(--border);pointer-events:none}
 .k.kb-l-top:active::after,.k.kb-l-top.p::after{background:var(--active);border-color:var(--active)}
 .k.kb-l-bot{border-top-left-radius:0}
-.touchpad{width:100%;aspect-ratio:16/9;background:var(--bg);border-radius:10px;border:2px solid var(--border);cursor:crosshair;touch-action:pan-y;position:relative;overflow:hidden;transition:border-color .15s}
+.touchpad{width:100%;aspect-ratio:16/9;background:var(--bg);border-radius:10px;border:2px solid var(--border);cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;position:relative;overflow:hidden;transition:border-color .15s}
 .touchpad.active{border-color:var(--active)}
 .touchpad-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--muted);font-size:12px;pointer-events:none;opacity:.5}
 .touchpad.active .touchpad-hint{opacity:0}
 .mbtn-row{display:grid;grid-template-columns:1fr .7fr 1fr;gap:6px;margin-top:8px}
 .mbtn{padding:12px 0;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .1s}
 .mbtn:active,.mbtn.p{background:var(--active);color:#fff;border-color:var(--active)}
+.mbtn.held{background:var(--accent);color:#fff;border-color:var(--accent)}
 .scroll-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .sbtn{padding:8px 0;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:16px;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .1s}
 .sbtn:active{background:var(--active);color:#fff;border-color:var(--active)}
@@ -133,11 +134,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
 <span class="dev-name" id="dname"></span>
+<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.1.0</span>
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
 <button class="toggle-btn on" data-section="keyboard">Keyboard</button>
 <button class="toggle-btn on" data-section="mouse-card">Mouse</button>
+<button class="toggle-btn on" data-section="finder-card">Finder</button>
 <button class="toggle-btn on" data-section="media-card">Remote</button>
 <button class="toggle-btn on" data-section="btns-card">Buttons</button>
 <button class="toggle-btn on" data-section="macros-card">Macros</button>
@@ -165,9 +168,53 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="mbtn" id="mm">Middle</button>
 <button class="mbtn" id="mr">Right</button>
 </div>
+<div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">Long-press a button to hold (drag) &middot; tap it again to release</div>
 <div class="scroll-row">
 <button class="sbtn" id="su">&#9650; Up</button>
 <button class="sbtn" id="sd">&#9660; Down</button>
+</div>
+</div>
+
+<div class="card" id="finder-card">
+<h2><svg viewBox="0 0 24 24"><path d="M11 2h2v6h-2zM2 11h6v2H2zm14 0h6v2h-6zm-5 5h2v6h-2zM7 7l3 3-1.4 1.4L5.6 8.4zm10 0l1.4 1.4-3 3L14 11zm0 10l-3-3 1.4-1.4 3 3zM7 17l-1.4-1.4 3-3L10 14z"/></svg>Position Finder<button class="macro-edit-btn" id="finder-edit-toggle">Edit</button></h2>
+<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Locked by default so a stray tap can't move the cursor &mdash; click <strong>Edit</strong> to aim &amp; calibrate. Then press &amp; drag the map to move the cursor; copy the <code>mouse_goto</code> value into a button/macro.</div>
+<div id="finder-map" style="position:relative;width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+<code id="finder-val" style="font-size:14px;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg)">mouse_goto:0:0</code>
+<button class="mbtn" id="finder-copy" style="flex:0 0 auto">Copy</button>
+<span id="finder-info" style="font-size:12px;color:var(--muted)"></span>
+</div>
+<div id="finder-edit-section">
+<div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+<label style="font-size:12px;color:var(--muted)">nudge&nbsp;target</label>
+<label style="font-size:12px;color:var(--muted)">X</label>
+<button id="gx-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<button id="gx-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<label style="font-size:12px;color:var(--muted)">Y</label>
+<button id="gy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<button id="gy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<span style="font-size:11px;color:var(--muted)">moves the cursor &amp; updates the value (1&nbsp;px steps)</span>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+<label style="font-size:12px;color:var(--muted)">goto scale (live)</label>
+<label style="font-size:12px;color:var(--muted)">X</label>
+<button id="sx-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<input id="finder-scale-x" type="number" step="0.0001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button id="sx-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<label style="font-size:12px;color:var(--muted)">Y</label>
+<button id="sy-dn" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">&minus;</button>
+<input id="finder-scale-y" type="number" step="0.0001" min="0.05" max="20" style="width:80px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button id="sy-up" style="flex:0 0 auto;min-width:32px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:16px;font-weight:700;cursor:pointer">+</button>
+<button id="sc-reset" style="flex:0 0 auto;padding:5px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:13px;cursor:pointer">Reset</button>
+<span style="font-size:11px;color:var(--muted)">&plusmn; nudges 0.0001 (4 dp) · Reset = YAML default · saved per host (also YAML <code>mouse_goto_scale_x</code> / <code>_y</code>)</span>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
+<label style="font-size:12px;color:var(--muted)">landed&nbsp;at</label>
+<input id="finder-act-x" type="number" placeholder="actual X" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<input id="finder-act-y" type="number" placeholder="actual Y" style="width:90px;padding:5px 8px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--fg);font-size:14px">
+<button class="mbtn" id="finder-cal" style="flex:0 0 auto">Auto‑calibrate</button>
+<span id="finder-cal-info" style="font-size:11px;color:var(--muted)">send to a target, then enter where it REALLY landed (read with cursorpos.bat) → computes X/Y scale</span>
+</div>
 </div>
 </div>
 
@@ -262,6 +309,19 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="string:">Type Text</option>
 <option value="delay:100">Delay 100ms</option>
 <option value="delay:500">Delay 500ms</option>
+<option value="repeat:3:">Repeat 3&times; (edit)</option>
+<option value="mouse_abs:0:0">Cursor Top-Left</option>
+<option value="mouse_abs:50:50">Cursor Center</option>
+<option value="mouse_abs:100:100">Cursor Bottom-Right</option>
+<option value="mouse_abs_px:960:540">Cursor to px (edit x:y)</option>
+<option value="mouse_abs_mon:0:50:50">Cursor in Monitor (edit)</option>
+<option value="mouse_goto:0:0">Goto desktop px — all monitors (edit x:y)</option>
+<option value="mouse_abs_save">Save Cursor Pos</option>
+<option value="mouse_abs_restore">Restore Cursor Pos</option>
+<option value="left_click_hold">Hold Left Button (drag)</option>
+<option value="right_click_hold">Hold Right Button</option>
+<option value="middle_click_hold">Hold Middle Button</option>
+<option value="mouse_release">Release Mouse Buttons</option>
 </optgroup>
 </select>
 <button id="macro-save">+ Add</button>
@@ -334,9 +394,10 @@ thmBtn.addEventListener('click',toggleTheme);
 let zoom=100;
 const scalable=document.getElementById('scalable');
 const zlbl=document.getElementById('zlbl');
-function setZoom(v){zoom=Math.max(50,Math.min(200,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%'}
-document.getElementById('zin').addEventListener('click',()=>setZoom(zoom+10));
-document.getElementById('zout').addEventListener('click',()=>setZoom(zoom-10));
+function setZoom(v){zoom=Math.max(50,Math.min(200,v));scalable.style.transform='scale('+(zoom/100)+')';zlbl.textContent=zoom+'%';localStorage.setItem('blekb_zoom',zoom)}
+document.getElementById('zin').addEventListener('click',()=>setZoom(zoom+5));
+document.getElementById('zout').addEventListener('click',()=>setZoom(zoom-5));
+setZoom(parseInt(localStorage.getItem('blekb_zoom'))||100);
 
 // ── Status polling ──
 const sdot=document.getElementById('sdot');
@@ -733,7 +794,7 @@ buildKeyboard();
 (function(){
   const pad=document.getElementById('touchpad');
   let tracking=false,lastX=0,lastY=0,lastTime=0,startTime=0,moved=false,startSX=0,startSY=0;
-  let accumX=0,accumY=0,moveAC=null;
+  let accumX=0,accumY=0,moveAC=null,heldBtn=0;
   let baseSens=1.0,accelFactor=0.15,maxSens=4.0,scrollSens=2;
   const tapDeadZone=5;
   fetch('/api/ble_keyboard/mouse_config').then(r=>r.json()).then(c=>{
@@ -741,6 +802,20 @@ buildKeyboard();
   }).catch(()=>{});
 
   function onStart(x,y){tracking=true;lastX=startSX=x;lastY=startSY=y;lastTime=startTime=Date.now();moved=false;accumX=0;accumY=0;moveAC=new AbortController();pad.classList.add('active')}
+  // Single request in flight; deltas keep merging into accumX/accumY while it
+  // runs, so a direction reversal cancels in the accumulator instead of
+  // queueing stale moves (a queued backlog was why reversals only registered
+  // after lifting the finger — lift aborts the queue).
+  let sendBusy=false;
+  function flushMove(){
+    if(sendBusy||!moveAC)return;
+    const dx=Math.trunc(accumX),dy=Math.trunc(accumY);
+    if(dx===0&&dy===0)return;
+    const cx=Math.max(-127,Math.min(127,dx)),cy=Math.max(-127,Math.min(127,dy));
+    accumX-=dx;accumY-=dy;moved=true;sendBusy=true;
+    fetch('/api/ble_keyboard/mouse_move?'+new URLSearchParams({x:cx,y:cy}),{method:'POST',signal:moveAC.signal})
+      .catch(()=>{}).finally(()=>{sendBusy=false;flushMove()});
+  }
   function onMove(x,y){
     if(!tracking)return;
     if(!moved){const td=Math.abs(x-startSX)+Math.abs(y-startSY);if(td<tapDeadZone)return}
@@ -750,58 +825,80 @@ buildKeyboard();
     const speed=dist/dt;
     const sens=Math.min(baseSens+speed*accelFactor,maxSens);
     accumX+=rawDx*sens;accumY+=rawDy*sens;
-    const dx=Math.trunc(accumX),dy=Math.trunc(accumY);
-    if(dx!==0||dy!==0){
-      const cx=Math.max(-127,Math.min(127,dx)),cy=Math.max(-127,Math.min(127,dy));
-      fetch('/api/ble_keyboard/mouse_move?'+new URLSearchParams({x:cx,y:cy}),{method:'POST',signal:moveAC.signal}).catch(()=>{});
-      accumX-=dx;accumY-=dy;moved=true;
-    }
     lastX=x;lastY=y;lastTime=now;
+    flushMove();
   }
   function onEnd(){
     if(!tracking)return;tracking=false;pad.classList.remove('active');
     if(moveAC){moveAC.abort();moveAC=null}
     accumX=0;accumY=0;
-    if(!moved&&Date.now()-startTime<250)api('mouse_click',{btn:1});
+    if(!moved&&!heldBtn&&Date.now()-startTime<250)api('mouse_click',{btn:1});
   }
 
   pad.addEventListener('mousedown',e=>{e.preventDefault();onStart(e.clientX,e.clientY)});
   window.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
   window.addEventListener('mouseup',()=>onEnd());
 
-  let tClaimed=false,tSX=0,tSY=0;
-  function tCleanup(){window.removeEventListener('touchmove',winTouchMove);window.removeEventListener('touchend',winTouchEnd);tClaimed=false}
-  function winTouchMove(e){
-    const t=e.touches[0];
-    if(!tClaimed){
-      const dx=Math.abs(t.clientX-tSX),dy=Math.abs(t.clientY-tSY);
-      if(dx+dy<6)return;  // wait for clear direction
-      if(dy>dx){onEnd();tCleanup();return}  // vertical — let browser scroll (touchcancel follows)
-      tClaimed=true;
-    }
-    e.preventDefault();onMove(t.clientX,t.clientY);
-  }
+  // The pad owns every touch that starts on it (touch-action:none). pan-y +
+  // direction-claiming was tried before, but the browser can start a vertical
+  // pan inside the claim slack — after that, touchmoves are non-cancelable and
+  // preventDefault can't stop the page scrolling mid-drag.
+  function tCleanup(){window.removeEventListener('touchmove',winTouchMove);window.removeEventListener('touchend',winTouchEnd);window.removeEventListener('touchcancel',winTouchCancel)}
+  function winTouchMove(e){e.preventDefault();const t=e.touches[0];onMove(t.clientX,t.clientY)}
   function winTouchEnd(e){if(e.touches.length===0){onEnd();tCleanup()}}
+  function winTouchCancel(){moved=true;onEnd();tCleanup()}  // moved=true: a canceled tap must not click
+  pad.addEventListener('contextmenu',e=>e.preventDefault());  // no long-press menu mid-drag
   pad.addEventListener('touchstart',e=>{
-    const t=e.touches[0];tSX=t.clientX;tSY=t.clientY;tClaimed=false;
+    const t=e.touches[0];
     onStart(t.clientX,t.clientY);
     window.addEventListener('touchmove',winTouchMove,{passive:false});
     window.addEventListener('touchend',winTouchEnd,{passive:false});
+    window.addEventListener('touchcancel',winTouchCancel,{passive:false});
   },{passive:true});
 
-  let wheelAccum=0;
+  let wheelAccum=0,wheelBusy=false;
+  function flushWheel(){
+    if(wheelBusy)return;
+    const s=Math.trunc(wheelAccum);
+    if(s===0)return;
+    wheelAccum-=s;wheelBusy=true;
+    fetch('/api/ble_keyboard/mouse_scroll?'+new URLSearchParams({amount:Math.max(-127,Math.min(127,s))}),{method:'POST'})
+      .catch(()=>{}).finally(()=>{wheelBusy=false;flushWheel()});
+  }
   pad.addEventListener('wheel',e=>{
     e.preventDefault();
     wheelAccum+=-e.deltaY*scrollSens*0.02;
-    const s=Math.trunc(wheelAccum);
-    if(s!==0){api('mouse_scroll',{amount:Math.max(-127,Math.min(127,s))});wheelAccum-=s}
+    flushWheel();
   },{passive:false});
 
-  // Mouse buttons
+  // Mouse buttons: tap = click; long-press (400ms) = hold (for dragging via the
+  // touchpad or mouse_goto); tap the held button to release. Held state is
+  // client-side only — a normal tap on any button releases everything
+  // server-side too, so it also clears the mark.
   const btnMap={ml:1,mm:4,mr:2};
+  function setHeld(b){
+    heldBtn=b;
+    for(const[id,btn]of Object.entries(btnMap))document.getElementById(id).classList.toggle('held',b===btn);
+  }
   for(const[id,btn]of Object.entries(btnMap)){
     const el=document.getElementById(id);
-    onTap(el,()=>api('mouse_click',{btn:btn}));
+    let sx,sy,ok,ht=null;
+    const clearHt=()=>{if(ht){clearTimeout(ht);ht=null}};
+    el.addEventListener('contextmenu',e=>e.preventDefault());  // stop mobile long-press menu
+    el.addEventListener('pointerdown',e=>{
+      sx=e.clientX;sy=e.clientY;ok=true;el.classList.add('p');
+      clearHt();
+      ht=setTimeout(()=>{ht=null;if(ok){ok=false;el.classList.remove('p');api('mouse_hold',{btn:btn});setHeld(btn)}},400);
+    });
+    el.addEventListener('pointermove',e=>{if(ok&&(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy))>10){ok=false;el.classList.remove('p');clearHt()}});
+    el.addEventListener('pointerup',()=>{
+      el.classList.remove('p');clearHt();
+      if(!ok)return;
+      ok=false;
+      if(heldBtn===btn){api('mouse_release');setHeld(0)}
+      else{api('mouse_click',{btn:btn});setHeld(0)}
+    });
+    el.addEventListener('pointercancel',()=>{ok=false;el.classList.remove('p');clearHt()});
   }
 
   // Scroll buttons
@@ -835,6 +932,146 @@ buildKeyboard();
   });
   card.addEventListener('pointercancel',()=>{if(ab)ab.classList.remove('p');ok=false;ab=null;stopRepeat()});
   }
+})();
+
+// ── Position Finder ──
+(function(){
+  const map=document.getElementById('finder-map');
+  if(!map)return;
+  const val=document.getElementById('finder-val');
+  const info=document.getElementById('finder-info');
+  const copyBtn=document.getElementById('finder-copy');
+  const scaleInX=document.getElementById('finder-scale-x');
+  const scaleInY=document.getElementById('finder-scale-y');
+  const actXIn=document.getElementById('finder-act-x');
+  const actYIn=document.getElementById('finder-act-y');
+  const calBtn=document.getElementById('finder-cal');
+  const calInfo=document.getElementById('finder-cal-info');
+  let SW=1920,SH=1080,OX=0,OY=0,mons=[],lastW=-1,wx=0,wy=0,dragging=false,lastTx=null,lastTy=null;
+  // Lock: keep the map non-interactive and the calibration controls hidden until
+  // "Edit" is clicked, so a stray tap can't move the cursor or change the scale.
+  const editToggle=document.getElementById('finder-edit-toggle');
+  const editSection=document.getElementById('finder-edit-section');
+  let locked=localStorage.getItem('blekb_finder_unlocked')!=='1';
+  function applyLock(){
+    if(editSection)editSection.style.display=locked?'none':'';
+    if(editToggle)editToggle.textContent=locked?'Edit':'Lock';
+    map.style.cursor=locked?'default':'crosshair';
+    map.style.opacity=locked?'0.9':'1';
+  }
+  if(editToggle)editToggle.addEventListener('click',()=>{locked=!locked;localStorage.setItem('blekb_finder_unlocked',locked?'0':'1');applyLock()});
+  applyLock();
+  function draw(){
+    const w=map.clientWidth||300;lastW=w;
+    map.style.height=Math.max(60,Math.round(w*SH/SW))+'px';
+    map.innerHTML='';
+    mons.forEach((m,i)=>{
+      const d=document.createElement('div');
+      d.style.cssText='position:absolute;box-sizing:border-box;border:1px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--accent);opacity:.85';
+      d.style.left=(m.x/SW*100)+'%';d.style.top=(m.y/SH*100)+'%';
+      d.style.width=(m.w/SW*100)+'%';d.style.height=(m.h/SH*100)+'%';
+      d.textContent=i+(m.p?' (primary 0,0)':'');if(m.p)d.style.borderWidth='2px';map.appendChild(d);
+    });
+    const mk=document.createElement('div');
+    mk.id='finder-marker';
+    mk.style.cssText='position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#e44;box-shadow:0 0 0 2px #fff;pointer-events:none;display:none';
+    map.appendChild(mk);
+    const sm=document.createElement('div');
+    sm.id='finder-sent';
+    sm.style.cssText='position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #2ec27e;background:rgba(46,194,126,.4);box-shadow:0 0 0 1px #fff;pointer-events:none;display:none';
+    map.appendChild(sm);
+    if(lastTx!=null)placeSent(lastTx,lastTy);
+  }
+  function placeSent(tx,ty){
+    lastTx=tx;lastTy=ty;
+    const dx=(tx+OX)/SW,dy=(ty+OY)/SH;
+    const sm=document.getElementById('finder-sent');
+    if(sm){
+      if(dx<0||dx>1||dy<0||dy>1)sm.style.display='none';
+      else{sm.style.display='';sm.style.left=(dx*100)+'%';sm.style.top=(dy*100)+'%'}
+    }
+    // Reflect the last sent target (e.g. a mouse_goto from a button or macro)
+    // in the value + main marker too — unless the user is actively aiming a tap.
+    if(!dragging){
+      wx=tx;wy=ty;
+      val.textContent='mouse_goto:'+tx+':'+ty;
+      const mk=document.getElementById('finder-marker');
+      if(mk){
+        if(dx<0||dx>1||dy<0||dy>1)mk.style.display='none';
+        else{mk.style.display='';mk.style.left=(dx*100)+'%';mk.style.top=(dy*100)+'%'}
+      }
+    }
+  }
+  function load(){
+    fetch('/api/ble_keyboard/screen').then(r=>r.json()).then(d=>{
+      SW=d.w||1920;SH=d.h||1080;OX=d.ox||0;OY=d.oy||0;mons=d.mon||[];
+      if(scaleInX&&d.gsx!=null&&document.activeElement!==scaleInX)scaleInX.value=(+d.gsx).toFixed(4);
+      if(scaleInY&&d.gsy!=null&&document.activeElement!==scaleInY)scaleInY.value=(+d.gsy).toFixed(4);
+      draw();
+    }).catch(()=>draw());
+  }
+  // input = live preview; change (commit) = also persist to the active host
+  if(scaleInX){scaleInX.addEventListener('input',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v})});scaleInX.addEventListener('change',()=>{const v=parseFloat(scaleInX.value);if(v>=0.05&&v<=20)api('goto_scale',{vx:v,save:1})})}
+  if(scaleInY){scaleInY.addEventListener('input',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v})});scaleInY.addEventListener('change',()=>{const v=parseFloat(scaleInY.value);if(v>=0.05&&v<=20)api('goto_scale',{vy:v,save:1})})}
+  // +/- nudge buttons: step 0.001, applied live and saved to the active host
+  function nudge(inp,ax,d){if(!inp)return;let v=(parseFloat(inp.value)||1)+d;v=Math.round(Math.max(0.05,Math.min(20,v))*10000)/10000;inp.value=v.toFixed(4);api('goto_scale',ax==='x'?{vx:v,save:1}:{vy:v,save:1})}
+  [['sx-dn',scaleInX,'x',-0.0001],['sx-up',scaleInX,'x',0.0001],['sy-dn',scaleInY,'y',-0.0001],['sy-up',scaleInY,'y',0.0001]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudge(a[1],a[2],a[3]))});
+  // Goto-target nudge (5px): move the cursor and update the value + markers
+  function nudgeGoto(ax,d){
+    if(ax==='x')wx+=d;else wy+=d;
+    val.textContent='mouse_goto:'+wx+':'+wy;
+    const mk=document.getElementById('finder-marker');
+    if(mk){mk.style.display='';mk.style.left=((wx+OX)/SW*100)+'%';mk.style.top=((wy+OY)/SH*100)+'%'}
+    placeSent(wx,wy);
+    api('press',{action:'mouse_goto:'+wx+':'+wy});
+  }
+  [['gx-dn','x',-1],['gx-up','x',1],['gy-dn','y',-1],['gy-up','y',1]].forEach(a=>{const b=document.getElementById(a[0]);if(b)b.addEventListener('click',()=>nudgeGoto(a[1],a[2]))});
+  // Reset scale to YAML defaults (per host), then refresh the inputs
+  {const rb=document.getElementById('sc-reset');if(rb)rb.addEventListener('click',()=>{api('goto_scale',{reset:1});setTimeout(load,200)})}
+  function aim(e){
+    const r=map.getBoundingClientRect();
+    let px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
+    px=Math.max(0,Math.min(1,px));py=Math.max(0,Math.min(1,py));
+    const gx=px*SW,gy=py*SH;
+    wx=Math.round(gx-OX);wy=Math.round(gy-OY);
+    val.textContent='mouse_goto:'+wx+':'+wy;
+    const mk=document.getElementById('finder-marker');
+    if(mk){mk.style.display='';mk.style.left=(px*100)+'%';mk.style.top=(py*100)+'%'}
+    let mon='';
+    for(let i=0;i<mons.length;i++){const m=mons[i];if(gx>=m.x&&gx<m.x+m.w&&gy>=m.y&&gy<m.y+m.h){mon=' · mon '+i;break}}
+    info.textContent='Windows '+wx+','+wy+mon+' — release to move cursor';
+  }
+  map.addEventListener('contextmenu',e=>e.preventDefault());  // stop long-press / right-click menu
+  map.addEventListener('pointerdown',e=>{if(locked)return;e.preventDefault();dragging=true;try{map.setPointerCapture(e.pointerId)}catch(_){}aim(e)});
+  map.addEventListener('pointermove',e=>{if(dragging){e.preventDefault();aim(e)}});
+  map.addEventListener('pointerup',e=>{if(!dragging)return;dragging=false;aim(e);placeSent(wx,wy);api('press',{action:'mouse_goto:'+wx+':'+wy})});
+  map.addEventListener('pointercancel',()=>{dragging=false});
+  copyBtn.addEventListener('click',()=>{
+    if(navigator.clipboard)navigator.clipboard.writeText(val.textContent).catch(()=>{});
+    copyBtn.textContent='Copied';setTimeout(()=>copyBtn.textContent='Copy',1200);
+  });
+  // Auto-calibrate: new_scale = current_scale * target / actual, per axis.
+  if(calBtn){calBtn.addEventListener('click',()=>{
+    if(lastTx==null){calInfo.textContent='send to a target first (tap the map)';return}
+    const ax=parseFloat(actXIn.value),ay=parseFloat(actYIn.value);let out=[],warn=[];
+    // Desktop bounds in Windows coords; a reading at the edge is clamped/unreliable.
+    const E=3,minWX=-OX,maxWX=SW-OX,minWY=-OY,maxWY=SH-OY;
+    const xClamp=isFinite(ax)&&(ax<=minWX+E||ax>=maxWX-E);
+    const yClamp=isFinite(ay)&&(ay<=minWY+E||ay>=maxWY-E);
+    if(isFinite(ax)&&ax!==0&&lastTx!==0&&!xClamp){const cur=parseFloat(scaleInX.value)||1;const ns=Math.round(Math.max(0.05,Math.min(20,cur*lastTx/ax))*10000)/10000;scaleInX.value=ns.toFixed(4);api('goto_scale',{vx:ns,save:1});out.push('X '+ns.toFixed(4))}
+    else if(xClamp)warn.push('X hit the screen edge');
+    if(isFinite(ay)&&ay!==0&&lastTy!==0&&!yClamp){const cur=parseFloat(scaleInY.value)||1;const ns=Math.round(Math.max(0.05,Math.min(20,cur*lastTy/ay))*10000)/10000;scaleInY.value=ns.toFixed(4);api('goto_scale',{vy:ns,save:1});out.push('Y '+ns.toFixed(4))}
+    else if(yClamp)warn.push('Y hit the screen edge');
+    let msg=out.length?('new scale → '+out.join('  ')):'';
+    if(warn.length)msg+=(msg?' · ':'')+warn.join('; ')+' (clamped — aim nearer the middle)';
+    calInfo.textContent=msg||'enter the actual X and/or Y where it landed';
+  })}
+  // Poll the last sent target so the green marker tracks goto's from any source.
+  function pollSent(){fetch('/api/ble_keyboard/goto_last').then(r=>r.json()).then(d=>{if(d&&d.x!=null)placeSent(d.x,d.y)}).catch(()=>{})}
+  setInterval(pollSent,1200);pollSent();
+  if(window.ResizeObserver){new ResizeObserver(()=>{if(map.clientWidth!==lastW)draw()}).observe(map)}
+  else{window.addEventListener('resize',draw)}
+  load();
 })();
 
 // ── Section Toggles + Drag Reorder ──
@@ -1082,6 +1319,39 @@ class BleKbWebHandler : public AsyncWebHandler {
       return;
     }
 
+    if (path == "screen") {
+      // Absolute-pointer geometry for the web Position Finder.
+      char gsxbuf[16], gsybuf[16];
+      snprintf(gsxbuf, sizeof(gsxbuf), "%.4f", kb_->mouse_goto_scale_x());
+      snprintf(gsybuf, sizeof(gsybuf), "%.4f", kb_->mouse_goto_scale_y());
+      std::string json = "{\"w\":" + std::to_string(kb_->screen_width()) +
+                         ",\"h\":" + std::to_string(kb_->screen_height()) +
+                         ",\"ox\":" + std::to_string(kb_->primary_origin_x()) +
+                         ",\"oy\":" + std::to_string(kb_->primary_origin_y()) +
+                         ",\"gsx\":" + gsxbuf + ",\"gsy\":" + gsybuf + ",\"mon\":[";
+      const auto &mons = kb_->get_monitors();
+      for (size_t i = 0; i < mons.size(); i++) {
+        if (i) json += ",";
+        json += "{\"x\":" + std::to_string(mons[i].x) +
+                ",\"y\":" + std::to_string(mons[i].y) +
+                ",\"w\":" + std::to_string(mons[i].width) +
+                ",\"h\":" + std::to_string(mons[i].height) +
+                ",\"p\":" + (mons[i].primary ? "1" : "0") + "}";
+      }
+      json += "]}";
+      send_response(200, "application/json", json.c_str());
+      return;
+    }
+
+    if (path == "goto_last") {
+      // Last mouse_goto target (Windows coords) so the Finder can mark where the
+      // cursor was last sent, from any source. Lightweight — safe to poll.
+      std::string json = "{\"x\":" + std::to_string(kb_->last_goto_x()) +
+                         ",\"y\":" + std::to_string(kb_->last_goto_y()) + "}";
+      send_response(200, "application/json", json.c_str());
+      return;
+    }
+
     if (path == "hosts") {
       // Build slot-to-name map from registered switch_host buttons
       std::map<uint8_t, std::string> slot_names;
@@ -1141,9 +1411,60 @@ class BleKbWebHandler : public AsyncWebHandler {
       kb_->send_mouse_click((uint8_t) btn);
       send_response(200, "text/plain", "OK");
 
+    } else if (path == "mouse_hold") {
+      int btn = request->hasArg("btn") ? atoi(request->arg("btn").c_str()) : 1;
+      kb_->send_mouse_click_start((uint8_t) btn);
+      send_response(200, "text/plain", "OK");
+
+    } else if (path == "mouse_release") {
+      kb_->send_mouse_click_release();
+      send_response(200, "text/plain", "OK");
+
     } else if (path == "mouse_scroll") {
       int amount = request->hasArg("amount") ? atoi(request->arg("amount").c_str()) : 0;
       kb_->send_mouse_scroll((int8_t) amount);
+      send_response(200, "text/plain", "OK");
+
+    } else if (path == "mouse_abs") {
+      // Move the pointer to an absolute position. x/y are percent by default,
+      // pixels when unit=px; monitor=<idx> selects a declared monitor region.
+      std::string sx = request->hasArg("x") ? request->arg("x").c_str() : "0";
+      std::string sy = request->hasArg("y") ? request->arg("y").c_str() : "0";
+      std::string action;
+      if (request->hasArg("monitor")) {
+        action = "mouse_abs_mon:" + std::string(request->arg("monitor").c_str()) + ":" + sx + ":" + sy;
+      } else if (request->hasArg("unit") && std::string(request->arg("unit").c_str()) == "px") {
+        action = "mouse_abs_px:" + sx + ":" + sy;
+      } else {
+        action = "mouse_abs:" + sx + ":" + sy;
+      }
+      kb_->execute_action(action);
+      if (request->hasArg("btn")) {
+        int btn = atoi(request->arg("btn").c_str());
+        if (btn != 0) kb_->send_mouse_click((uint8_t) btn);  // clicks at the new position
+      }
+      send_response(200, "text/plain", "OK");
+
+    } else if (path == "goto_scale") {
+      // Live mouse_goto calibration. v sets both axes; vx/vy set each; reset
+      // restores the YAML defaults; save persists to the active host (NVS).
+      if (request->hasArg("reset")) {
+        kb_->reset_goto_scale_for_host();
+      } else {
+        if (request->hasArg("v")) {
+          float v = atof(request->arg("v").c_str());
+          if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale(v);
+        }
+        if (request->hasArg("vx")) {
+          float v = atof(request->arg("vx").c_str());
+          if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_x(v);
+        }
+        if (request->hasArg("vy")) {
+          float v = atof(request->arg("vy").c_str());
+          if (v >= 0.05f && v <= 20.0f) kb_->set_mouse_goto_scale_y(v);
+        }
+        if (request->hasArg("save")) kb_->save_goto_scale_for_host();  // persist to active host
+      }
       send_response(200, "text/plain", "OK");
 
     } else if (path == "string") {

@@ -336,7 +336,7 @@
     <div class="feature">
       <div class="feature-icon">🖱️</div>
       <h3>Mouse Control</h3>
-      <p>Left, right and middle click, cursor movement, and scroll wheel via HID mouse reports. Drive from buttons or automations.</p>
+      <p>Left, right and middle click — plus click-and-hold for drag &amp; drop — relative movement, and scroll wheel via HID mouse reports, and absolute positioning (with <code>mouse_goto</code> for an exact pixel on <em>any</em> monitor). A web Position Finder calibrates and saves it per host. Drive from buttons or automations.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">⌨️</div>
@@ -347,7 +347,7 @@
     <div class="feature">
       <div class="feature-icon">🖥️</div>
       <h3>HA Mouse Card</h3>
-      <p>Custom Lovelace card with a touchpad, 3 mouse buttons, and scroll controls. Drag to move cursor, wheel to scroll.</p>
+      <p>Custom Lovelace card with a touchpad, 3 mouse buttons, and scroll controls. Drag to move cursor, wheel to scroll. Long-press a button to hold it for drag &amp; drop, tap again to release.</p>
       <img src="mouse_ha_card.png" alt="Home Assistant Mouse Card" style="width:100%;border-radius:8px;margin-top:8px;">
     </div>
     <div class="feature">
@@ -359,7 +359,7 @@
     <div class="feature">
       <div class="feature-icon">🌐</div>
       <h3>Web Control</h3>
-      <p>Built-in web page with full keyboard, mouse, and remote UI. Access from any browser — no Home Assistant needed. Enable with <code>web_control: true</code>.</p>
+      <p>Built-in web page with full keyboard, mouse, remote, and a <strong>Position Finder</strong> (calibrates <code>mouse_goto</code> per host). Access from any browser — no Home Assistant needed. Enable with <code>web_control: true</code>.</p>
       <img src="web_server.png" alt="Web Control Page" style="max-width:100%;border-radius:8px;margin-top:8px;">
     </div>
     <div class="feature">
@@ -386,7 +386,7 @@
   <span class="yaml-val">- </span><span class="yaml-key">source</span><span class="yaml-val">:</span>
       <span class="yaml-key">type</span><span class="yaml-val">:</span> <span class="yaml-str">git</span>
       <span class="yaml-key">url</span><span class="yaml-val">:</span> <span class="yaml-str">https://github.com/markusg1234/ESPHome-espidf_ble_keyboard</span>
-      <span class="yaml-key">ref</span><span class="yaml-val">:</span> <span class="yaml-str">main</span>
+      <span class="yaml-key">ref</span><span class="yaml-val">:</span> <span class="yaml-str">main</span>  <span class="yaml-comment"># or pin a release tag, e.g. v1.0.0</span>
     <span class="yaml-key">components</span><span class="yaml-val">: [</span> <span class="yaml-str">espidf_ble_keyboard</span> <span class="yaml-val">]</span>
 
 <span class="yaml-key">espidf_ble_keyboard</span><span class="yaml-val">:</span>
@@ -401,6 +401,12 @@
   <span class="yaml-key">mouse_acceleration</span><span class="yaml-val">:</span> <span class="yaml-str">0.15</span>  <span class="yaml-comment"># optional, web mouse accel factor (default: 0.15)</span>
   <span class="yaml-key">mouse_max_speed</span><span class="yaml-val">:</span> <span class="yaml-str">4.0</span>  <span class="yaml-comment"># optional, web mouse max sensitivity (default: 4.0)</span>
   <span class="yaml-key">scroll_sensitivity</span><span class="yaml-val">:</span> <span class="yaml-str">2.0</span>  <span class="yaml-comment"># optional, web mouse scroll speed (default: 2.0)</span>
+  <span class="yaml-key">screen_width</span><span class="yaml-val">:</span> <span class="yaml-str">3840</span>   <span class="yaml-comment"># optional, desktop px for mouse_abs_px / mouse_goto</span>
+  <span class="yaml-key">screen_height</span><span class="yaml-val">:</span> <span class="yaml-str">2160</span>  <span class="yaml-comment"># optional</span>
+  <span class="yaml-key">mouse_goto_scale_x</span><span class="yaml-val">:</span> <span class="yaml-str">0.57</span>  <span class="yaml-comment"># optional, mouse_goto X calibration (tune in Position Finder; saved per host)</span>
+  <span class="yaml-key">mouse_goto_scale_y</span><span class="yaml-val">:</span> <span class="yaml-str">0.57</span>  <span class="yaml-comment"># optional, mouse_goto Y calibration</span>
+  <span class="yaml-key">monitors</span><span class="yaml-val">:</span>            <span class="yaml-comment"># optional, multi-monitor — mark the Windows primary</span>
+    <span class="yaml-val">-</span> <span class="yaml-str">{ name: main, x: 0, y: 0, width: 3840, height: 2160, primary: true }</span>
   <span class="yaml-key">keyboard_layout</span><span class="yaml-val">:</span> <span class="yaml-str">us</span>  <span class="yaml-comment"># optional, us | uk | de | be — must match host PC layout (default: us)</span>
   <span class="yaml-key">custom_text_id</span><span class="yaml-val">:</span>        <span class="yaml-comment"># optional, link text entities for Send buttons</span>
     <span class="yaml-val">-</span> <span class="yaml-str">custom_text</span>
@@ -470,9 +476,16 @@
       <tr><td><code>"left_click"</code></td><td class="desc">Mouse left click.</td></tr>
       <tr><td><code>"right_click"</code></td><td class="desc">Mouse right click.</td></tr>
       <tr><td><code>"middle_click"</code></td><td class="desc">Mouse middle click.</td></tr>
+      <tr><td><code>"left_click_hold"</code></td><td class="desc">Press <strong>and hold</strong> the left button until <code>mouse_release</code> — moving, scrolling or <code>mouse_goto</code> while held performs a drag. Also <code>right_click_hold</code> / <code>middle_click_hold</code>, or <code>mouse_hold:0x01</code> with a button mask.</td></tr>
+      <tr><td><code>"mouse_release"</code></td><td class="desc">Release all held mouse buttons. A normal click also releases them.</td></tr>
       <tr><td><code>"mouse_move:50:0"</code></td><td class="desc">Move mouse cursor — relative X:Y pixels (-127 to 127).</td></tr>
       <tr><td><code>"mouse_scroll:3"</code></td><td class="desc">Scroll mouse wheel — positive = up, negative = down (-127 to 127).</td></tr>
       <tr><td><code>type: mouse_click</code></td><td class="desc">Dict format — <code>type: mouse_click</code>, <code>buttons: 0x01</code>. 0x01=left, 0x02=right, 0x04=middle.</td></tr>
+      <tr><td><code>"mouse_abs:50:50"</code></td><td class="desc">Move cursor to an exact position — percent of screen (0–100). <code>mouse_abs:50:50</code> = center.</td></tr>
+      <tr><td><code>"mouse_abs_px:1280:720"</code></td><td class="desc">Move cursor to an exact position in pixels (uses <code>screen_width</code>/<code>screen_height</code>).</td></tr>
+      <tr><td><code>"mouse_abs_mon:1:50:50"</code></td><td class="desc">Move cursor to a percent within declared <code>monitors[1]</code> (multi-monitor).</td></tr>
+      <tr><td><code>"mouse_abs_save"</code> / <code>"mouse_abs_restore"</code></td><td class="desc">Remember the current absolute position and jump back to it later.</td></tr>
+      <tr><td><code>"mouse_goto:4394:42"</code></td><td class="desc">Move to a Windows virtual-desktop pixel across <strong>all monitors</strong> (homes absolute to 0,0 then steps relatively). X/Y = Windows coords (primary top-left = 0,0; negatives allowed); read a spot's with the bundled <code>docs/cursorpos.bat</code>. Use when the absolute pointer is stuck on the primary monitor. Needs <strong>"Enhance pointer precision" off</strong> + per-axis calibration (<code>mouse_goto_scale_x</code>/<code>_y</code>), dialed in via the web Position Finder.</td></tr>
       <tr><td><code>"send_custom_text"</code></td><td class="desc">Send linked text entity content. Use <code>send_custom_text:N</code> for multiple entities. Requires <code>custom_text_id</code> in config.</td></tr>
       <tr><td><code>"switch_host:0"</code></td><td class="desc">Switch to host slot 0–9. Reconnects to stored host or advertises for new pairing.</td></tr>
       <tr><td><code>"forget_host:0"</code></td><td class="desc">Remove BLE bond for host slot 0–9 and clear the stored address.</td></tr>
@@ -481,6 +494,7 @@
       <tr><td><code>"a | b | c"</code></td><td class="desc">Multi-step macro — chain actions with <code>|</code>. 50ms auto-delay between steps. E.g. <code>"combo:2:6 | delay:100 | combo:2:25"</code> (Copy, wait, Paste).</td></tr>
       <tr><td><code>execute_action()</code></td><td class="desc">Run any action string from a lambda — <code>id(kb).execute_action("combo:2:6 | delay:100 | combo:2:25");</code>. Supports multi-step.</td></tr>
       <tr><td><code>execute_macro(N)</code></td><td class="desc">Run a web-defined macro by index — <code>id(kb).execute_macro(0);</code>. Index shown in web UI as [0], [1], etc.</td></tr>
+      <tr><td><code>run_macro</code> / <code>run_action</code></td><td class="desc">Expose macros to Home Assistant: add <code>api:</code> services that call <code>execute_macro(index)</code> / <code>execute_action(action)</code>, then call <code>esphome.&lt;device&gt;_run_macro</code> (data: <code>index</code>) or <code>_run_action</code> (data: <code>action</code>) from HA. Web macros aren't individual HA entities (created at runtime); use these services or a <code>button:</code> entry for a named entity.</td></tr>
     </table>
   </div>
 
@@ -543,6 +557,23 @@
       <span class="yaml-key">then</span><span class="yaml-val">:</span>
         <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
             id(my_keyboard).send_mouse_click(btn);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_hold</span>          <span class="yaml-comment"># press &amp; hold for dragging — release with mouse_release</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">btn</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_click_start(btn);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_release</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_click_release();</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_abs</span>          <span class="yaml-comment"># move cursor to exact position, % of screen</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">x</span><span class="yaml-val">:</span> <span class="yaml-str">float</span>
+        <span class="yaml-key">y</span><span class="yaml-val">:</span> <span class="yaml-str">float</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).execute_action("mouse_abs:" + to_string(x) + ":" + to_string(y));</span>
     <span class="yaml-comment"># Keyboard card services</span>
     <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">send_string</span>
       <span class="yaml-key">variables</span><span class="yaml-val">:</span>

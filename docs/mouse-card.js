@@ -3,6 +3,8 @@
  *
  * A custom Lovelace card that provides a touchpad, 3 mouse buttons,
  * and scroll controls for the ESPHome BLE Keyboard component.
+ * Tap a button to click; long-press (400ms) to hold it for dragging
+ * (needs the mouse_hold / mouse_release services), tap again to release.
  *
  * Installation:
  *   1. Copy this file to your HA config/www/ folder.
@@ -142,6 +144,11 @@ class BleMouseCard extends HTMLElement {
           color: #fff;
           border-color: var(--primary-color, #03a9f4);
         }
+        .mouse-btn.held {
+          background: var(--accent-color, #ff9800);
+          color: #fff;
+          border-color: var(--accent-color, #ff9800);
+        }
         .scroll-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -186,6 +193,7 @@ class BleMouseCard extends HTMLElement {
       </div>
     `;
 
+    this._heldBtn = 0;
     this._setupTouchpad();
     this._setupButtons();
     this._setupScroll();
@@ -284,8 +292,9 @@ class BleMouseCard extends HTMLElement {
       tracking = false;
       pad.classList.remove('active');
 
-      // Tap-to-click: short tap with no drag beyond dead zone
-      if (this._config.tap_to_click && !moved && (Date.now() - startTime) < 300) {
+      // Tap-to-click: short tap with no drag beyond dead zone. Suppressed
+      // while a button is held so a stray tap can't drop the drag.
+      if (this._config.tap_to_click && !moved && !this._heldBtn && (Date.now() - startTime) < 300) {
         this._callService('mouse_click', { btn:1 });
       }
     };
@@ -322,7 +331,9 @@ class BleMouseCard extends HTMLElement {
     }, { passive: false });
   }
 
-  // ── Click buttons ────────────────────────────────────────────────
+  // ── Click buttons: tap = click; long-press (400ms) = hold for dragging;
+  // tap the held button = release. Held state is client-side only — a normal
+  // click releases everything device-side too, so it also clears the mark.
 
   _setupButtons() {
     const btnMap = {
@@ -330,15 +341,47 @@ class BleMouseCard extends HTMLElement {
       'btn-middle': 4,
       'btn-right': 2,
     };
+    const setHeld = (b) => {
+      this._heldBtn = b;
+      for (const [id, button] of Object.entries(btnMap)) {
+        this.shadowRoot.getElementById(id).classList.toggle('held', b === button);
+      }
+    };
     for (const [id, button] of Object.entries(btnMap)) {
       const el = this.shadowRoot.getElementById(id);
+      let holdTimer = null;
+      let ok = false;
+      const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
       el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        ok = true;
         el.classList.add('pressed');
-        this._callService('mouse_click', { btn:button });
+        clearHold();
+        holdTimer = setTimeout(() => {
+          holdTimer = null;
+          if (!ok) return;
+          ok = false;
+          el.classList.remove('pressed');
+          this._callService('mouse_hold', { btn: button });
+          setHeld(button);
+        }, 400);
       });
-      el.addEventListener('pointerup', () => el.classList.remove('pressed'));
-      el.addEventListener('pointerleave', () => el.classList.remove('pressed'));
+      el.addEventListener('pointerup', () => {
+        el.classList.remove('pressed');
+        clearHold();
+        if (!ok) return;
+        ok = false;
+        if (this._heldBtn === button) {
+          this._callService('mouse_release', {});
+          setHeld(0);
+        } else {
+          this._callService('mouse_click', { btn: button });
+          setHeld(0);
+        }
+      });
+      el.addEventListener('pointerleave', () => { ok = false; el.classList.remove('pressed'); clearHold(); });
+      el.addEventListener('pointercancel', () => { ok = false; el.classList.remove('pressed'); clearHold(); });
     }
   }
 

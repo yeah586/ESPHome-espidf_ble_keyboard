@@ -160,9 +160,10 @@ action: "consumer:0x0223"   # Browser Home
 
 ---
 
-## Mouse Actions (Report ID 4)
+## Mouse Actions (Report ID 4 + 5)
 
-The component includes a 3-button relative mouse with scroll wheel.
+The component includes a 3-button relative mouse with scroll wheel (Report ID 4)
+and an absolute pointer for exact-position moves (Report ID 5).
 
 ### Named Actions
 
@@ -171,6 +172,8 @@ The component includes a 3-button relative mouse with scroll wheel.
 | Left Click | `left_click` |
 | Right Click | `right_click` |
 | Middle Click | `middle_click` |
+| Save absolute position | `mouse_abs_save` |
+| Restore absolute position | `mouse_abs_restore` |
 
 ### Parameterised Actions
 
@@ -179,6 +182,10 @@ The component includes a 3-button relative mouse with scroll wheel.
 | `mouse_click:<buttons_hex>` | `mouse_click:0x01` | Click with button mask. `0x01` = left, `0x02` = right, `0x04` = middle. Combine for simultaneous buttons. |
 | `mouse_move:<x>:<y>` | `mouse_move:50:-20` | Move cursor. Values -127 to 127 (relative, pixels). |
 | `mouse_scroll:<wheel>` | `mouse_scroll:3` | Scroll wheel. Positive = up, negative = down (-127 to 127). |
+| `mouse_abs:<x%>:<y%>` | `mouse_abs:50:50` | Move cursor to an **exact** position, percent of screen (0–100). Uses absolute Report ID 5. |
+| `mouse_abs_px:<x>:<y>` | `mouse_abs_px:1280:720` | Exact position in pixels (uses `screen_width` / `screen_height`). |
+| `mouse_abs_mon:<idx>:<x%>:<y%>` | `mouse_abs_mon:1:50:50` | Percent within declared `monitors[idx]` (multi-monitor). |
+| `mouse_goto:<x>:<y>` | `mouse_goto:4394:42` | Move to a Windows virtual-desktop pixel across **all** monitors (homes absolute to 0,0 then steps relatively). X/Y = Windows coords (primary top-left = 0,0; negatives allowed). Use when the absolute pointer is stuck on the primary monitor. Needs per-axis calibration + pointer settings — see note below. |
 
 ### Dict Format
 
@@ -195,9 +202,16 @@ action:
 action:
   type: mouse_scroll
   wheel: 3
+
+action:
+  type: mouse_abs    # also: mouse_abs_px, or mouse_abs_mon (add `monitor: <idx>`)
+  x: 50              # percent of screen
+  y: 50
 ```
 
-> **Note:** Mouse reports use HID Report ID 4. After adding mouse support, hosts that previously paired the keyboard will need to re-pair to discover the updated HID descriptor.
+> **Note:** Relative mouse uses HID Report ID 4; absolute positioning uses Report ID 5. Absolute pointers are reliable on Windows/Linux but inconsistent on macOS/iOS. After changing the HID descriptor, hosts that previously paired the keyboard must **re-pair** to discover the updated descriptor (otherwise `mouse_abs`/`mouse_goto` do nothing).
+
+> **`mouse_goto` accuracy:** `mouse_goto` reaches every monitor but its relative step is scaled by the host's pointer speed/DPI, so it needs calibrating. In **Mouse Properties → Pointer Options** turn **"Enhance pointer precision"** *off* and set the pointer-speed slider to a fixed position, then calibrate to it (moving it even one notch loses accuracy — e.g. this rig uses 14 of 20). Set per-axis `mouse_goto_scale_x` / `mouse_goto_scale_y` in YAML (X and Y usually differ), or dial it in live with the web **Position Finder** (which saves the calibration per host). Mark your Windows primary monitor with `primary: true` in `monitors:`. See the README's *Absolute Mouse Positioning* section.
 
 ---
 

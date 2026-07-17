@@ -26,6 +26,8 @@ This is a custom ESPHome component that transforms an ESP32 into a Bluetooth Low
 
 Add the following to your ESPHome YAML configuration:
 
+> **Versioning:** tagged releases are listed on the [Releases page](https://github.com/markusg1234/ESPHome-espidf_ble_keyboard/releases). `ref: main` always tracks the latest code (re-fetched per ESPHome's `refresh:` interval, default 1 day). Pin a tag like `ref: v1.0.0` to stay on a fixed release and upgrade only when you change the ref.
+
 ```yaml
 substitutions:
   device_name: bluetooth-keyboard
@@ -77,7 +79,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/markusg1234/ESPHome-espidf_ble_keyboard
-      ref: main
+      ref: main            # or pin a release tag, e.g. v1.0.0
       path: components
     components: [ espidf_ble_keyboard ]
 
@@ -100,10 +102,17 @@ espidf_ble_keyboard:
   # Optional: number of host slots for multi-host switching (1–10, default: 4)
   host_slots: 4
   # Optional: web mouse sensitivity settings
-  mouse_sensitivity: 1.0       # base movement speed (default: 1.0)
-  mouse_acceleration: 0.15     # speed-based acceleration factor (default: 0.15)
+  mouse_sensitivity: 2.0       # base movement speed (default: 1.0)
+  mouse_acceleration: 2.0     # speed-based acceleration factor (default: 0.15)
   mouse_max_speed: 4.0         # max sensitivity cap (default: 4.0)
   scroll_sensitivity: 2.0      # scroll speed multiplier (default: 2.0)
+  # Optional: screen geometry for absolute pointer (mouse_abs / mouse_abs_px / mouse_abs_mon)
+  screen_width: 1920           # pixel space the host maps onto (default: 1920)
+  screen_height: 1080          # for multi-monitor, set to the whole virtual desktop
+  # Optional: monitor regions (virtual-desktop pixels) for mouse_abs_mon:<idx>:<x%>:<y%>
+  # monitors:
+  #   - { name: left,  x: 0,    y: 0, width: 1920, height: 1080 }
+  #   - { name: right, x: 1920, y: 0, width: 1920, height: 1080 }
   # Optional: link text entities for custom text input (shows Send button in web UI)
   custom_text_id:
     - custom_text
@@ -208,6 +217,16 @@ button:
 
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
+    name: "Cursor to Center"
+    action: "mouse_abs:50:50"        # exact position, percent of screen
+
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Click Corner & Return"
+    action: "mouse_abs_save | mouse_abs:5:5 | left_click | mouse_abs_restore"
+
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
     name: "Send Custom Text"
     action: "send_custom_text"
 
@@ -264,6 +283,10 @@ binary_sensor:
 * **mouse_acceleration** (Optional, float): Web mouse speed-based acceleration factor. Defaults to `0.15`. Range: 0.0–2.0.
 * **mouse_max_speed** (Optional, float): Web mouse maximum sensitivity cap. Defaults to `4.0`. Range: 0.5–20.0.
 * **scroll_sensitivity** (Optional, float): Web mouse scroll speed multiplier. Defaults to `2.0`. Range: 0.1–10.0.
+* **screen_width** / **screen_height** (Optional, int): The pixel space the host maps the absolute pointer's `0..32767` range onto, used by `mouse_abs_px` and `mouse_abs_mon`. For a single screen, set to its resolution; for a spanned multi-monitor setup, set to the whole **virtual desktop** size. Defaults to `1920` / `1080`. Range: 1–32767. See [Absolute mouse positioning](#absolute-mouse-positioning).
+* **monitors** (Optional, list): Per-monitor regions (in virtual-desktop pixels) for `mouse_abs_mon:<idx>:<x%>:<y%>`. Each entry has optional `name`, required `x`, `y`, `width`, `height`, and optional `primary` (mark the Windows primary monitor — its top-left is the Windows `0,0` origin that `mouse_goto` homes to, and the web Position Finder needs it to emit correct `mouse_goto` values). See [Absolute mouse positioning](#absolute-mouse-positioning).
+* **mouse_goto_scale** (Optional, float): Calibration multiplier for `mouse_goto`'s relative step, to compensate for the host's pointer-speed / DPI scaling — sets **both** axes. Defaults to `1.0`. If the cursor travels about **twice** as far as intended, set `0.5`; tune until a `mouse_goto` lands on target. (Requires "Enhance pointer precision" **off** — acceleration is non-linear and can't be calibrated out.) Range: 0.05–20.0.
+* **mouse_goto_scale_x** / **mouse_goto_scale_y** (Optional, float): Per-axis override of `mouse_goto_scale`. X and Y often need **different** values (a host can scale the axes differently), so calibrate each independently. Range: 0.05–20.0. Easiest to dial in live via the web Position Finder, which also saves the values per host. See [Absolute mouse positioning](#absolute-mouse-positioning).
 * **custom_text_id** (Optional, ID or list of IDs): Link one or more ESPHome `text` entities for custom text input. Automatically registers a "Send" button in the web UI for each. Use `send_custom_text` or `send_custom_text:N` action to trigger.
 * **keyboard_layout** (Optional, string): Default keyboard layout. One of `us` (default), `uk`, `de`, `be`. Controls how `send_string` maps each character to USB HID keycodes — must match the *host's* keyboard layout. Can be overridden at runtime from the web UI (persisted to NVS, survives reboot). See [Keyboard layouts](#keyboard-layouts) below.
 * **hosts** (Optional, list): Per-slot passkey and pairing mode overrides. Each entry has:
@@ -430,12 +453,24 @@ espidf_ble_keyboard:
 | `"right_click"` | Mouse right click. |
 | `"middle_click"` | Mouse middle click. |
 | `"mouse_click:0x01"` | Mouse click with button mask. `0x01` = left, `0x02` = right, `0x04` = middle. Combine for simultaneous buttons. |
+| `"left_click_hold"` | Press **and hold** the left button until `mouse_release`. Moving, scrolling or `mouse_goto` while held performs a drag. |
+| `"right_click_hold"` | Press and hold the right button. |
+| `"middle_click_hold"` | Press and hold the middle button. |
+| `"mouse_hold:0x01"` | Press and hold with a button mask (same masks as `mouse_click`). |
+| `"mouse_release"` | Release all held mouse buttons. A normal click also releases them. |
 | `"mouse_move:<x>:<y>"` | Move mouse cursor. Values -127 to 127 (relative, pixels). |
 | `"mouse_scroll:<wheel>"` | Scroll mouse wheel. Positive = up, negative = down (-127 to 127). |
+| `"mouse_abs:<x%>:<y%>"` | Move cursor to an **exact** position, percent of screen (0–100, decimals allowed). E.g. `mouse_abs:50:50` = center. See [Absolute mouse positioning](#absolute-mouse-positioning). |
+| `"mouse_abs_px:<x>:<y>"` | Move cursor to an exact position in **pixels** (uses `screen_width`/`screen_height`). |
+| `"mouse_abs_mon:<idx>:<x%>:<y%>"` | Move cursor to a percent within declared `monitors[idx]` (multi-monitor). |
+| `"mouse_abs_save"` | Remember the current absolute position (the one this device last set). |
+| `"mouse_abs_restore"` | Jump back to the last `mouse_abs_save` position. |
+| `"mouse_goto:<x>:<y>"` | Move to a **Windows virtual-desktop pixel** across **all monitors** (homes the absolute pointer to the desktop origin, then steps relatively). X/Y are Windows coordinates (primary monitor top-left = 0,0; screens left of it are negative). Use this when the absolute pointer is confined to the primary monitor. Needs "Enhance pointer precision" **off** and a fixed pointer-speed slider position (the per-axis calibration is tied to it) for pixel accuracy. |
 | `"switch_host:N"` | Switch to host slot N (0–9). Reconnects to stored host or advertises for new pairing. |
 | `"forget_host:N"` | Remove BLE bond for host slot N (0–9) and clear the slot. |
 | `"string:hello"` | Explicit text typing — useful in multi-step macros to distinguish text from action names. |
 | `"delay:N"` | Pause for N milliseconds (max 10000). Used between steps in multi-step macros. |
+| `"repeat:N:<action>"` | Run `<action>` N times (max 1000). Put it at the start of a macro to repeat the whole sequence, e.g. `repeat:3:combo:0:40 \| delay:200`. |
 | `"send_custom_text"` | Send the first linked text entity's content. Requires `custom_text_id` in config. |
 | `"send_custom_text:N"` | Send the Nth linked text entity (0-based). E.g. `send_custom_text:1` for the second. |
 
@@ -485,6 +520,25 @@ action:
 action:
   type: mouse_scroll
   wheel: 3         # scroll up 3 notches (negative = down)
+
+# Absolute move — exact position, percent of screen
+action:
+  type: mouse_abs
+  x: 50            # 50% across
+  y: 50            # 50% down (center)
+
+# Absolute move — exact pixels (uses screen_width / screen_height)
+action:
+  type: mouse_abs_px
+  x: 1280
+  y: 720
+
+# Absolute move — percent within a declared monitor
+action:
+  type: mouse_abs_mon
+  monitor: 1       # index into the `monitors:` list
+  x: 50
+  y: 50
 
 # Switch host
 action:
@@ -602,7 +656,7 @@ api:
 
 ### Web Control
 
-When `web_control: true` is enabled, a full control page is available at `http://<device-ip>/ble_keyboard` with keyboard, mouse, and remote sections. Section toggle buttons in the toolbar let you show/hide each section. When `host_slots` > 1, a host bar appears below the toolbar showing all slots. Click a slot to switch. The active slot is highlighted. Occupied slots show the stored Bluetooth address.
+When `web_control: true` is enabled, a full control page is available at `http://<device-ip>/ble_keyboard` with **keyboard, mouse, Position Finder, remote, buttons, and macro** sections. Section toggle buttons in the toolbar let you show/hide (and reorder) each section. When `host_slots` > 1, a host bar appears below the toolbar showing all slots. Click a slot to switch. The active slot is highlighted. Occupied slots show the stored Bluetooth address. The **Position Finder** (locked by default; click **Edit** to use) sends the cursor to an exact spot and calibrates `mouse_goto` per host — see [Absolute mouse positioning](#absolute-mouse-positioning).
 
 <img src="docs/web_server.png" width="427" alt="Web Control Page">
 
@@ -647,6 +701,23 @@ api:
       then:
         - lambda: |-
             id(my_keyboard).send_mouse_click(btn);
+    - service: mouse_hold           # press & hold for dragging — release with mouse_release
+      variables:
+        btn: int
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_click_start(btn);
+    - service: mouse_release
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_click_release();
+    - service: mouse_abs            # move cursor to exact position, percent of screen
+      variables:
+        x: float
+        y: float
+      then:
+        - lambda: |-
+            id(my_keyboard).execute_action("mouse_abs:" + to_string(x) + ":" + to_string(y));
 ```
 
 ### 2. Install the card
@@ -690,11 +761,182 @@ Optional configuration:
 Features:
 - **Touchpad** — 16:9 aspect ratio, drag to move cursor, tap for left click, mouse wheel/trackpad scroll.
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground.
-- **Buttons** — Left, Middle, Right click.
+- **Buttons** — Left, Middle, Right click; long-press to hold for dragging (needs the `mouse_hold`/`mouse_release` services), tap the held button to release.
 - **Scroll** — Scroll Up / Scroll Down buttons (hold to repeat).
 - **Auto device name** — card title is auto-detected from Home Assistant's device registry.
 
 ![Mouse HA Card](docs/mouse_ha_card.png)
+
+---
+
+## Absolute Mouse Positioning
+
+The touchpad / `mouse_move` actions are **relative** — they nudge the cursor by a
+delta, like a real mouse. To move the cursor to an **exact** location, use the
+absolute-pointer actions, which report a fixed coordinate that the host maps onto
+the screen:
+
+| Action | Coordinates |
+|---|---|
+| `mouse_abs:<x%>:<y%>` | Percent of the screen, `0`–`100` (decimals allowed). `mouse_abs:50:50` = center, `mouse_abs:0:0` = top-left, `mouse_abs:100:100` = bottom-right. **Resolution-independent — start here.** |
+| `mouse_abs_px:<x>:<y>` | Exact pixels, converted using `screen_width` / `screen_height`. Set those to your host's resolution first. |
+| `mouse_abs_mon:<idx>:<x%>:<y%>` | Percent within the region defined by `monitors[idx]` (see Multi-monitor below). |
+| `mouse_abs_save` / `mouse_abs_restore` | Remember the current position and jump back later — e.g. `mouse_abs_save \| mouse_abs:5:5 \| left_click \| mouse_abs_restore`. |
+
+Web/REST: `curl -X POST "http://<device-ip>/api/ble_keyboard/mouse_abs?x=50&y=50"`
+(add `&unit=px` for pixels, `&monitor=1` for a monitor, `&btn=1` to click after moving).
+
+### Save / restore — what it can and can't do
+
+`mouse_abs_save` records the **last position the device itself commanded**, and
+`mouse_abs_restore` jumps back to it. HID is a one-way input channel — the host
+**never tells the device where the real cursor is** (the only host→device data is
+the keyboard LED lock state). So restore is exact only when the ESP32 is the sole
+thing moving the pointer; if you move a physical mouse in between, the device
+still restores to *its* last value, not the true cursor. True capture of the OS
+cursor would require a helper app on the host (`GetCursorPos`/`SetCursorPos`).
+
+### Multi-monitor
+
+Whether absolute coordinates can reach a second monitor is decided by the
+**host**, not the firmware — the device cannot detect your monitor layout. The
+host maps the `0..32767` range onto either the **primary monitor** or the **whole
+virtual desktop**:
+
+- On hosts that span the **virtual desktop**, set `screen_width` / `screen_height`
+  to the total desktop size and (optionally) declare each monitor's region, then
+  address a specific screen with `mouse_abs_mon`:
+
+  ```yaml
+  espidf_ble_keyboard:
+    screen_width: 3840          # two 1080p monitors side by side
+    screen_height: 1080
+    monitors:
+      - { name: left,  x: 0,    y: 0, width: 1920, height: 1080 }
+      - { name: right, x: 1920, y: 0, width: 1920, height: 1080 }
+  # mouse_abs_mon:1:50:50  -> center of the RIGHT monitor
+  # mouse_abs:75:50        -> 75% across the whole desktop (also the right monitor)
+  ```
+
+- On hosts that confine the absolute pointer to the **primary monitor** (a common
+  Windows default for a generic absolute mouse), `mouse_abs` / `mouse_abs_mon`
+  only reach the primary monitor regardless of configuration. **Use
+  `mouse_goto:<x>:<y>` instead** — it homes the absolute pointer to the desktop
+  origin (primary top-left = Windows 0,0) and then steps *relatively*, and
+  relative movement spans the whole virtual desktop, so it reaches every monitor.
+  Feed it Windows virtual-desktop coordinates (read a spot's with the bundled
+  [`docs/cursorpos.bat`](docs/cursorpos.bat)); for pixel accuracy turn "Enhance
+  pointer precision" off and set the pointer-speed slider to a fixed position you then
+  calibrate to (don't move it afterward — even one notch loses accuracy).
+
+### Cross-monitor positioning with `mouse_goto`
+
+`mouse_goto:<x>:<y>` is the **reliable way to hit an exact pixel on any monitor**
+when the host confines the absolute pointer to the primary screen (the usual
+Windows case). `x`/`y` are **Windows virtual-desktop coordinates** — the primary
+monitor's top-left is `0,0`, and monitors to its left are negative. Read a spot's
+coordinates by hovering it with the bundled [`docs/cursorpos.bat`](docs/cursorpos.bat):
+
+```yaml
+button:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Click that button on monitor 2"
+    action: "mouse_goto:4394:42 | left_click"
+```
+
+It works by homing the absolute pointer to the desktop origin, then stepping the
+cursor there with **relative** moves (relative movement crosses monitors), routed
+mid-screen so it doesn't jam at a monitor corner.
+
+**Requirements for accuracy:**
+1. **Re-pair** the host after first flashing the absolute-mouse feature (Windows
+   caches the old HID descriptor, so the absolute report stays invisible until a
+   fresh pairing — `mouse_abs`/`mouse_goto` do nothing otherwise).
+2. Mark the Windows primary monitor with **`primary: true`** in `monitors:`.
+3. In **Mouse Properties → Pointer Options**: turn **"Enhance pointer precision" off**
+   (acceleration is non-linear and can't be calibrated out; vendor mouse software
+   such as Logitech Options+ can re-enable it), and set the **pointer-speed slider to a
+   fixed position and leave it there**. Each step is a different fixed multiplier and the
+   per-axis calibration is tied to the one you pick, so moving it even a single notch
+   makes `mouse_goto` land a few pixels off. (On Windows 11's 1–20 slider this rig is
+   dialed in at **14** — 13 and 15 are visibly inaccurate.)
+4. **Calibrate** the per-axis scale (next section). X and Y usually need different
+   values. A residual of ~1–2 px is the integer mouse-count grid — host-side limit.
+
+### Calibrating with the Position Finder
+
+Enable the web UI (`web_control: true` + `web_server`) and open
+`http://<device-ip>/ble_keyboard`. The **Position Finder** card makes calibration
+a few taps — it's **locked by default** (so a stray tap can't move the cursor or
+change the scale); click **Edit** to use it:
+
+1. **Tap the desktop map** (or use the **nudge target** ±1 px buttons) to send the
+   cursor to a spot. Start with a **small target near the primary's top-left** so
+   an uncalibrated move can't fly off-screen.
+2. Read where the cursor **actually** landed, type it into **"landed at" X/Y**, and
+   hit **Auto-calibrate** — it computes the X/Y scale (`new = current × target ÷
+   actual`), applies it live, and **saves it to the current host**. Re-tap and
+   repeat to converge; aim more central if a reading hits a screen edge.
+   - To read the live cursor position, use the bundled
+     **[`docs/cursorpos.bat`](docs/cursorpos.bat)** — double-click it on the target
+     PC for a live **physical-pixel** readout (no install; uses `GetCursorPos` under
+     `SetProcessDPIAware` so the numbers match the Finder).
+3. Fine-tune with the **goto scale ±** buttons (0.0001 steps, 4-dp), or **Reset**
+   to the YAML default.
+
+Each **host slot keeps its own** X/Y scale in NVS, so a 4K/scaled host and a 1080p
+host each remember their own calibration. It **survives firmware updates** (NVS is
+a separate partition; only a full chip erase wipes it). For belt-and-braces, copy
+the dialed values into YAML as `mouse_goto_scale_x` / `_y` too. (Note: a saved
+per-host value **overrides** the YAML default — use the Finder's **Reset** to push
+a new YAML default onto a host.)
+
+The Finder can't read the real cursor (HID is one-way), so it's "send and read the
+value back," not a live cursor display. To capture and put back the *real* cursor,
+see [Saving and restoring the cursor](#saving-and-restoring-the-cursor).
+
+### Host support
+
+Absolute pointers are reliable on **Windows** and **Linux**. **macOS and iOS**
+frequently ignore or mishandle absolute USB/BLE pointers — treat as best-effort.
+The relative mouse (touchpad / `mouse_move`) is unaffected and keeps working on
+all hosts.
+
+### Saving and restoring the cursor
+
+The named actions `mouse_abs_save` / `mouse_abs_restore` only remember the **last
+position the device itself commanded** — not where a physical mouse left the cursor,
+and not a `mouse_goto` target (HID is one-way, so the device can never read the real
+cursor). For a *real* save/restore, run a tiny **host-side** helper and trigger it
+from the keyboard with a **shortcut key**:
+
+1. Copy **[`docs/cursor_saverestore.bat`](docs/cursor_saverestore.bat)** to the PC
+   (e.g. `C:\Tools\`). It reads/writes the live cursor with `GetCursorPos` /
+   `SetCursorPos` (physical px, DPI-aware — same coordinates as `mouse_goto`) and has
+   **no BLE/ESP32 link**. Run it as `cursor_saverestore.bat save` / `... restore`.
+2. Make two **Windows shortcuts** to it and give each a **Shortcut key**:
+   - Right-click the `.bat` → *Create shortcut*; set the shortcut's **Target** to
+     `cmd /c "C:\Tools\cursor_saverestore.bat" save`; put it on the **Desktop or Start
+     Menu** (required for the hotkey to be global); then Properties → **Shortcut key**
+     = e.g. `Ctrl+Alt+C` (and **Run: Minimized** to hide the console flash).
+   - A second shortcut the same way with `... restore` and `Ctrl+Alt+R`.
+3. Fire those combos from the keyboard (Ctrl+Alt = `0x01 + 0x04` = `0x05`; `c` = `0x06`,
+   `r` = `0x15`): **save** → `combo:0x05:0x06`, **restore** → `combo:0x05:0x15`.
+
+Because combos and `mouse_goto` chain, **one button** can do the whole round-trip:
+
+```yaml
+button:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    name: "Click monitor 2, then put the cursor back"
+    action: "combo:0x05:0x06 | mouse_goto:4394:42 | left_click | combo:0x05:0x15"
+```
+
+The keyboard never touches the cursor file or the ESP32 — it only sends the shortcut
+keys; **Windows** runs the helper. (Windows requires Ctrl+Alt or Ctrl+Shift in a
+shortcut key — a bare letter won't register.)
 
 ---
 
@@ -742,11 +984,11 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Full QWERTY keyboard** — letters, numbers, symbols, F-keys, modifiers, arrows
 - **Mouse touchpad** — 16:9 aspect ratio, drag to move cursor, tap for left click (5px dead zone prevents accidental clicks)
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground (up to 4x)
-- **Mouse buttons** — Left, Middle, Right click
+- **Mouse buttons** — Left, Middle, Right click; long-press a button to hold it for dragging (drag the touchpad or run `mouse_goto` while held), tap the held button to release
 - **Scroll controls** — buttons + mouse wheel on the touchpad
 - **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
-- **Zoom controls** — resize keyboard and mouse with +/- buttons (50%–150%)
+- **Zoom controls** — resize keyboard and mouse with +/- buttons in 5% steps (50%–200%), zoom level saved in browser
 - **Light/dark theme** — toggle between dark and light mode, preference saved in browser
 - **BLE connection status** — live indicator shows Connected, Paired, or Disconnected (polls every 3s)
 - **Device name display** — shows the configured `device_name` in the toolbar and browser tab title
@@ -764,7 +1006,14 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/key` | POST | `modifier` (int), `keycode` (int) | Send key combo |
 | `/api/ble_keyboard/mouse_move` | POST | `x` (int), `y` (int) | Move cursor |
 | `/api/ble_keyboard/mouse_click` | POST | `btn` (int) | Click button |
+| `/api/ble_keyboard/mouse_hold` | POST | `btn` (int, default 1) | Press and hold button(s) — release with `mouse_release` |
+| `/api/ble_keyboard/mouse_release` | POST | — | Release all held mouse buttons |
 | `/api/ble_keyboard/mouse_scroll` | POST | `amount` (int) | Scroll wheel |
+| `/api/ble_keyboard/mouse_abs` | POST | `x`, `y` (percent; `unit=px` for pixels; `monitor=<idx>`; optional `btn`) | Move cursor to an exact position (absolute) |
+| `/api/ble_keyboard/press` | POST | `action=mouse_goto:<x>:<y>` | Cross-monitor exact move (any action string) |
+| `/api/ble_keyboard/screen` | GET | — | Desktop geometry (size, origin, monitors, goto scales) for the Position Finder |
+| `/api/ble_keyboard/goto_scale` | POST | `v` / `vx` / `vy` (scale), `save=1`, `reset=1` | Set `mouse_goto` calibration live (persist per host with `save`) |
+| `/api/ble_keyboard/goto_last` | GET | — | Last `mouse_goto` target (Windows coords) |
 | `/api/ble_keyboard/status` | GET | — | Returns `{"connected":bool,"paired":bool,"device_name":"..."}` |
 | `/api/ble_keyboard/buttons` | GET | — | Returns JSON array of programmed buttons |
 | `/api/ble_keyboard/press` | POST | `action` (string) | Trigger a programmed button action |
@@ -972,7 +1221,7 @@ The web UI provides:
 
 ### Multi-Step Macros
 
-Macros support multiple commands separated by `|`. A 50ms delay is automatically inserted between steps. Use `delay:N` for explicit pauses (max 10000ms).
+Macros support multiple commands separated by `|`. A 50ms delay is automatically inserted between steps. Use `delay:N` for explicit pauses (max 10000ms). Prefix a macro with `repeat:N:` to run the whole sequence N times (max 1000).
 
 Examples:
 | Action string | Description |
@@ -981,7 +1230,9 @@ Examples:
 | `combo:2:4 \| delay:50 \| combo:2:6` | Select All, Copy |
 | `play_pause \| delay:500 \| next_track` | Play/Pause, wait 500ms, Next Track |
 | `combo:0:40 \| delay:200 \| combo:0:40` | Enter twice with 200ms gap |
+| `repeat:3:combo:0:40 \| delay:200` | Press Enter 3 times, 200ms apart |
 | `combo:2:4 \| delay:50 \| string:hello` | Select All, type "hello" |
+| `mouse_abs_save \| mouse_abs:90:10 \| left_click \| mouse_abs_restore` | Click top-right corner, then return the cursor |
 
 Multi-step actions work everywhere: web macros, YAML buttons, `execute_action()`, and the `/api/ble_keyboard/press` endpoint.
 
@@ -1009,6 +1260,46 @@ button:
         - lambda: |-
             id(my_keyboard).execute_action("combo:2:6 | delay:100 | combo:2:25");
 ```
+
+### Triggering Macros from Home Assistant
+
+Web macros are created at runtime (stored in NVS), so they don't appear as individual Home Assistant entities — ESPHome entities are fixed at compile time. To reach them from HA, expose API services that call `execute_macro(index)` or `execute_action("...")`:
+
+```yaml
+api:
+  services:
+    # Run a stored web macro by its index ([0], [1], … shown in the web UI)
+    - service: run_macro
+      variables:
+        index: int
+      then:
+        - lambda: |-
+            id(my_keyboard).execute_macro(index);
+
+    # Run any action string directly (single or multi-step with "|")
+    - service: run_action
+      variables:
+        action: string
+      then:
+        - lambda: |-
+            id(my_keyboard).execute_action(action);
+```
+
+Then call them from a HA automation, script, or **Developer Tools → Actions**:
+
+```yaml
+# Run web macro #0
+action: esphome.<device_name>_run_macro
+data:
+  index: 0
+
+# Or run an ad-hoc action string (no stored macro needed)
+action: esphome.<device_name>_run_action
+data:
+  action: "mouse_abs_save | mouse_abs:0:0 | left_click | mouse_abs_restore"
+```
+
+> **Tip:** For a permanent, *named* clickable button in HA, define a `button:` platform entry instead (those auto-appear in HA and accept the same action strings, including multi-step). Web macros are best for ad-hoc, web-managed actions reached via `run_macro` / `run_action`.
 
 ### Macro REST API
 
