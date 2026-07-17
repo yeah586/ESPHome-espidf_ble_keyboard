@@ -68,6 +68,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .mbtn-row{display:grid;grid-template-columns:1fr .7fr 1fr;gap:6px;margin-top:8px}
 .mbtn{padding:12px 0;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:12px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .1s}
 .mbtn:active,.mbtn.p{background:var(--active);color:#fff;border-color:var(--active)}
+.mbtn.held{background:var(--accent);color:#fff;border-color:var(--accent)}
 .scroll-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .sbtn{padding:8px 0;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:16px;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .1s}
 .sbtn:active{background:var(--active);color:#fff;border-color:var(--active)}
@@ -167,6 +168,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="mbtn" id="mm">Middle</button>
 <button class="mbtn" id="mr">Right</button>
 </div>
+<div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center">Long-press a button to hold (drag) &middot; tap it again to release</div>
 <div class="scroll-row">
 <button class="sbtn" id="su">&#9650; Up</button>
 <button class="sbtn" id="sd">&#9660; Down</button>
@@ -316,6 +318,10 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="mouse_goto:0:0">Goto desktop px — all monitors (edit x:y)</option>
 <option value="mouse_abs_save">Save Cursor Pos</option>
 <option value="mouse_abs_restore">Restore Cursor Pos</option>
+<option value="left_click_hold">Hold Left Button (drag)</option>
+<option value="right_click_hold">Hold Right Button</option>
+<option value="middle_click_hold">Hold Middle Button</option>
+<option value="mouse_release">Release Mouse Buttons</option>
 </optgroup>
 </select>
 <button id="macro-save">+ Add</button>
@@ -788,7 +794,7 @@ buildKeyboard();
 (function(){
   const pad=document.getElementById('touchpad');
   let tracking=false,lastX=0,lastY=0,lastTime=0,startTime=0,moved=false,startSX=0,startSY=0;
-  let accumX=0,accumY=0,moveAC=null;
+  let accumX=0,accumY=0,moveAC=null,heldBtn=0;
   let baseSens=1.0,accelFactor=0.15,maxSens=4.0,scrollSens=2;
   const tapDeadZone=5;
   fetch('/api/ble_keyboard/mouse_config').then(r=>r.json()).then(c=>{
@@ -817,7 +823,7 @@ buildKeyboard();
     if(!tracking)return;tracking=false;pad.classList.remove('active');
     if(moveAC){moveAC.abort();moveAC=null}
     accumX=0;accumY=0;
-    if(!moved&&Date.now()-startTime<250)api('mouse_click',{btn:1});
+    if(!moved&&!heldBtn&&Date.now()-startTime<250)api('mouse_click',{btn:1});
   }
 
   pad.addEventListener('mousedown',e=>{e.preventDefault();onStart(e.clientX,e.clientY)});
@@ -852,11 +858,34 @@ buildKeyboard();
     if(s!==0){api('mouse_scroll',{amount:Math.max(-127,Math.min(127,s))});wheelAccum-=s}
   },{passive:false});
 
-  // Mouse buttons
+  // Mouse buttons: tap = click; long-press (400ms) = hold (for dragging via the
+  // touchpad or mouse_goto); tap the held button to release. Held state is
+  // client-side only — a normal tap on any button releases everything
+  // server-side too, so it also clears the mark.
   const btnMap={ml:1,mm:4,mr:2};
+  function setHeld(b){
+    heldBtn=b;
+    for(const[id,btn]of Object.entries(btnMap))document.getElementById(id).classList.toggle('held',b===btn);
+  }
   for(const[id,btn]of Object.entries(btnMap)){
     const el=document.getElementById(id);
-    onTap(el,()=>api('mouse_click',{btn:btn}));
+    let sx,sy,ok,ht=null;
+    const clearHt=()=>{if(ht){clearTimeout(ht);ht=null}};
+    el.addEventListener('contextmenu',e=>e.preventDefault());  // stop mobile long-press menu
+    el.addEventListener('pointerdown',e=>{
+      sx=e.clientX;sy=e.clientY;ok=true;el.classList.add('p');
+      clearHt();
+      ht=setTimeout(()=>{ht=null;if(ok){ok=false;el.classList.remove('p');api('mouse_hold',{btn:btn});setHeld(btn)}},400);
+    });
+    el.addEventListener('pointermove',e=>{if(ok&&(Math.abs(e.clientX-sx)+Math.abs(e.clientY-sy))>10){ok=false;el.classList.remove('p');clearHt()}});
+    el.addEventListener('pointerup',()=>{
+      el.classList.remove('p');clearHt();
+      if(!ok)return;
+      ok=false;
+      if(heldBtn===btn){api('mouse_release');setHeld(0)}
+      else{api('mouse_click',{btn:btn});setHeld(0)}
+    });
+    el.addEventListener('pointercancel',()=>{ok=false;el.classList.remove('p');clearHt()});
   }
 
   // Scroll buttons
@@ -1367,6 +1396,15 @@ class BleKbWebHandler : public AsyncWebHandler {
     } else if (path == "mouse_click") {
       int btn = request->hasArg("btn") ? atoi(request->arg("btn").c_str()) : 1;
       kb_->send_mouse_click((uint8_t) btn);
+      send_response(200, "text/plain", "OK");
+
+    } else if (path == "mouse_hold") {
+      int btn = request->hasArg("btn") ? atoi(request->arg("btn").c_str()) : 1;
+      kb_->send_mouse_click_start((uint8_t) btn);
+      send_response(200, "text/plain", "OK");
+
+    } else if (path == "mouse_release") {
+      kb_->send_mouse_click_release();
       send_response(200, "text/plain", "OK");
 
     } else if (path == "mouse_scroll") {

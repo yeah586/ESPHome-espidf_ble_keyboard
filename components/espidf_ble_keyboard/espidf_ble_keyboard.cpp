@@ -1313,6 +1313,9 @@ static esp_err_t send_keyboard_input_report(uint16_t conn_id, const uint8_t *rep
         ESP_LOGW(TAG, "Keyboard report send failed on handle 0x%04X (%d), caller will retry",
                  primary_handle, ret);
     }
+    // Keep the readable characteristic value in sync for hosts that READ the
+    // input report (e.g. on reconnect) instead of relying on notifications.
+    esp_ble_gatts_set_attr_value(primary_handle, len, report);
     return ret;
 }
 
@@ -1553,9 +1556,11 @@ void EspidfBleKeyboard::send_sleep() {
     if (!is_connected_) return;
     uint8_t report[1] = {0x82};  // System Sleep
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_system_report_handle, 1, report, false);
+    esp_ble_gatts_set_attr_value(s_system_report_handle, 1, report);
     vTaskDelay(pdMS_TO_TICKS(50));
     uint8_t release[1] = {0};
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_system_report_handle, 1, release, false);
+    esp_ble_gatts_set_attr_value(s_system_report_handle, 1, release);
     ESP_LOGI(TAG, "System Sleep sent");
 }
 
@@ -1575,9 +1580,11 @@ void EspidfBleKeyboard::send_consumer(uint16_t usage) {
     last_consumer_ms_ = now;
     uint8_t report[2] = {(uint8_t)(usage & 0xFF), (uint8_t)(usage >> 8)};
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_consumer_report_handle, 2, report, false);
+    esp_ble_gatts_set_attr_value(s_consumer_report_handle, 2, report);
     vTaskDelay(pdMS_TO_TICKS(50));
     uint8_t release[2] = {0, 0};
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_consumer_report_handle, 2, release, false);
+    esp_ble_gatts_set_attr_value(s_consumer_report_handle, 2, release);
     ESP_LOGI(TAG, "Consumer report sent: 0x%04X", usage);
 }
 
@@ -1585,9 +1592,11 @@ void EspidfBleKeyboard::send_power() {
     if (!is_connected_) return;
     uint8_t report[1] = {0x81};  // System Power Down
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_system_report_handle, 1, report, false);
+    esp_ble_gatts_set_attr_value(s_system_report_handle, 1, report);
     vTaskDelay(pdMS_TO_TICKS(50));
     uint8_t release[1] = {0};
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_system_report_handle, 1, release, false);
+    esp_ble_gatts_set_attr_value(s_system_report_handle, 1, release);
     ESP_LOGI(TAG, "System Power Down sent");
 }
 
@@ -1599,7 +1608,13 @@ void EspidfBleKeyboard::send_volume_up()         { send_consumer(0x00E9); }
 void EspidfBleKeyboard::send_volume_down()       { send_consumer(0x00EA); }
 void EspidfBleKeyboard::send_mute()              { send_consumer(0x00E2); }
 
-void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
+void EspidfBleKeyboard::send_mouse_report_(uint8_t buttons, int8_t x, int8_t y, int8_t wheel) {
+    uint8_t report[4] = {buttons, static_cast<uint8_t>(x), static_cast<uint8_t>(y), static_cast<uint8_t>(wheel)};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, sizeof(report), report, false);
+    esp_ble_gatts_set_attr_value(s_mouse_report_handle, sizeof(report), report);
+}
+
+void EspidfBleKeyboard::send_mouse_click_start(uint8_t buttons) {
     if (!is_connected_) return;
     uint32_t now = millis();
     if (buttons == last_mouse_click_ && (now - last_mouse_click_ms_) < 30) {
@@ -1608,31 +1623,37 @@ void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
     }
     last_mouse_click_ = buttons;
     last_mouse_click_ms_ = now;
-    uint8_t report[4] = {buttons, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    held_mouse_buttons_ = buttons;
+    send_mouse_report_(buttons, 0, 0, 0);
+    ESP_LOGI(TAG, "Mouse click start sent: buttons=0x%02X", buttons);
+}
+
+void EspidfBleKeyboard::send_mouse_click_release() {
+    if (!is_connected_) return;
+    held_mouse_buttons_ = 0;
+    send_mouse_report_(0, 0, 0, 0);
+    ESP_LOGI(TAG, "Mouse click release sent");
+}
+
+void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
+    send_mouse_click_start(buttons);
     vTaskDelay(pdMS_TO_TICKS(50));
-    uint8_t release[4] = {0, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
-    ESP_LOGI(TAG, "Mouse click sent: buttons=0x%02X", buttons);
+    send_mouse_click_release();
 }
 
 void EspidfBleKeyboard::send_mouse_move(int8_t x, int8_t y) {
     if (!is_connected_) return;
-    uint8_t report[4] = {0, static_cast<uint8_t>(x), static_cast<uint8_t>(y), 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    send_mouse_report_(held_mouse_buttons_, x, y, 0);
     vTaskDelay(pdMS_TO_TICKS(20));
-    uint8_t release[4] = {0, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    send_mouse_report_(held_mouse_buttons_, 0, 0, 0);
     ESP_LOGD(TAG, "Mouse move sent: x=%d y=%d", x, y);
 }
 
 void EspidfBleKeyboard::send_mouse_scroll(int8_t wheel) {
     if (!is_connected_) return;
-    uint8_t report[4] = {0, 0, 0, static_cast<uint8_t>(wheel)};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    send_mouse_report_(held_mouse_buttons_, 0, 0, wheel);
     vTaskDelay(pdMS_TO_TICKS(20));
-    uint8_t release[4] = {0, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    send_mouse_report_(held_mouse_buttons_, 0, 0, 0);
     ESP_LOGD(TAG, "Mouse scroll sent: wheel=%d", wheel);
 }
 
@@ -1646,11 +1667,13 @@ void EspidfBleKeyboard::send_mouse_move_abs(uint16_t x, uint16_t y, uint8_t butt
                          static_cast<uint8_t>(x & 0xFF), static_cast<uint8_t>(x >> 8),
                          static_cast<uint8_t>(y & 0xFF), static_cast<uint8_t>(y >> 8)};
     esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_abs_mouse_report_handle, 5, report, false);
+    esp_ble_gatts_set_attr_value(s_abs_mouse_report_handle, 5, report);
     if (buttons != 0) {
         // Click-at-position: release the button while staying at the same coords.
         vTaskDelay(pdMS_TO_TICKS(50));
         uint8_t release[5] = {0, report[1], report[2], report[3], report[4]};
         esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_abs_mouse_report_handle, 5, release, false);
+        esp_ble_gatts_set_attr_value(s_abs_mouse_report_handle, 5, release);
     }
     // Remember where WE put the cursor (for save/restore). Note: this is only the
     // device-commanded position; HID can't read the host's real cursor.
@@ -1682,6 +1705,9 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     //    monitor boundaries, so this reaches any monitor (incl. negative coords).
     //    Apply the calibration scale to compensate the host's pointer-speed/DPI
     //    scaling (e.g. ~0.5 if the cursor otherwise travels twice as far).
+    //    Steps carry held_mouse_buttons_ so a click-and-hold drag survives the
+    //    goto. The abs homing above must NOT carry it: send_mouse_move_abs
+    //    treats nonzero buttons as click-at-position and would release the drag.
     float fx = (float) x * goto_scale_x_, fy = (float) y * goto_scale_y_;
     int32_t dx = (int32_t)(fx < 0 ? fx - 0.5f : fx + 0.5f);
     int32_t dy = (int32_t)(fy < 0 ? fy - 0.5f : fy + 0.5f);
@@ -1702,24 +1728,21 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     int32_t d = dmid;                       // Phase 1: Y -> mid-screen
     while (d != 0) {
         int32_t s = d > 127 ? 127 : (d < -127 ? -127 : d);
-        uint8_t report[4] = {0, 0, static_cast<uint8_t>(static_cast<int8_t>(s)), 0};
-        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+        send_mouse_report_(held_mouse_buttons_, 0, static_cast<int8_t>(s), 0);
         d -= s;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
     d = dx;                                 // Phase 2: X across (mid-screen Y)
     while (d != 0) {
         int32_t s = d > 127 ? 127 : (d < -127 ? -127 : d);
-        uint8_t report[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(s)), 0, 0};
-        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+        send_mouse_report_(held_mouse_buttons_, static_cast<int8_t>(s), 0, 0);
         d -= s;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
     d = dy - dmid;                          // Phase 3: Y from mid -> target
     while (d != 0) {
         int32_t s = d > 127 ? 127 : (d < -127 ? -127 : d);
-        uint8_t report[4] = {0, 0, static_cast<uint8_t>(static_cast<int8_t>(s)), 0};
-        esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+        send_mouse_report_(held_mouse_buttons_, 0, static_cast<int8_t>(s), 0);
         d -= s;
         vTaskDelay(pdMS_TO_TICKS(8));
     }
@@ -1727,11 +1750,9 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     // sprite visually stale (it only redraws on a "real" mouse event), so it looks
     // like nothing happened until you touch a physical mouse. A +1/-1 wiggle nets
     // ~zero displacement but forces the cursor to redraw at the final spot.
-    uint8_t nudge1[4] = {0, 1, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, nudge1, false);
+    send_mouse_report_(held_mouse_buttons_, 1, 0, 0);
     vTaskDelay(pdMS_TO_TICKS(10));
-    uint8_t nudge2[4] = {0, static_cast<uint8_t>(static_cast<int8_t>(-1)), 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, nudge2, false);
+    send_mouse_report_(held_mouse_buttons_, -1, 0, 0);
 }
 
 void EspidfBleKeyboard::send_hibernate() {
@@ -1805,6 +1826,12 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
         int buttons = 0;
         if (sscanf(action.c_str(), "mouse_click:%i", &buttons) == 1)
             send_mouse_click((uint8_t) buttons);
+        return;
+    }
+    if (action.find("mouse_hold:") == 0) {
+        int buttons = 0;
+        if (sscanf(action.c_str(), "mouse_hold:%i", &buttons) == 1)
+            send_mouse_click_start((uint8_t) buttons);
         return;
     }
     if (action.find("mouse_move:") == 0) {
@@ -1901,6 +1928,10 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
     else if (action == "left_click")   send_mouse_click(0x01);
     else if (action == "right_click")  send_mouse_click(0x02);
     else if (action == "middle_click") send_mouse_click(0x04);
+    else if (action == "left_click_hold")   send_mouse_click_start(0x01);
+    else if (action == "right_click_hold")  send_mouse_click_start(0x02);
+    else if (action == "middle_click_hold") send_mouse_click_start(0x04);
+    else if (action == "mouse_release")     send_mouse_click_release();
     else if (action == "mouse_abs_save") {
         saved_abs_x_ = cur_abs_x_; saved_abs_y_ = cur_abs_y_; has_saved_abs_ = true;
     }

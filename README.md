@@ -451,6 +451,11 @@ espidf_ble_keyboard:
 | `"right_click"` | Mouse right click. |
 | `"middle_click"` | Mouse middle click. |
 | `"mouse_click:0x01"` | Mouse click with button mask. `0x01` = left, `0x02` = right, `0x04` = middle. Combine for simultaneous buttons. |
+| `"left_click_hold"` | Press **and hold** the left button until `mouse_release`. Moving, scrolling or `mouse_goto` while held performs a drag. |
+| `"right_click_hold"` | Press and hold the right button. |
+| `"middle_click_hold"` | Press and hold the middle button. |
+| `"mouse_hold:0x01"` | Press and hold with a button mask (same masks as `mouse_click`). |
+| `"mouse_release"` | Release all held mouse buttons. A normal click also releases them. |
 | `"mouse_move:<x>:<y>"` | Move mouse cursor. Values -127 to 127 (relative, pixels). |
 | `"mouse_scroll:<wheel>"` | Scroll mouse wheel. Positive = up, negative = down (-127 to 127). |
 | `"mouse_abs:<x%>:<y%>"` | Move cursor to an **exact** position, percent of screen (0–100, decimals allowed). E.g. `mouse_abs:50:50` = center. See [Absolute mouse positioning](#absolute-mouse-positioning). |

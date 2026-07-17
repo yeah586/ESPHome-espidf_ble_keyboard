@@ -78,6 +78,8 @@ class EspidfBleKeyboard : public Component {
   void send_volume_up();
   void send_volume_down();
   void send_mute();
+  void send_mouse_click_start(uint8_t buttons);
+  void send_mouse_click_release();
   void send_mouse_click(uint8_t buttons);
   void send_mouse_move(int8_t x, int8_t y);
   void send_mouse_scroll(int8_t wheel);
@@ -225,6 +227,7 @@ class EspidfBleKeyboard : public Component {
   void set_connected(bool connected, uint16_t conn_id) {
     is_connected_ = connected;
     conn_id_ = conn_id;
+    if (!connected) held_mouse_buttons_ = 0;
   }
   bool is_connected() const { return is_connected_; }
   uint16_t conn_id() const { return conn_id_; }
@@ -357,6 +360,7 @@ class EspidfBleKeyboard : public Component {
   void load_layout_();
   void save_layout_(const std::string &id);
   void update_led_state_(uint8_t led_byte);
+  void send_mouse_report_(uint8_t buttons, int8_t x, int8_t y, int8_t wheel);
 
   // Non-blocking string typing state machine (driven from loop())
   // Keystrokes are pre-resolved (UTF-8 decoded + layout-mapped) at enqueue time,
@@ -376,6 +380,7 @@ class EspidfBleKeyboard : public Component {
   uint16_t last_consumer_usage_{0};
   uint32_t last_mouse_click_ms_{0};
   uint8_t last_mouse_click_{0};
+  uint8_t held_mouse_buttons_{0};
 #ifdef USE_TEXT
   std::vector<text::Text *> custom_texts_;
 #endif
