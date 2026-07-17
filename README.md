@@ -78,9 +78,10 @@ wifi:
 external_components:
   - source:
       type: git
-      url: https://github.com/markusg1234/ESPHome-espidf_ble_keyboard
+      url: https://github.com/markusg1234/ESPHome-espidf_ble_keyboard.git
       ref: main            # or pin a release tag, e.g. v1.0.0
       path: components
+    refresh: 0s  
     components: [ espidf_ble_keyboard ]
 
 espidf_ble_keyboard:
