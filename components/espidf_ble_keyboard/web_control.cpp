@@ -61,7 +61,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .k.kb-l-top::after{content:'';position:absolute;top:100%;left:-1px;right:-1px;height:5px;background:var(--bg);border-left:1px solid var(--border);border-right:1px solid var(--border);pointer-events:none}
 .k.kb-l-top:active::after,.k.kb-l-top.p::after{background:var(--active);border-color:var(--active)}
 .k.kb-l-bot{border-top-left-radius:0}
-.touchpad{width:100%;aspect-ratio:16/9;background:var(--bg);border-radius:10px;border:2px solid var(--border);cursor:crosshair;touch-action:pan-y;position:relative;overflow:hidden;transition:border-color .15s}
+.touchpad{width:100%;aspect-ratio:16/9;background:var(--bg);border-radius:10px;border:2px solid var(--border);cursor:crosshair;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;position:relative;overflow:hidden;transition:border-color .15s}
 .touchpad.active{border-color:var(--active)}
 .touchpad-hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--muted);font-size:12px;pointer-events:none;opacity:.5}
 .touchpad.active .touchpad-hint{opacity:0}
@@ -830,24 +830,21 @@ buildKeyboard();
   window.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
   window.addEventListener('mouseup',()=>onEnd());
 
-  let tClaimed=false,tSX=0,tSY=0;
-  function tCleanup(){window.removeEventListener('touchmove',winTouchMove);window.removeEventListener('touchend',winTouchEnd);tClaimed=false}
-  function winTouchMove(e){
-    const t=e.touches[0];
-    if(!tClaimed){
-      const dx=Math.abs(t.clientX-tSX),dy=Math.abs(t.clientY-tSY);
-      if(dx+dy<6)return;  // wait for clear direction
-      if(dy>dx){onEnd();tCleanup();return}  // vertical — let browser scroll (touchcancel follows)
-      tClaimed=true;
-    }
-    e.preventDefault();onMove(t.clientX,t.clientY);
-  }
+  // The pad owns every touch that starts on it (touch-action:none). pan-y +
+  // direction-claiming was tried before, but the browser can start a vertical
+  // pan inside the claim slack — after that, touchmoves are non-cancelable and
+  // preventDefault can't stop the page scrolling mid-drag.
+  function tCleanup(){window.removeEventListener('touchmove',winTouchMove);window.removeEventListener('touchend',winTouchEnd);window.removeEventListener('touchcancel',winTouchCancel)}
+  function winTouchMove(e){e.preventDefault();const t=e.touches[0];onMove(t.clientX,t.clientY)}
   function winTouchEnd(e){if(e.touches.length===0){onEnd();tCleanup()}}
+  function winTouchCancel(){moved=true;onEnd();tCleanup()}  // moved=true: a canceled tap must not click
+  pad.addEventListener('contextmenu',e=>e.preventDefault());  // no long-press menu mid-drag
   pad.addEventListener('touchstart',e=>{
-    const t=e.touches[0];tSX=t.clientX;tSY=t.clientY;tClaimed=false;
+    const t=e.touches[0];
     onStart(t.clientX,t.clientY);
     window.addEventListener('touchmove',winTouchMove,{passive:false});
     window.addEventListener('touchend',winTouchEnd,{passive:false});
+    window.addEventListener('touchcancel',winTouchCancel,{passive:false});
   },{passive:true});
 
   let wheelAccum=0;
