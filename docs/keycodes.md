@@ -79,6 +79,19 @@ Combine modifiers by adding hex values (e.g. Ctrl+Shift = `0x01 + 0x02` = `0x03`
 | | | | Page Up | `0x4B` | | | |
 | | | | Page Down | `0x4E` | | | |
 
+### Extended Function Keys (F13–F24)
+
+Great as "phantom" macro keys on Windows — recognized as `VK_F13`–`VK_F24` but unused by default, so they never collide with app shortcuts (bind them in AutoHotkey, OBS, Discord, etc.).
+
+| Key | Code | | Key | Code | | Key | Code |
+|---|---|---|---|---|---|---|---|
+| F13 | `0x68` | | F17 | `0x6C` | | F21 | `0x70` |
+| F14 | `0x69` | | F18 | `0x6D` | | F22 | `0x71` |
+| F15 | `0x6A` | | F19 | `0x6E` | | F23 | `0x72` |
+| F16 | `0x6B` | | F20 | `0x6F` | | F24 | `0x73` |
+
+> **Note:** hosts cache the HID descriptor per Bluetooth bond. If the device was paired with firmware older than the F13–F24 support, remove it from the host's Bluetooth settings and pair again, or these keys are silently ignored.
+
 ---
 
 ## Numpad Keys
