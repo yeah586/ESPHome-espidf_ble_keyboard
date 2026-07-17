@@ -1373,7 +1373,7 @@ void EspidfBleKeyboard::send_string(const std::string &str) {
     // Dedup: ESPHome API can deliver the same service call twice within ~5ms
     uint32_t now = millis();
     if (str == last_send_string_ && (now - last_send_string_ms_) < 30) {
-        ESP_LOGD(TAG, "send_string dedup: \"%s\" (duplicate after %ums)", str.c_str(), now - last_send_string_ms_);
+        ESP_LOGD(TAG, "send_string dedup: \"%s\" (duplicate after %ums)", str.c_str(), (unsigned) (now - last_send_string_ms_));
         return;
     }
     last_send_string_ = str;
@@ -1522,7 +1522,7 @@ void EspidfBleKeyboard::send_key_combo(uint8_t modifiers, uint8_t keycode) {
     uint16_t key_id = ((uint16_t) modifiers << 8) | keycode;
     if (key_id == last_send_key_id_ && (now - last_send_key_ms_) < 30) {
         ESP_LOGD(TAG, "send_key_combo dedup: mod=0x%02X key=0x%02X (duplicate after %ums)",
-                 modifiers, keycode, now - last_send_key_ms_);
+                 modifiers, keycode, (unsigned) (now - last_send_key_ms_));
         return;
     }
     last_send_key_id_ = key_id;
@@ -1568,7 +1568,7 @@ void EspidfBleKeyboard::send_consumer(uint16_t usage) {
     if (!is_connected_) return;
     uint32_t now = millis();
     if (usage == last_consumer_usage_ && (now - last_consumer_ms_) < 30) {
-        ESP_LOGD(TAG, "send_consumer dedup: 0x%04X (duplicate after %ums)", usage, now - last_consumer_ms_);
+        ESP_LOGD(TAG, "send_consumer dedup: 0x%04X (duplicate after %ums)", usage, (unsigned) (now - last_consumer_ms_));
         return;
     }
     last_consumer_usage_ = usage;
@@ -1603,7 +1603,7 @@ void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
     if (!is_connected_) return;
     uint32_t now = millis();
     if (buttons == last_mouse_click_ && (now - last_mouse_click_ms_) < 30) {
-        ESP_LOGD(TAG, "send_mouse_click dedup: 0x%02X (duplicate after %ums)", buttons, now - last_mouse_click_ms_);
+        ESP_LOGD(TAG, "send_mouse_click dedup: 0x%02X (duplicate after %ums)", buttons, (unsigned) (now - last_mouse_click_ms_));
         return;
     }
     last_mouse_click_ = buttons;
@@ -1691,7 +1691,7 @@ void EspidfBleKeyboard::send_mouse_goto(int32_t x, int32_t y) {
     // distance being sent. If scale != your YAML value, the config isn't reaching
     // the firmware; if relative is right but the cursor overshoots, it's host-side.
     ESP_LOGI(TAG, "Mouse goto: target=(%d,%d) scale=(%.4f,%.4f) relative=(%d,%d)",
-             x, y, goto_scale_x_, goto_scale_y_, dx, dy);
+             (int) x, (int) y, goto_scale_x_, goto_scale_y_, (int) dx, (int) dy);
     // Decoupled move that still crosses monitors. The cursor homes to the top-left
     // corner, so a straight X run travels along the top edge and sticks at a
     // monitor's top-right corner (can't change screens — the "3839" jam). So:
