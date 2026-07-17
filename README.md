@@ -701,6 +701,16 @@ api:
       then:
         - lambda: |-
             id(my_keyboard).send_mouse_click(btn);
+    - service: mouse_hold           # press & hold for dragging — release with mouse_release
+      variables:
+        btn: int
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_click_start(btn);
+    - service: mouse_release
+      then:
+        - lambda: |-
+            id(my_keyboard).send_mouse_click_release();
     - service: mouse_abs            # move cursor to exact position, percent of screen
       variables:
         x: float
@@ -751,7 +761,7 @@ Optional configuration:
 Features:
 - **Touchpad** — 16:9 aspect ratio, drag to move cursor, tap for left click, mouse wheel/trackpad scroll.
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground.
-- **Buttons** — Left, Middle, Right click.
+- **Buttons** — Left, Middle, Right click; long-press to hold for dragging (needs the `mouse_hold`/`mouse_release` services), tap the held button to release.
 - **Scroll** — Scroll Up / Scroll Down buttons (hold to repeat).
 - **Auto device name** — card title is auto-detected from Home Assistant's device registry.
 

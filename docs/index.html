@@ -347,7 +347,7 @@
     <div class="feature">
       <div class="feature-icon">🖥️</div>
       <h3>HA Mouse Card</h3>
-      <p>Custom Lovelace card with a touchpad, 3 mouse buttons, and scroll controls. Drag to move cursor, wheel to scroll.</p>
+      <p>Custom Lovelace card with a touchpad, 3 mouse buttons, and scroll controls. Drag to move cursor, wheel to scroll. Long-press a button to hold it for drag &amp; drop, tap again to release.</p>
       <img src="mouse_ha_card.png" alt="Home Assistant Mouse Card" style="width:100%;border-radius:8px;margin-top:8px;">
     </div>
     <div class="feature">
@@ -557,6 +557,16 @@
       <span class="yaml-key">then</span><span class="yaml-val">:</span>
         <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
             id(my_keyboard).send_mouse_click(btn);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_hold</span>          <span class="yaml-comment"># press &amp; hold for dragging — release with mouse_release</span>
+      <span class="yaml-key">variables</span><span class="yaml-val">:</span>
+        <span class="yaml-key">btn</span><span class="yaml-val">:</span> <span class="yaml-str">int</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_click_start(btn);</span>
+    <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_release</span>
+      <span class="yaml-key">then</span><span class="yaml-val">:</span>
+        <span class="yaml-val">- </span><span class="yaml-key">lambda</span><span class="yaml-val">:</span> <span class="yaml-str">|-
+            id(my_keyboard).send_mouse_click_release();</span>
     <span class="yaml-val">- </span><span class="yaml-key">service</span><span class="yaml-val">:</span> <span class="yaml-str">mouse_abs</span>          <span class="yaml-comment"># move cursor to exact position, % of screen</span>
       <span class="yaml-key">variables</span><span class="yaml-val">:</span>
         <span class="yaml-key">x</span><span class="yaml-val">:</span> <span class="yaml-str">float</span>
