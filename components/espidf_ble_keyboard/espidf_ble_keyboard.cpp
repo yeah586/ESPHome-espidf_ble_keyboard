@@ -1505,7 +1505,13 @@ void EspidfBleKeyboard::send_volume_up()         { send_consumer(0x00E9); }
 void EspidfBleKeyboard::send_volume_down()       { send_consumer(0x00EA); }
 void EspidfBleKeyboard::send_mute()              { send_consumer(0x00E2); }
 
-void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
+void EspidfBleKeyboard::send_mouse_report_(uint8_t buttons, int8_t x, int8_t y, int8_t wheel) {
+    uint8_t report[4] = {buttons, static_cast<uint8_t>(x), static_cast<uint8_t>(y), static_cast<uint8_t>(wheel)};
+    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, sizeof(report), report, false);
+    esp_ble_gatts_set_attr_value(s_mouse_report_handle, sizeof(report), report);
+}
+
+void EspidfBleKeyboard::send_mouse_click_start(uint8_t buttons) {
     if (!is_connected_) return;
     uint32_t now = millis();
     if (buttons == last_mouse_click_ && (now - last_mouse_click_ms_) < 30) {
@@ -1514,31 +1520,37 @@ void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
     }
     last_mouse_click_ = buttons;
     last_mouse_click_ms_ = now;
-    uint8_t report[4] = {buttons, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    held_mouse_buttons_ = buttons;
+    send_mouse_report_(buttons, 0, 0, 0);
+    ESP_LOGI(TAG, "Mouse click start sent: buttons=0x%02X", buttons);
+}
+
+void EspidfBleKeyboard::send_mouse_click_release() {
+    if (!is_connected_) return;
+    held_mouse_buttons_ = 0;
+    send_mouse_report_(0, 0, 0, 0);
+    ESP_LOGI(TAG, "Mouse click release sent");
+}
+
+void EspidfBleKeyboard::send_mouse_click(uint8_t buttons) {
+    send_mouse_click_start(buttons);
     vTaskDelay(pdMS_TO_TICKS(50));
-    uint8_t release[4] = {0, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
-    ESP_LOGI(TAG, "Mouse click sent: buttons=0x%02X", buttons);
+    send_mouse_click_release();
 }
 
 void EspidfBleKeyboard::send_mouse_move(int8_t x, int8_t y) {
     if (!is_connected_) return;
-    uint8_t report[4] = {0, static_cast<uint8_t>(x), static_cast<uint8_t>(y), 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    send_mouse_report_(held_mouse_buttons_, x, y, 0);
     vTaskDelay(pdMS_TO_TICKS(20));
-    uint8_t release[4] = {0, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    send_mouse_report_(held_mouse_buttons_, 0, 0, 0);
     ESP_LOGD(TAG, "Mouse move sent: x=%d y=%d", x, y);
 }
 
 void EspidfBleKeyboard::send_mouse_scroll(int8_t wheel) {
     if (!is_connected_) return;
-    uint8_t report[4] = {0, 0, 0, static_cast<uint8_t>(wheel)};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, report, false);
+    send_mouse_report_(held_mouse_buttons_, 0, 0, wheel);
     vTaskDelay(pdMS_TO_TICKS(20));
-    uint8_t release[4] = {0, 0, 0, 0};
-    esp_ble_gatts_send_indicate(s_gatts_if, conn_id_, s_mouse_report_handle, 4, release, false);
+    send_mouse_report_(held_mouse_buttons_, 0, 0, 0);
     ESP_LOGD(TAG, "Mouse scroll sent: wheel=%d", wheel);
 }
 
