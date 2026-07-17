@@ -26,6 +26,8 @@ This is a custom ESPHome component that transforms an ESP32 into a Bluetooth Low
 
 Add the following to your ESPHome YAML configuration:
 
+> **Versioning:** tagged releases are listed on the [Releases page](https://github.com/markusg1234/ESPHome-espidf_ble_keyboard/releases). `ref: main` always tracks the latest code (re-fetched per ESPHome's `refresh:` interval, default 1 day). Pin a tag like `ref: v1.0.0` to stay on a fixed release and upgrade only when you change the ref.
+
 ```yaml
 substitutions:
   device_name: bluetooth-keyboard
@@ -77,7 +79,7 @@ external_components:
   - source:
       type: git
       url: https://github.com/markusg1234/ESPHome-espidf_ble_keyboard
-      ref: main
+      ref: main            # or pin a release tag, e.g. v1.0.0
       path: components
     components: [ espidf_ble_keyboard ]
 
@@ -972,7 +974,7 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Full QWERTY keyboard** — letters, numbers, symbols, F-keys, modifiers, arrows
 - **Mouse touchpad** — 16:9 aspect ratio, drag to move cursor, tap for left click (5px dead zone prevents accidental clicks)
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground (up to 4x)
-- **Mouse buttons** — Left, Middle, Right click
+- **Mouse buttons** — Left, Middle, Right click; long-press a button to hold it for dragging (drag the touchpad or run `mouse_goto` while held), tap the held button to release
 - **Scroll controls** — buttons + mouse wheel on the touchpad
 - **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
@@ -994,6 +996,8 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/key` | POST | `modifier` (int), `keycode` (int) | Send key combo |
 | `/api/ble_keyboard/mouse_move` | POST | `x` (int), `y` (int) | Move cursor |
 | `/api/ble_keyboard/mouse_click` | POST | `btn` (int) | Click button |
+| `/api/ble_keyboard/mouse_hold` | POST | `btn` (int, default 1) | Press and hold button(s) — release with `mouse_release` |
+| `/api/ble_keyboard/mouse_release` | POST | — | Release all held mouse buttons |
 | `/api/ble_keyboard/mouse_scroll` | POST | `amount` (int) | Scroll wheel |
 | `/api/ble_keyboard/mouse_abs` | POST | `x`, `y` (percent; `unit=px` for pixels; `monitor=<idx>`; optional `btn`) | Move cursor to an exact position (absolute) |
 | `/api/ble_keyboard/press` | POST | `action=mouse_goto:<x>:<y>` | Cross-monitor exact move (any action string) |

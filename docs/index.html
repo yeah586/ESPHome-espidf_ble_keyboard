@@ -336,7 +336,7 @@
     <div class="feature">
       <div class="feature-icon">🖱️</div>
       <h3>Mouse Control</h3>
-      <p>Left, right and middle click, relative movement, and scroll wheel via HID mouse reports — plus absolute positioning (and <code>mouse_goto</code> for an exact pixel on <em>any</em> monitor). A web Position Finder calibrates and saves it per host. Drive from buttons or automations.</p>
+      <p>Left, right and middle click — plus click-and-hold for drag &amp; drop — relative movement, and scroll wheel via HID mouse reports, and absolute positioning (with <code>mouse_goto</code> for an exact pixel on <em>any</em> monitor). A web Position Finder calibrates and saves it per host. Drive from buttons or automations.</p>
     </div>
     <div class="feature">
       <div class="feature-icon">⌨️</div>
@@ -386,7 +386,7 @@
   <span class="yaml-val">- </span><span class="yaml-key">source</span><span class="yaml-val">:</span>
       <span class="yaml-key">type</span><span class="yaml-val">:</span> <span class="yaml-str">git</span>
       <span class="yaml-key">url</span><span class="yaml-val">:</span> <span class="yaml-str">https://github.com/markusg1234/ESPHome-espidf_ble_keyboard</span>
-      <span class="yaml-key">ref</span><span class="yaml-val">:</span> <span class="yaml-str">main</span>
+      <span class="yaml-key">ref</span><span class="yaml-val">:</span> <span class="yaml-str">main</span>  <span class="yaml-comment"># or pin a release tag, e.g. v1.0.0</span>
     <span class="yaml-key">components</span><span class="yaml-val">: [</span> <span class="yaml-str">espidf_ble_keyboard</span> <span class="yaml-val">]</span>
 
 <span class="yaml-key">espidf_ble_keyboard</span><span class="yaml-val">:</span>
@@ -476,6 +476,8 @@
       <tr><td><code>"left_click"</code></td><td class="desc">Mouse left click.</td></tr>
       <tr><td><code>"right_click"</code></td><td class="desc">Mouse right click.</td></tr>
       <tr><td><code>"middle_click"</code></td><td class="desc">Mouse middle click.</td></tr>
+      <tr><td><code>"left_click_hold"</code></td><td class="desc">Press <strong>and hold</strong> the left button until <code>mouse_release</code> — moving, scrolling or <code>mouse_goto</code> while held performs a drag. Also <code>right_click_hold</code> / <code>middle_click_hold</code>, or <code>mouse_hold:0x01</code> with a button mask.</td></tr>
+      <tr><td><code>"mouse_release"</code></td><td class="desc">Release all held mouse buttons. A normal click also releases them.</td></tr>
       <tr><td><code>"mouse_move:50:0"</code></td><td class="desc">Move mouse cursor — relative X:Y pixels (-127 to 127).</td></tr>
       <tr><td><code>"mouse_scroll:3"</code></td><td class="desc">Scroll mouse wheel — positive = up, negative = down (-127 to 127).</td></tr>
       <tr><td><code>type: mouse_click</code></td><td class="desc">Dict format — <code>type: mouse_click</code>, <code>buttons: 0x01</code>. 0x01=left, 0x02=right, 0x04=middle.</td></tr>
