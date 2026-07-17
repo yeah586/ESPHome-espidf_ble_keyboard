@@ -278,6 +278,7 @@ binary_sensor:
 * **passkey** (Optional, int): A 6-digit static PIN (000000–999999). If set, the device uses static passkey pairing (legacy MITM bond) and requires this PIN during initial pairing.
 * **passkey_mode** (Optional, string): Passkey security mode. `legacy` (default) uses legacy MITM bonding — tested and recommended for Windows. `secure_connections` uses LE Secure Connections MITM bonding — required for iOS passkey pairing (legacy mode does not work on iOS). Android does not support passkey pairing with BLE HID keyboards.
 * **web_control** (Optional, bool): Enable a built-in web control page with keyboard and mouse UI at `http://<device-ip>/ble_keyboard`. Requires the `web_server` component. Defaults to `false`.
+* **api_services** (Optional, bool): Auto-register all documented Home Assistant services (`run_action`, `run_macro`, `send_string`, `send_key`, `send_consumer`, `mouse_move`, `mouse_scroll`, `mouse_click`, `mouse_hold`, `mouse_release`, `mouse_abs`, `switch_host`, `forget_host`) directly from the component — no `api: services:` yaml needed, and the HA cards work out of the box. Requires the `api:` component. Defaults to `false`. **Don't combine with the manual `api: services:` snippets below** — you'd register the same service names twice; delete the manual copies when enabling this. See [Home Assistant services](#home-assistant-services).
 * **host_slots** (Optional, int): Number of host slots for multi-host switching (1–10). Each slot can store a bonded host. Switch between hosts using buttons, HA services, or the web control page. Defaults to `4`.
 * **mouse_sensitivity** (Optional, float): Web mouse base movement multiplier. Defaults to `1.0`. Range: 0.1–10.0.
 * **mouse_acceleration** (Optional, float): Web mouse speed-based acceleration factor. Defaults to `0.15`. Range: 0.0–2.0.
@@ -555,6 +556,46 @@ Both formats are equivalent — the dict format is converted to the string forma
 
 ---
 
+## Home Assistant Services
+
+Set `api_services: true` and the component registers every documented Home Assistant service by itself — no `api: services:` yaml to paste, and all three HA cards (mouse, keyboard, media remote) work out of the box:
+
+```yaml
+api:
+  encryption:
+    key: !secret api_key
+
+espidf_ble_keyboard:
+  id: my_keyboard
+  api_services: true
+```
+
+Services appear in HA under **Developer Tools → Actions** as `esphome.<device_name>_<service>`:
+
+| Service | Variables | Description |
+|---------|-----------|-------------|
+| `run_action` | `action: string` | Run any [action string](#usage-example) — single or multi-step with `\|`. Reaches everything below plus every named action. |
+| `run_macro` | `index: int` | Run a stored web macro by its index ([0], [1], … in the web UI). |
+| `send_string` | `keys: string` | Type text (used by the keyboard and remote cards). |
+| `send_key` | `modifier: int`, `keycode: int` | Send a key combination (HID modifier + keycode). |
+| `send_consumer` | `code: int` | Send a HID consumer control code. |
+| `mouse_move` | `x: int`, `y: int` | Relative cursor move (−127…127). |
+| `mouse_scroll` | `amount: int` | Scroll wheel (−127…127). |
+| `mouse_click` | `btn: int` | Click with button mask (1 = left, 2 = right, 4 = middle). |
+| `mouse_hold` | `btn: int` | Press and hold for dragging — release with `mouse_release`. |
+| `mouse_release` | — | Release all held mouse buttons. |
+| `mouse_abs` | `x: float`, `y: float` | Move cursor to an exact position, percent of screen (0–100). |
+| `switch_host` | `slot: int` | Switch to host slot N (0–9). |
+| `forget_host` | `slot: int` | Remove the bond for host slot N (0–9). |
+
+Requirements and notes:
+
+* Requires the `api:` component (config validation fails with a clear error without it). The component automatically enables `api: custom_services: true` for you (needed by ESPHome 2025.11+ for dynamically registered services).
+* **Don't combine with manual `api: services:` definitions of the same names** — if you previously pasted the per-card snippets below, delete them when enabling `api_services: true`, or the service names collide.
+* The manual snippets in the card sections below remain fully supported as the "custom" path — use them if you want different service names, extra validation, or only a subset.
+
+---
+
 ## Multi-Host Switching
 
 The keyboard supports up to 10 bonded hosts and can switch between them on the fly — like commercial keyboards with a host-switch button. Each host slot stores the bonded device address in NVS (persistent across reboots).
@@ -635,7 +676,7 @@ String action format is also supported: `"switch_host:0"`, `"forget_host:2"`.
 
 ### Host Switching from Home Assistant
 
-Add an ESPHome service to trigger host switching from HA automations:
+Easiest: set `api_services: true` on the component — it auto-registers `switch_host` and `forget_host` (see [Home Assistant services](#home-assistant-services)). To define them manually instead:
 
 ```yaml
 api:
@@ -675,7 +716,7 @@ A custom Lovelace card is included that provides a touchpad, 3 mouse buttons, an
 
 ### 1. Add ESPHome services
 
-Add the following to your ESPHome device YAML (alongside the existing `api:` section):
+Easiest: set `api_services: true` on the component — it auto-registers all the services this card needs (see [Home Assistant services](#home-assistant-services)) and you can skip to step 2. To define them manually instead:
 
 ```yaml
 api:
@@ -1034,7 +1075,7 @@ A custom Lovelace card that provides a full on-screen QWERTY keyboard. It requir
 
 ### 1. Add ESPHome services
 
-Add the following services to your ESPHome device YAML (alongside any existing mouse services):
+Easiest: set `api_services: true` on the component — it auto-registers all the services this card needs (see [Home Assistant services](#home-assistant-services)) and you can skip to step 2. To define them manually instead (alongside any existing mouse services):
 
 ```yaml
 api:
@@ -1129,7 +1170,7 @@ A custom Lovelace card that provides a modern media remote control with power, n
 
 ### 1. Add ESPHome services
 
-Add the following services to your ESPHome device YAML (alongside any existing keyboard/mouse services):
+Easiest: set `api_services: true` on the component — it auto-registers all the services this card needs (see [Home Assistant services](#home-assistant-services)) and you can skip to step 2. To define them manually instead (alongside any existing keyboard/mouse services):
 
 ```yaml
 api:
@@ -1263,7 +1304,7 @@ button:
 
 ### Triggering Macros from Home Assistant
 
-Web macros are created at runtime (stored in NVS), so they don't appear as individual Home Assistant entities — ESPHome entities are fixed at compile time. To reach them from HA, expose API services that call `execute_macro(index)` or `execute_action("...")`:
+Web macros are created at runtime (stored in NVS), so they don't appear as individual Home Assistant entities — ESPHome entities are fixed at compile time. To reach them from HA, set `api_services: true` on the component — it auto-registers `run_macro` and `run_action` (see [Home Assistant services](#home-assistant-services)). Or define them manually:
 
 ```yaml
 api:
@@ -1283,7 +1324,10 @@ api:
       then:
         - lambda: |-
             id(my_keyboard).execute_action(action);
+        - delay: 0ms   # keeps the string arg linkable across ESPHome upgrades, see note
 ```
+
+> **Note:** the no-op `- delay: 0ms` works around an ESPHome 2026.5+ quirk: a fully synchronous yaml service with a `string` variable is code-generated as a zero-copy `StringRef`, and after an ESPHome upgrade a stale cached object file can miss that symbol, failing the link with `undefined reference to get_execute_arg_value<StringRef>`. The delay flips codegen back to the long-supported `std::string` path. Services auto-registered with `api_services: true` are pure C++ and don't need this.
 
 Then call them from a HA automation, script, or **Developer Tools → Actions**:
 

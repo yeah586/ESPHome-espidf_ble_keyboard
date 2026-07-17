@@ -1121,6 +1121,25 @@ void EspidfBleKeyboard::update_rssi(int8_t rssi) {
 }
 
 // ── Component Setup ──────────────────────────────────────────────────────────
+#if defined(USE_API) && defined(USE_API_CUSTOM_SERVICES)
+void EspidfBleKeyboard::register_api_services_() {
+    register_service(&EspidfBleKeyboard::on_api_run_action_, "run_action", {"action"});
+    register_service(&EspidfBleKeyboard::on_api_run_macro_, "run_macro", {"index"});
+    register_service(&EspidfBleKeyboard::on_api_send_string_, "send_string", {"keys"});
+    register_service(&EspidfBleKeyboard::on_api_send_key_, "send_key", {"modifier", "keycode"});
+    register_service(&EspidfBleKeyboard::on_api_send_consumer_, "send_consumer", {"code"});
+    register_service(&EspidfBleKeyboard::on_api_mouse_move_, "mouse_move", {"x", "y"});
+    register_service(&EspidfBleKeyboard::on_api_mouse_scroll_, "mouse_scroll", {"amount"});
+    register_service(&EspidfBleKeyboard::on_api_mouse_click_, "mouse_click", {"btn"});
+    register_service(&EspidfBleKeyboard::on_api_mouse_hold_, "mouse_hold", {"btn"});
+    register_service(&EspidfBleKeyboard::on_api_mouse_release_, "mouse_release");
+    register_service(&EspidfBleKeyboard::on_api_mouse_abs_, "mouse_abs", {"x", "y"});
+    register_service(&EspidfBleKeyboard::on_api_switch_host_, "switch_host", {"slot"});
+    register_service(&EspidfBleKeyboard::on_api_forget_host_, "forget_host", {"slot"});
+    ESP_LOGI(TAG, "Registered Home Assistant API services (esphome.<node>_run_action, _mouse_move, ...)");
+}
+#endif
+
 void EspidfBleKeyboard::setup() {
     s_instance = this;
     type_mutex_ = xSemaphoreCreateMutex();
@@ -1177,6 +1196,13 @@ void EspidfBleKeyboard::setup() {
 
     set_connected(false, 0);
     set_paired(false);
+
+#if defined(USE_API) && defined(USE_API_CUSTOM_SERVICES)
+    if (api_services_enabled_) register_api_services_();
+#else
+    if (api_services_enabled_)
+        ESP_LOGW(TAG, "api_services: true but the 'api:' component (with custom_services support) is missing — no HA services registered");
+#endif
 
 #ifdef USE_BLE_KEYBOARD_WEB_CONTROL
     if (web_control_enabled_ && web_server_base_ != nullptr) {

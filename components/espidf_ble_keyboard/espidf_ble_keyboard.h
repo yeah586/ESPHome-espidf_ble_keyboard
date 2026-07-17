@@ -1,8 +1,12 @@
 #pragma once
+#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/components/button/button.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
+#ifdef USE_API
+#include "esphome/components/api/custom_api_device.h"
+#endif
 #ifdef USE_TEXT
 #include "esphome/components/text/text.h"
 #endif
@@ -58,7 +62,11 @@ const KeyboardLayout *default_layout();
 size_t layout_count();
 const KeyboardLayout *layout_at(size_t i);
 
-class EspidfBleKeyboard : public Component {
+class EspidfBleKeyboard : public Component
+#ifdef USE_API
+    , public api::CustomAPIDevice
+#endif
+{
  public:
   void setup() override;
   void loop() override;
@@ -107,6 +115,7 @@ class EspidfBleKeyboard : public Component {
   uint32_t key_delay_ms() const { return key_delay_ms_; }
 
   void set_web_control(bool enabled) { web_control_enabled_ = enabled; }
+  void set_api_services(bool enabled) { api_services_enabled_ = enabled; }
   void set_host_slots(uint8_t slots) { host_slots_ = slots > MAX_HOST_SLOTS ? MAX_HOST_SLOTS : slots; }
 
   // Keyboard layout
@@ -296,6 +305,33 @@ class EspidfBleKeyboard : public Component {
   std::atomic<int8_t> pending_rssi_value_{0};
 
  protected:
+#if defined(USE_API) && defined(USE_API_CUSTOM_SERVICES)
+  // Auto-registered HA services (api_services: true). Names and arg names must
+  // stay in sync with the HA cards (docs/*-card.js) and the README yaml snippets.
+  // register_service() static-asserts without USE_API_CUSTOM_SERVICES (the python
+  // side force-enables `api: custom_services: true` whenever api_services is on).
+  void register_api_services_();
+  // int32_t (not int) — the api component only specializes service args for
+  // int32_t, and on xtensa int32_t is a distinct type from int (link error).
+  void on_api_run_action_(std::string action) { execute_action(action); }
+  void on_api_run_macro_(int32_t index) { execute_macro((uint8_t) index); }
+  void on_api_send_string_(std::string keys) { send_string(keys); }
+  void on_api_send_key_(int32_t modifier, int32_t keycode) { send_key_combo((uint8_t) modifier, (uint8_t) keycode); }
+  void on_api_send_consumer_(int32_t code) { send_consumer((uint16_t) code); }
+  void on_api_mouse_move_(int32_t x, int32_t y) { send_mouse_move((int8_t) x, (int8_t) y); }
+  void on_api_mouse_scroll_(int32_t amount) { send_mouse_scroll((int8_t) amount); }
+  void on_api_mouse_click_(int32_t btn) { send_mouse_click((uint8_t) btn); }
+  void on_api_mouse_hold_(int32_t btn) { send_mouse_click_start((uint8_t) btn); }
+  void on_api_mouse_release_() { send_mouse_click_release(); }
+  void on_api_mouse_abs_(float x, float y) {  // percent of the mapped space (0..100)
+    x = x < 0 ? 0 : (x > 100 ? 100 : x);
+    y = y < 0 ? 0 : (y > 100 ? 100 : y);
+    send_mouse_move_abs((uint16_t)(x / 100.0f * 32767.0f), (uint16_t)(y / 100.0f * 32767.0f));
+  }
+  void on_api_switch_host_(int32_t slot) { switch_host((uint8_t) slot); }
+  void on_api_forget_host_(int32_t slot) { forget_host((uint8_t) slot); }
+#endif
+  bool api_services_enabled_{false};
   bool is_connected_{false};
   uint16_t conn_id_{0};
   bool is_paired_{false};

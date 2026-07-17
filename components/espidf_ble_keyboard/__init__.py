@@ -1,5 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
+import esphome.final_validate as fv
 from esphome.const import CONF_ID
 from esphome import automation
 
@@ -12,6 +13,7 @@ CONF_KEY_DELAY_MS = "key_delay_ms"
 CONF_PASSKEY = "passkey"
 CONF_PASSKEY_MODE = "passkey_mode"
 CONF_WEB_CONTROL = "web_control"
+CONF_API_SERVICES = "api_services"
 CONF_HOST_SLOTS = "host_slots"
 CONF_MOUSE_SENSITIVITY = "mouse_sensitivity"
 CONF_MOUSE_ACCEL = "mouse_acceleration"
@@ -87,6 +89,25 @@ HOST_SCHEMA = cv.Schema({
     cv.Optional(CONF_LAYOUT): cv.one_of(*SUPPORTED_LAYOUTS, lower=True),
 })
 
+def _api_services_final_validate(config):
+    """api_services needs the api component, and register_service() only compiles
+    (and user_services.cpp is only built) with `api: custom_services: true` on
+    ESPHome 2025.11+ — force-enable it so users don't have to know about it."""
+    if not config.get(CONF_API_SERVICES):
+        return config
+    full = fv.full_config.get()
+    if "api" not in full:
+        raise cv.Invalid(
+            "api_services: true requires the 'api:' component — add an 'api:' section to your config"
+        )
+    api_conf = full["api"]
+    if isinstance(api_conf, dict):
+        api_conf["custom_services"] = True
+    return config
+
+
+FINAL_VALIDATE_SCHEMA = _api_services_final_validate
+
 CONFIG_SCHEMA = cv.All(
     cv.Schema({
         cv.GenerateID(): cv.declare_id(EspidfBleKeyboard),
@@ -99,6 +120,10 @@ CONFIG_SCHEMA = cv.All(
             lower=True,
         ),
         cv.Optional(CONF_WEB_CONTROL, default=False): cv.boolean,
+        # Auto-register the documented HA services (run_action, mouse_move, ...)
+        # from C++ — requires the `api:` component. Off by default: configs that
+        # pasted the manual `api: services:` snippets would get duplicate names.
+        cv.Optional(CONF_API_SERVICES, default=False): cv.boolean,
         cv.Optional(CONF_MOUSE_SENSITIVITY, default=1.0): cv.float_range(min=0.1, max=10.0),
         cv.Optional(CONF_MOUSE_ACCEL, default=0.15): cv.float_range(min=0.0, max=2.0),
         cv.Optional(CONF_MOUSE_MAX_SPEED, default=4.0): cv.float_range(min=0.5, max=20.0),
@@ -169,6 +194,9 @@ async def to_code(config):
             text_entity = await cg.get_variable(text_id)
             cg.add(var.add_custom_text(text_entity))
             cg.add(var.register_button(f"Send {text_id.id}", f"send_custom_text:{i}"))
+
+    if config[CONF_API_SERVICES]:
+        cg.add(var.set_api_services(True))
 
     if config[CONF_WEB_CONTROL]:
         cg.add_define("USE_BLE_KEYBOARD_WEB_CONTROL")
