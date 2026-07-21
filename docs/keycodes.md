@@ -152,7 +152,7 @@ action: "consumer:0x0223"   # Browser Home
 |---|---|---|
 | Play / Pause | `0x00CD` | Toggle play/pause |
 | Stop | `0x00B7` | Stop playback |
-| Record | `0x00B2` | Start / stop recording |
+| Record | `0x00B2` | Start / stop recording. No Windows handler — see per-host action overrides in the [README](../README.md#per-host-action-overrides) |
 | Next Track | `0x00B5` | Skip to next track |
 | Previous Track | `0x00B6` | Go to previous track |
 | Mute | `0x00E2` | Toggle mute |

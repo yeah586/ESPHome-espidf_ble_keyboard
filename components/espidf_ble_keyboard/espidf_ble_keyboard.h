@@ -196,6 +196,22 @@ class EspidfBleKeyboard : public Component
   bool update_macro(uint8_t index, const std::string &name, const std::string &action);
   bool delete_macro(uint8_t index);
 
+  // Per-host action overrides: remap a named action for one host slot, so the
+  // same button does the right thing on whichever host is active. Motivating
+  // case: "record" sends HID Record (0x00B2), which Windows ignores entirely —
+  // a Windows slot can remap it to Game Bar's Win+Alt+R while a TV slot keeps
+  // the HID usage. YAML sets defaults; the web UI persists overrides to NVS.
+  // Resolution order: NVS override, then YAML override, then built-in.
+  static const uint8_t MAX_OVERRIDES = 8;  // per slot
+  void set_host_slot_override(uint8_t slot, const std::string &name, const std::string &action);
+  bool set_override(uint8_t slot, const std::string &name, const std::string &action);
+  bool clear_override(uint8_t slot, const std::string &name);
+  const std::vector<ButtonInfo> &get_yaml_overrides(uint8_t slot) const { return yaml_overrides_[slot]; }
+  const std::vector<ButtonInfo> &get_nvs_overrides(uint8_t slot) const { return nvs_overrides_[slot]; }
+  /// True if `name` is usable as an override name (no separator characters that
+  /// would corrupt the NVS blob, and within the length cap).
+  static bool valid_override_name(const std::string &name);
+
   /// Execute an action string (combo:, consumer:, named actions, or literal text).
   /// Used by buttons, macros, web API, and YAML automations.
   void execute_action(const std::string &action);
@@ -369,6 +385,16 @@ class EspidfBleKeyboard : public Component
   std::vector<ButtonInfo> macros_;   // user-editable, NVS-persisted
   void load_macros_();
   void save_macros_();
+
+  // Per-host action overrides. NVS wins over YAML; empty = no override.
+  std::vector<ButtonInfo> yaml_overrides_[MAX_HOST_SLOTS];
+  std::vector<ButtonInfo> nvs_overrides_[MAX_HOST_SLOTS];
+  // Depth guard: overrides only apply at depth 0, so an override body naming
+  // itself runs the built-in action instead of recursing forever.
+  uint8_t override_depth_{0};
+  const std::string *find_override_(uint8_t slot, const std::string &name) const;
+  void load_overrides_();
+  void save_overrides_(uint8_t slot);
 
   // Multi-host state
   uint8_t host_slots_{MAX_HOST_SLOTS};

@@ -10,7 +10,9 @@
  *   2. Add the resource in HA:
  *        Settings -> Dashboards -> Resources -> Add Resource
  *        URL: /local/remote-card.js   Type: JavaScript Module
- *   3. Add ESPHome services to your device YAML (see README).
+ *   3. Add ESPHome services to your device YAML (see README). This card uses
+ *      send_key, send_string, send_consumer and run_action — the simplest way
+ *      to get all four is `api_services: true` on the component.
  *   4. Add the card to a dashboard via the UI or YAML.
  *
  * Card YAML:
@@ -390,7 +392,9 @@ class BleRemoteCard extends HTMLElement {
       next:   () => this._sendConsumer(0x00B5),     // Next
       rew:    () => this._sendConsumer(0x00B4),     // Rewind
       fwd:    () => this._sendConsumer(0x00B3),     // Fast Forward
-      rec:    () => this._sendConsumer(0x00B2),     // Record
+      // Named action, not a raw consumer code, so per-host `actions:` overrides
+      // apply — e.g. a Windows host can remap record to Game Bar's Win+Alt+R.
+      rec:    () => this._runAction('record'),
 
       // Color buttons (F1-F4, common for media apps)
       c_red:    () => this._sendKey(0, 0x3A),       // F1
@@ -440,6 +444,11 @@ class BleRemoteCard extends HTMLElement {
   _sendConsumer(code) {
     if (!this._hass) return;
     this._hass.callService('esphome', `${this._config.device}_send_consumer`, { code });
+  }
+
+  _runAction(action) {
+    if (!this._hass) return;
+    this._hass.callService('esphome', `${this._config.device}_run_action`, { action });
   }
 
   getCardSize() {

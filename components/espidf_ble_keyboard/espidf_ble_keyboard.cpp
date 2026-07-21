@@ -926,6 +926,141 @@ void EspidfBleKeyboard::save_host_slots_() {
     nvs_close(handle);
 }
 
+// ── Per-host action overrides (YAML defaults + NVS, web-editable) ─
+//
+// Stored one NVS entry per slot (key "ovr<slot>"), value the slot's overrides
+// serialised as "name=action\n" records. Names reject '=', '|', whitespace and
+// newlines so a payload can never break the encoding it is stored in.
+
+bool EspidfBleKeyboard::valid_override_name(const std::string &name) {
+    if (name.empty() || name.size() > 31) return false;
+    for (char c : name) {
+        if (c == '=' || c == '|' || c == '\n' || c == '\r' || c == ' ' || c == '\t')
+            return false;
+    }
+    return true;
+}
+
+void EspidfBleKeyboard::set_host_slot_override(uint8_t slot, const std::string &name,
+                                               const std::string &action) {
+    if (slot >= MAX_HOST_SLOTS || !valid_override_name(name) || action.empty()) return;
+    for (auto &o : yaml_overrides_[slot]) {
+        if (o.name == name) { o.action = action; return; }
+    }
+    if (yaml_overrides_[slot].size() < MAX_OVERRIDES)
+        yaml_overrides_[slot].push_back({name, action});
+}
+
+const std::string *EspidfBleKeyboard::find_override_(uint8_t slot, const std::string &name) const {
+    if (slot >= MAX_HOST_SLOTS) return nullptr;
+    for (const auto &o : nvs_overrides_[slot])
+        if (o.name == name) return &o.action;
+    for (const auto &o : yaml_overrides_[slot])
+        if (o.name == name) return &o.action;
+    return nullptr;
+}
+
+bool EspidfBleKeyboard::set_override(uint8_t slot, const std::string &name,
+                                     const std::string &action) {
+    if (slot >= MAX_HOST_SLOTS || !valid_override_name(name)) return false;
+    if (action.empty() || action.size() > 255) return false;
+    if (action.find('\n') != std::string::npos || action.find('\r') != std::string::npos)
+        return false;
+
+    for (auto &o : nvs_overrides_[slot]) {
+        if (o.name == name) {
+            o.action = action;
+            save_overrides_(slot);
+            ESP_LOGI(TAG, "Override slot %u: %s -> %s", (unsigned) slot, name.c_str(), action.c_str());
+            return true;
+        }
+    }
+    if (nvs_overrides_[slot].size() >= MAX_OVERRIDES) return false;
+    nvs_overrides_[slot].push_back({name, action});
+    save_overrides_(slot);
+    ESP_LOGI(TAG, "Override slot %u: %s -> %s", (unsigned) slot, name.c_str(), action.c_str());
+    return true;
+}
+
+bool EspidfBleKeyboard::clear_override(uint8_t slot, const std::string &name) {
+    if (slot >= MAX_HOST_SLOTS) return false;
+    for (size_t i = 0; i < nvs_overrides_[slot].size(); i++) {
+        if (nvs_overrides_[slot][i].name == name) {
+            nvs_overrides_[slot].erase(nvs_overrides_[slot].begin() + i);
+            save_overrides_(slot);
+            ESP_LOGI(TAG, "Cleared override slot %u: %s", (unsigned) slot, name.c_str());
+            return true;
+        }
+    }
+    return false;
+}
+
+void EspidfBleKeyboard::load_overrides_() {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+
+    for (uint8_t slot = 0; slot < MAX_HOST_SLOTS; slot++) {
+        char key[12];
+        snprintf(key, sizeof(key), "ovr%u", slot);
+
+        size_t len = 0;
+        if (nvs_get_str(handle, key, nullptr, &len) != ESP_OK || len == 0) continue;
+        // Cap: MAX_OVERRIDES records of "name=action\n" (31 + 1 + 255 + 1)
+        if (len > (size_t) (MAX_OVERRIDES * 288 + 1)) {
+            ESP_LOGW(TAG, "Override blob for slot %u is oversized (%u bytes) — ignoring",
+                     (unsigned) slot, (unsigned) len);
+            continue;
+        }
+
+        std::vector<char> buf(len);
+        if (nvs_get_str(handle, key, buf.data(), &len) != ESP_OK) continue;
+
+        std::string blob(buf.data());
+        size_t start = 0;
+        while (start < blob.size() && nvs_overrides_[slot].size() < MAX_OVERRIDES) {
+            size_t end = blob.find('\n', start);
+            if (end == std::string::npos) end = blob.size();
+            std::string line = blob.substr(start, end - start);
+            start = end + 1;
+
+            size_t eq = line.find('=');
+            if (eq == std::string::npos) continue;
+            std::string name = line.substr(0, eq);
+            std::string action = line.substr(eq + 1);
+            if (!valid_override_name(name) || action.empty()) continue;
+
+            nvs_overrides_[slot].push_back({name, action});
+            ESP_LOGI(TAG, "Loaded override slot %u: %s -> %s", (unsigned) slot, name.c_str(),
+                     action.c_str());
+        }
+    }
+    nvs_close(handle);
+}
+
+void EspidfBleKeyboard::save_overrides_(uint8_t slot) {
+    if (slot >= MAX_HOST_SLOTS) return;
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+
+    char key[12];
+    snprintf(key, sizeof(key), "ovr%u", slot);
+
+    if (nvs_overrides_[slot].empty()) {
+        nvs_erase_key(handle, key);
+    } else {
+        std::string blob;
+        for (const auto &o : nvs_overrides_[slot]) {
+            blob += o.name;
+            blob += '=';
+            blob += o.action;
+            blob += '\n';
+        }
+        nvs_set_str(handle, key, blob.c_str());
+    }
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
 // ── User-editable macros (NVS-persisted) ──────────────────────────
 
 void EspidfBleKeyboard::load_macros_() {
@@ -1164,6 +1299,7 @@ void EspidfBleKeyboard::setup() {
     yaml_goto_scale_y_ = goto_scale_y_;
     load_goto_scale_for_host(active_slot_);  // per-host calibration override (if saved)
     load_macros_();
+    load_overrides_();  // all slots, so the web UI can edit an inactive slot
     // Apply YAML default if no setter ran (defensive), then let NVS override.
     if (active_layout_ == nullptr) active_layout_ = default_layout();
     load_layout_();
@@ -1940,6 +2076,27 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
         if (sscanf(action.c_str(), "forget_host:%i", &slot) == 1)
             forget_host((uint8_t) slot);
         return;
+    }
+
+    // Per-host override: a named action can be remapped for the active host slot
+    // (e.g. "record" -> Game Bar's Win+Alt+R on a Windows host, while a TV host
+    // keeps the HID Record usage). Only bare names reach here — every parametric
+    // form above has already returned — so only named actions are remappable.
+    // Applied at depth 0 only, so an override body that names itself or chains
+    // back to itself runs the built-in action instead of recursing.
+    if (override_depth_ == 0) {
+        const std::string *ovr = find_override_(active_slot_, action);
+        if (ovr != nullptr) {
+            // Copy before executing: a web edit runs on the HTTP task and could
+            // reallocate the vector, and an override body can block for a long
+            // time (delay:/repeat: chains). Same unguarded read/write window as
+            // macros — the copy just closes the widest part of it.
+            std::string body = *ovr;
+            override_depth_++;
+            execute_action(body);
+            override_depth_--;
+            return;
+        }
     }
 
     // Named actions

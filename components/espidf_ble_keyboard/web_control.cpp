@@ -93,6 +93,11 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .macro-edit-btn{margin-left:auto;padding:4px 11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--name);font-size:11px;cursor:pointer}
 .macro-edit-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
 .macros-card:not(.editing) .macro-act,.macros-card:not(.editing) .macro-form{display:none}
+.ovr-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.ovr-row:last-child{border-bottom:none}
+.ovr-name{font-weight:600;color:var(--name);flex-shrink:0}
+.ovr-act{color:var(--fg);font-family:ui-monospace,monospace;word-break:break-all;flex:1}
+.ovr-tag{font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--muted);flex-shrink:0}
 .host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;overflow:hidden}
 .host-btn{flex:1 0 60px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
@@ -146,6 +151,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="toggle-btn on" data-section="media-card">Remote</button>
 <button class="toggle-btn on" data-section="btns-card">Buttons</button>
 <button class="toggle-btn on" data-section="macros-card">Macros</button>
+<button class="toggle-btn on" data-section="hostact-card">Host Actions</button>
 </div>
 <div class="zoom-controls">
 <button class="zoom-btn" id="zout">-</button>
@@ -366,6 +372,20 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 </div>
 </div>
+
+<div class="card" id="hostact-card">
+<h2><svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>Host Actions</h2>
+<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Remap a <strong>named</strong> action for one host, so the same button suits each machine &mdash; e.g. <code>record</code> &rarr; <code>combo:0x0C:0x15</code> (Game Bar) on a Windows host, while a TV host keeps HID Record. Saved per host; YAML rows come from your config and are restored when you delete the override on top.</div>
+<div class="macro-form" style="margin-top:0;margin-bottom:8px">
+<select id="ov-slot" style="flex:1 1 100%"></select>
+</div>
+<div id="ov-list"><span class="prog-empty">Loading...</span></div>
+<div class="macro-form">
+<input id="ov-name" placeholder="Action name (e.g. record)" maxlength="31">
+<input id="ov-act" placeholder="Replacement action" maxlength="255">
+<button id="ov-save">+ Set</button>
+</div>
+</div>
 </div>
 
 <script>
@@ -582,6 +602,80 @@ setInterval(pollStatus,3000);
   });
 
   loadButtons();
+})();
+
+// ── Host Actions (per-host action overrides) ──
+(function(){
+  const slotSel=document.getElementById('ov-slot');
+  const list=document.getElementById('ov-list');
+  const nameIn=document.getElementById('ov-name');
+  const actIn=document.getElementById('ov-act');
+  const saveBtn=document.getElementById('ov-save');
+  if(!slotSel)return;
+  let slot=null;  // null until the first load picks the active slot
+
+  function loadSlots(){
+    return fetch('/api/ble_keyboard/hosts').then(r=>r.json()).then(d=>{
+      if(slot===null)slot=d.active;
+      slotSel.innerHTML='';
+      d.slots.forEach(s=>{
+        const o=document.createElement('option');
+        o.value=s.slot;
+        o.textContent='Host '+s.slot+(s.name?' — '+s.name:'')+(s.slot===d.active?' (active)':'');
+        slotSel.appendChild(o);
+      });
+      slotSel.value=slot;
+    });
+  }
+
+  function load(){
+    fetch('/api/ble_keyboard/overrides?'+new URLSearchParams({slot:slot})).then(r=>r.json()).then(d=>{
+      list.innerHTML='';
+      if(!d.items.length){list.innerHTML='<span class="prog-empty">No overrides — this host uses the built-in actions</span>';return}
+      d.items.forEach(it=>{
+        const row=document.createElement('div');
+        row.className='ovr-row';
+        const n=document.createElement('span');
+        n.className='ovr-name';n.textContent=it.name;
+        const a=document.createElement('span');
+        a.className='ovr-act';a.textContent=it.action;
+        const tag=document.createElement('span');
+        tag.className='ovr-tag';
+        tag.textContent=it.src==='yaml'?'YAML':'SAVED';
+        tag.title=it.src==='yaml'?'From your YAML config — set one here to override it':'Saved on the device; delete to fall back to YAML';
+        row.appendChild(n);row.appendChild(a);row.appendChild(tag);
+        const eb=document.createElement('button');
+        eb.className='macro-act';eb.textContent='✎';eb.title='Edit';
+        eb.addEventListener('click',()=>{nameIn.value=it.name;actIn.value=it.action});
+        row.appendChild(eb);
+        if(it.src!=='yaml'){
+          const db=document.createElement('button');
+          db.className='macro-act del';db.textContent='✕';db.title='Delete (revert to YAML/built-in)';
+          db.addEventListener('click',()=>{
+            if(confirm('Delete override "'+it.name+'" on host '+slot+'?')){
+              fetch('/api/ble_keyboard/override_clear?'+new URLSearchParams({slot:slot,name:it.name}),{method:'POST'}).then(load);
+            }
+          });
+          row.appendChild(db);
+        }
+        list.appendChild(row);
+      });
+    }).catch(()=>{list.innerHTML='<span class="prog-empty">Error loading</span>'});
+  }
+
+  slotSel.addEventListener('change',()=>{slot=parseInt(slotSel.value);load()});
+
+  saveBtn.addEventListener('click',()=>{
+    const n=nameIn.value.trim(),a=actIn.value.trim();
+    if(!n||!a){alert('Action name and replacement are required');return}
+    fetch('/api/ble_keyboard/override_set?'+new URLSearchParams({slot:slot,name:n,action:a}),{method:'POST'}).then(r=>{
+      if(!r.ok)return r.text().then(t=>{alert(t)});
+      nameIn.value='';actIn.value='';
+      load();
+    });
+  });
+
+  loadSlots().then(load).catch(()=>{list.innerHTML='<span class="prog-empty">Error loading</span>'});
 })();
 
 // ── Keyboard ──
@@ -1193,6 +1287,23 @@ buildKeyboard();
 </script></body></html>)rawhtml";
 
 
+// JSON-escape a string (handles \n, \r, \t, \, ")
+static std::string json_escape(const std::string &s) {
+  std::string out;
+  out.reserve(s.size() + 4);
+  for (char c : s) {
+    switch (c) {
+      case '"':  out += "\\\""; break;
+      case '\\': out += "\\\\"; break;
+      case '\n': out += "\\n"; break;
+      case '\r': out += "\\r"; break;
+      case '\t': out += "\\t"; break;
+      default:   out += c; break;
+    }
+  }
+  return out;
+}
+
 // ── Internal handler class ─────────────────────────────────────────
 // Inherits from the platform-specific AsyncWebHandler via web_server_base
 
@@ -1266,22 +1377,6 @@ class BleKbWebHandler : public AsyncWebHandler {
     }
 
     if (path == "buttons") {
-      // JSON-escape a string (handles \n, \r, \t, \, ")
-      auto json_escape = [](const std::string &s) -> std::string {
-        std::string out;
-        out.reserve(s.size() + 4);
-        for (char c : s) {
-          switch (c) {
-            case '"':  out += "\\\""; break;
-            case '\\': out += "\\\\"; break;
-            case '\n': out += "\\n"; break;
-            case '\r': out += "\\r"; break;
-            case '\t': out += "\\t"; break;
-            default:   out += c; break;
-          }
-        }
-        return out;
-      };
       std::string json = "[";
       bool first = true;
       // YAML-defined buttons (read-only)
@@ -1388,10 +1483,47 @@ class BleKbWebHandler : public AsyncWebHandler {
         auto it = slot_names.find(i);
         if (it != slot_names.end()) {
           json += ",\"name\":\"";
-          json += it->second;
+          json += json_escape(it->second);  // button names are user-supplied
           json += "\"";
         }
         json += "}";
+      }
+      json += "]}";
+      send_response(200, "application/json", json.c_str());
+      return;
+    }
+
+    if (path == "overrides") {
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : kb_->active_host_slot();
+      if (slot < 0 || slot >= kb_->host_slots()) {
+        send_response(400, "text/plain", "Invalid slot");
+        return;
+      }
+      // NVS overrides first; a YAML entry of the same name is shadowed and omitted,
+      // so the list shows exactly what would run.
+      const auto &nvs = kb_->get_nvs_overrides((uint8_t) slot);
+      const auto &yaml = kb_->get_yaml_overrides((uint8_t) slot);
+      std::string json = "{\"slot\":";
+      json += std::to_string(slot);
+      json += ",\"active\":";
+      json += std::to_string(kb_->active_host_slot());
+      json += ",\"items\":[";
+      bool first = true;
+      for (const auto &o : nvs) {
+        if (!first) json += ",";
+        first = false;
+        json += "{\"name\":\"" + json_escape(o.name) + "\",\"action\":\"" + json_escape(o.action) +
+                "\",\"src\":\"nvs\"}";
+      }
+      for (const auto &o : yaml) {
+        bool shadowed = false;
+        for (const auto &n : nvs)
+          if (n.name == o.name) { shadowed = true; break; }
+        if (shadowed) continue;
+        if (!first) json += ",";
+        first = false;
+        json += "{\"name\":\"" + json_escape(o.name) + "\",\"action\":\"" + json_escape(o.action) +
+                "\",\"src\":\"yaml\"}";
       }
       json += "]}";
       send_response(200, "application/json", json.c_str());
@@ -1543,6 +1675,35 @@ class BleKbWebHandler : public AsyncWebHandler {
         } else {
           send_response(200, "text/plain", "OK");
         }
+      }
+
+    } else if (path == "override_set") {
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : -1;
+      std::string name = request->hasArg("name") ? request->arg("name").c_str() : "";
+      std::string action = request->hasArg("action") ? request->arg("action").c_str() : "";
+      if (slot < 0 || slot >= kb_->host_slots()) {
+        send_response(400, "text/plain", "Invalid slot");
+      } else if (!EspidfBleKeyboard::valid_override_name(name)) {
+        send_response(400, "text/plain",
+                      "Invalid action name: max 31 chars, no '=', '|' or spaces. Only named "
+                      "actions can be overridden (e.g. record, play_pause, stop).");
+      } else if (action.empty() || action.size() > 255) {
+        send_response(400, "text/plain", "Action required, max 255 chars");
+      } else if (!kb_->set_override((uint8_t) slot, name, action)) {
+        send_response(400, "text/plain", "Max overrides reached for this host (8)");
+      } else {
+        send_response(200, "text/plain", "OK");
+      }
+
+    } else if (path == "override_clear") {
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : -1;
+      std::string name = request->hasArg("name") ? request->arg("name").c_str() : "";
+      if (slot < 0 || slot >= kb_->host_slots() || name.empty()) {
+        send_response(400, "text/plain", "slot and name required");
+      } else if (!kb_->clear_override((uint8_t) slot, name)) {
+        send_response(404, "text/plain", "No saved override with that name");
+      } else {
+        send_response(200, "text/plain", "OK");
       }
 
     } else if (path == "macro_delete") {

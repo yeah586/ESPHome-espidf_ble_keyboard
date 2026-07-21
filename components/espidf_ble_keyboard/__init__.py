@@ -36,6 +36,9 @@ CONF_SLOT = "slot"
 CONF_CUSTOM_TEXT_ID = "custom_text_id"
 CONF_KEYBOARD_LAYOUT = "keyboard_layout"
 CONF_LAYOUT = "layout"
+CONF_ACTIONS = "actions"
+# Keep in sync with EspidfBleKeyboard::MAX_OVERRIDES
+MAX_OVERRIDES_PER_HOST = 8
 PASSKEY_MODE_LEGACY = "legacy"
 PASSKEY_MODE_SECURE_CONNECTIONS = "secure_connections"
 
@@ -78,6 +81,29 @@ MONITOR_SCHEMA = cv.Schema({
     cv.Optional(CONF_PRIMARY, default=False): cv.boolean,
 })
 
+def _validate_override_names(value):
+    """Validate the keys of a per-host `actions:` mapping.
+
+    Checked here rather than as a key validator, because voluptuous discards a
+    failing key validator's message and reports a bare "invalid option" instead.
+
+    Only *named* actions can be remapped (parametric forms like `combo:` or
+    `consumer:` are dispatched before the override lookup), and the name is
+    stored in a `name=action` NVS record — so the separators are rejected here,
+    matching EspidfBleKeyboard::valid_override_name() on the C++ side."""
+    for name in value:
+        if len(name) > 31:
+            raise cv.Invalid(f"Action name '{name}' is too long (max 31 characters)")
+        for ch in "=| \t\r\n":
+            if ch in name:
+                raise cv.Invalid(
+                    f"Invalid action name '{name}': must not contain '=', '|' or whitespace. "
+                    "Only named actions can be overridden (e.g. record, play_pause, stop); "
+                    "see the Action Types table in the README."
+                )
+    return value
+
+
 HOST_SCHEMA = cv.Schema({
     cv.Required(CONF_SLOT): cv.int_range(min=0, max=9),
     cv.Optional(CONF_PASSKEY): cv.int_range(min=0, max=999999),
@@ -87,6 +113,17 @@ HOST_SCHEMA = cv.Schema({
         lower=True,
     ),
     cv.Optional(CONF_LAYOUT): cv.one_of(*SUPPORTED_LAYOUTS, lower=True),
+    # Remap named actions for this host, e.g. record: "combo:0x0C:0x15" so a
+    # Windows slot drives Game Bar while a TV slot keeps HID Record.
+    cv.Optional(CONF_ACTIONS): cv.All(
+        cv.Schema({cv.string: cv.All(cv.string, cv.Length(min=1, max=255))}),
+        _validate_override_names,
+        # Without this the C++ side would silently drop the extras
+        cv.Length(
+            max=MAX_OVERRIDES_PER_HOST,
+            msg=f"At most {MAX_OVERRIDES_PER_HOST} action overrides per host slot",
+        ),
+    ),
 })
 
 def _api_services_final_validate(config):
@@ -187,6 +224,8 @@ async def to_code(config):
                 cg.add(var.set_host_slot_passkey(host[CONF_SLOT], host[CONF_PASSKEY], sc))
             if CONF_LAYOUT in host:
                 cg.add(var.set_host_slot_layout(host[CONF_SLOT], host[CONF_LAYOUT]))
+            for name, act in host.get(CONF_ACTIONS, {}).items():
+                cg.add(var.set_host_slot_override(host[CONF_SLOT], name, act))
 
     if CONF_CUSTOM_TEXT_ID in config:
         cg.add_define("USE_TEXT")

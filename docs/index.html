@@ -473,7 +473,7 @@
       <tr><td><code>"next_track"</code></td><td class="desc">Skip to next track.</td></tr>
       <tr><td><code>"prev_track"</code></td><td class="desc">Previous track.</td></tr>
       <tr><td><code>"stop"</code></td><td class="desc">Stop media playback.</td></tr>
-      <tr><td><code>"record"</code></td><td class="desc">Start / stop recording (HID Record).</td></tr>
+      <tr><td><code>"record"</code></td><td class="desc">Start / stop recording (HID Record, <code>0x00B2</code>). Works on TV / DVR hosts; Windows ignores it — remap it per host with <code>actions:</code>, e.g. <code>"combo:0x0C:0x15"</code> for Game Bar.</td></tr>
       <tr><td><code>"consumer:0x0192"</code></td><td class="desc">Send any HID consumer control code — open apps, control brightness and more. See keycode reference.</td></tr>
       <tr><td><code>"left_click"</code></td><td class="desc">Mouse left click.</td></tr>
       <tr><td><code>"right_click"</code></td><td class="desc">Mouse right click.</td></tr>
