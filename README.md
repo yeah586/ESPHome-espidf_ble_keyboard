@@ -454,6 +454,18 @@ espidf_ble_keyboard:
 | `"prev_track"` | Previous track. |
 | `"stop"` | Stop media playback. |
 | `"record"` | Start / stop recording (HID Record, `0x00B2`). Works on TV / DVR hosts; **Windows ignores it** — remap it per host with [`actions:`](#per-host-action-overrides), e.g. `"combo:0x0C:0x15"` for Game Bar. |
+| `"rewind"` | Rewind (`0x00B4`). |
+| `"fast_forward"` | Fast forward (`0x00B3`). |
+| `"remote_power"` | Remote Power key — HID consumer Power (`0x0030`). Distinct from `"power"` above, which is a System Power Down report. |
+| `"up"` / `"down"` / `"left"` / `"right"` | D-pad navigation — HID Menu Up / Down / Left / Right (`0x0042`–`0x0045`). |
+| `"ok"` | D-pad select — HID Menu Pick (`0x0041`). |
+| `"home"` | AC Home (`0x0223`). |
+| `"back"` | AC Back (`0x0224`). |
+| `"search"` | AC Search (`0x0221`). |
+| `"info"` | AC More Info / Guide (`0x0209`). |
+| `"channel_up"` / `"channel_down"` | Channel surf — Page Up / Page Down keypress. |
+| `"color_red"` / `"color_green"` / `"color_yellow"` / `"color_blue"` | Coloured remote keys — F1–F4, as most media apps expect. |
+| `"app_explorer"` / `"app_browser"` / `"app_email"` / `"app_calc"` | App launch keys (`0x0194`, `0x0223`, `0x018A`, `0x0192`). |
 | `"left_click"` | Mouse left click. |
 | `"right_click"` | Mouse right click. |
 | `"middle_click"` | Mouse middle click. |
@@ -726,13 +738,14 @@ The replacement can be any action string, including a multi-step chain: `record:
 
 **Rules and limits:**
 
-- Only **named** actions can be overridden (`record`, `play_pause`, `stop`, `mute`, …) — the ones in the [Action Types](#action-types) table with no `:` parameter. Parametric forms like `combo:` and `consumer:` are dispatched before the override lookup, so they always mean exactly what they say.
+- **Every button on both remotes is remappable.** All of them — D-pad, Power, Channel, Rewind/FF, the colour keys and app launchers — fire named actions for exactly this reason. The one exception is the number pad, which types digits rather than sending a fixed HID code.
+- Only **named** actions can be overridden (`record`, `up`, `channel_up`, `play_pause`, …) — the ones in the [Action Types](#action-types) table with no `:` parameter. Parametric forms like `combo:` and `consumer:` are dispatched before the override lookup, so they always mean exactly what they say. That's deliberate: `consumer:0x00B5` must never silently become something else.
 - Resolution order is **web-UI override → YAML `actions:` → built-in behaviour**.
 - Max 8 overrides per host slot. Names are max 31 characters and may not contain `=`, `|`, or whitespace; replacements are max 255 characters.
 - An override body is executed with overrides disabled, so `record: "record"` safely runs the built-in Record rather than looping.
 - Overrides apply everywhere the named action is used — remote buttons, macros, YAML `button` actions, and the `run_action` HA service — not just the remote.
 
-**Editing without a reflash:** the web UI has a **Host Actions** card. Pick a host slot, then add or edit overrides for it; they persist to NVS and win over the YAML value. Rows tagged `YAML` come from your config and are read-only — set an override of the same name to shadow one, and delete that override to fall back. You can edit a slot other than the one currently active.
+**Editing without a reflash:** the web UI has a **Host Actions** card. Pick a host slot, then add or edit overrides for it; they persist to NVS and win over the YAML value. The action-name box offers every overridable name as you type, and the replacement box has the same preset dropdown as the macro editor, so neither has to be typed from memory. Rows tagged `YAML` come from your config and are read-only — set an override of the same name to shadow one, and delete that override to fall back. You can edit a slot other than the one currently active.
 
 ### Action Reference
 
@@ -1207,33 +1220,30 @@ A custom Lovelace card that provides a modern media remote control with power, n
 
 ### 1. Add ESPHome services
 
-Easiest: set `api_services: true` on the component — it auto-registers all the services this card needs (see [Home Assistant services](#home-assistant-services)) and you can skip to step 2. To define them manually instead (alongside any existing keyboard/mouse services):
+Easiest: set `api_services: true` on the component — it auto-registers all the services this card needs (see [Home Assistant services](#home-assistant-services)) and you can skip to step 2.
+
+Every button on this card fires a **named action** through `run_action`, so any of them can be remapped per host — see [Per-host action overrides](#per-host-action-overrides). `send_string` is only used by the optional number pad. To define the two services manually instead (alongside any existing keyboard/mouse services):
 
 ```yaml
 api:
   encryption:
     key: ${api_encryption_key}
   services:
+    - service: run_action
+      variables:
+        action: string
+      then:
+        - lambda: |-
+            id(my_keyboard).execute_action(action);
     - service: send_string
       variables:
         keys: string
       then:
         - lambda: |-
             id(my_keyboard).send_string(keys);
-    - service: send_key
-      variables:
-        modifier: int
-        keycode: int
-      then:
-        - lambda: |-
-            id(my_keyboard).send_key_combo(modifier, keycode);
-    - service: send_consumer
-      variables:
-        code: int
-      then:
-        - lambda: |-
-            id(my_keyboard).send_consumer(code);
 ```
+
+> If you previously pasted only the older `send_key` / `send_consumer` snippets, the card's buttons will silently do nothing until `run_action` exists.
 
 ### 2. Install the card
 
@@ -1279,6 +1289,7 @@ Features:
 - **App launchers** — quick launch Explorer, Browser, Email, Calculator, Search.
 - **Number pad** — optional 0–9 keypad for channel/PIN entry.
 - **Color buttons** — optional red/green/yellow/blue (F1–F4).
+- **Per-host remapping** — every button is a named action, so any of them can do something different on each paired host (the number pad excepted).
 - **Auto device name** — card title is auto-detected from Home Assistant's device registry.
 
 ![Remote HA Card](docs/remote_ha_card.png)

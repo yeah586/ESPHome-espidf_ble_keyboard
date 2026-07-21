@@ -11,8 +11,11 @@
  *        Settings -> Dashboards -> Resources -> Add Resource
  *        URL: /local/remote-card.js   Type: JavaScript Module
  *   3. Add ESPHome services to your device YAML (see README). This card uses
- *      send_key, send_string, send_consumer and run_action — the simplest way
- *      to get all four is `api_services: true` on the component.
+ *      run_action (every button) and send_string (the optional number pad) —
+ *      the simplest way to get both is `api_services: true` on the component.
+ *
+ * Every button fires a *named* action, so any of them can be remapped per host
+ * slot via the component's `actions:` config or the web UI's Host Actions card.
  *   4. Add the card to a dashboard via the UI or YAML.
  *
  * Card YAML:
@@ -317,12 +320,14 @@ class BleRemoteCard extends HTMLElement {
       const section = shadow.getElementById('app-section');
       section.style.display = '';
       const row = shadow.getElementById('app-row');
+      // Named actions so these are remappable per host too. 'Search' shares the
+      // Search button's action — both are AC Search 0x0221.
       const apps = [
-        { name: 'Explorer', consumer: 0x0194 },
-        { name: 'Browser', consumer: 0x0223 },
-        { name: 'Email', consumer: 0x018A },
-        { name: 'Calc', consumer: 0x0192 },
-        { name: 'Search', consumer: 0x0221 },
+        { name: 'Explorer', action: 'app_explorer' },  // 0x0194
+        { name: 'Browser', action: 'app_browser' },    // 0x0223
+        { name: 'Email', action: 'app_email' },        // 0x018A
+        { name: 'Calc', action: 'app_calc' },          // 0x0192
+        { name: 'Search', action: 'search' },          // 0x0221
       ];
       apps.forEach(app => {
         const btn = document.createElement('button');
@@ -331,7 +336,7 @@ class BleRemoteCard extends HTMLElement {
         btn.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           this._press(btn);
-          this._sendConsumer(app.consumer);
+          this._runAction(app.action);
         });
         row.appendChild(btn);
       });
@@ -359,51 +364,54 @@ class BleRemoteCard extends HTMLElement {
   }
 
   _wireButtons(shadow) {
-    // Button action map: id -> handler
+    // Button action map: id -> named action.
+    //
+    // These are named actions rather than raw HID codes so per-host `actions:`
+    // overrides apply — e.g. a Windows host can remap record to Game Bar's
+    // Win+Alt+R while a TV host keeps HID Record. Each name's built-in default
+    // is the same code this card used to send directly.
     const actions = {
       // Power & navigation
-      power:  () => this._sendConsumer(0x0030),    // HID Power
-      back:   () => this._sendConsumer(0x0224),    // AC Back
-      home:   () => this._sendConsumer(0x0223),    // AC Home
-      mute:   () => this._sendConsumer(0x00E2),    // Mute
+      power:  'remote_power',   // HID consumer Power 0x0030 (not System Power Down)
+      back:   'back',           // AC Back 0x0224
+      home:   'home',           // AC Home 0x0223
+      mute:   'mute',           // 0x00E2
 
-      search: () => this._sendConsumer(0x0221),    // AC Search
-      info:   () => this._sendConsumer(0x0209),    // AC More Info / Guide
+      search: 'search',         // AC Search 0x0221
+      info:   'info',           // AC More Info / Guide 0x0209
 
-      // D-pad (arrow keys + Enter)
-      up:     () => this._sendConsumer(0x0042),    // Menu Up
-      down:   () => this._sendConsumer(0x0043),    // Menu Down
-      left:   () => this._sendConsumer(0x0044),    // Menu Left
-      right:  () => this._sendConsumer(0x0045),    // Menu Right
-      ok:     () => this._sendConsumer(0x0041),    // Menu Pick (OK)
+      // D-pad
+      up:     'up',             // Menu Up 0x0042
+      down:   'down',           // Menu Down 0x0043
+      left:   'left',           // Menu Left 0x0044
+      right:  'right',          // Menu Right 0x0045
+      ok:     'ok',             // Menu Pick 0x0041
 
       // Volume
-      vol_up: () => this._sendConsumer(0x00E9),
-      vol_dn: () => this._sendConsumer(0x00EA),
+      vol_up: 'volume_up',      // 0x00E9
+      vol_dn: 'volume_down',    // 0x00EA
 
       // Channel (Page Up/Down)
-      pg_up:  () => this._sendKey(0, 0x4B),        // Page Up
-      pg_dn:  () => this._sendKey(0, 0x4E),        // Page Down
+      pg_up:  'channel_up',     // Page Up
+      pg_dn:  'channel_down',   // Page Down
 
       // Media
-      play:   () => this._sendConsumer(0x00CD),     // Play/Pause
-      stop:   () => this._sendConsumer(0x00B7),     // Stop
-      prev:   () => this._sendConsumer(0x00B6),     // Previous
-      next:   () => this._sendConsumer(0x00B5),     // Next
-      rew:    () => this._sendConsumer(0x00B4),     // Rewind
-      fwd:    () => this._sendConsumer(0x00B3),     // Fast Forward
-      // Named action, not a raw consumer code, so per-host `actions:` overrides
-      // apply — e.g. a Windows host can remap record to Game Bar's Win+Alt+R.
-      rec:    () => this._runAction('record'),
+      play:   'play_pause',     // 0x00CD
+      stop:   'stop',           // 0x00B7
+      prev:   'prev_track',     // 0x00B6
+      next:   'next_track',     // 0x00B5
+      rew:    'rewind',         // 0x00B4
+      fwd:    'fast_forward',   // 0x00B3
+      rec:    'record',         // 0x00B2
 
       // Color buttons (F1-F4, common for media apps)
-      c_red:    () => this._sendKey(0, 0x3A),       // F1
-      c_green:  () => this._sendKey(0, 0x3B),       // F2
-      c_yellow: () => this._sendKey(0, 0x3C),       // F3
-      c_blue:   () => this._sendKey(0, 0x3D),       // F4
+      c_red:    'color_red',
+      c_green:  'color_green',
+      c_yellow: 'color_yellow',
+      c_blue:   'color_blue',
     };
 
-    for (const [id, handler] of Object.entries(actions)) {
+    for (const [id, action] of Object.entries(actions)) {
       const el = shadow.getElementById(id);
       if (!el) continue;
 
@@ -413,8 +421,8 @@ class BleRemoteCard extends HTMLElement {
         const start = (e) => {
           e.preventDefault();
           this._press(el);
-          handler();
-          interval = setInterval(() => handler(), 180);
+          this._runAction(action);
+          interval = setInterval(() => this._runAction(action), 180);
         };
         const stop = () => { if (interval) { clearInterval(interval); interval = null; } };
         el.addEventListener('pointerdown', start);
@@ -425,25 +433,17 @@ class BleRemoteCard extends HTMLElement {
         el.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           this._press(el);
-          handler();
+          this._runAction(action);
         });
       }
     }
   }
 
-  _sendKey(modifier, keycode) {
-    if (!this._hass) return;
-    this._hass.callService('esphome', `${this._config.device}_send_key`, { modifier, keycode });
-  }
-
+  // Used by the optional number pad, which types digits rather than sending a
+  // fixed HID code — the one part of the card that isn't a named action.
   _sendString(text) {
     if (!this._hass) return;
     this._hass.callService('esphome', `${this._config.device}_send_string`, { keys: text });
-  }
-
-  _sendConsumer(code) {
-    if (!this._hass) return;
-    this._hass.callService('esphome', `${this._config.device}_send_consumer`, { code });
   }
 
   _runAction(action) {

@@ -392,6 +392,10 @@ class EspidfBleKeyboard : public Component
   // Depth guard: overrides only apply at depth 0, so an override body naming
   // itself runs the built-in action instead of recursing forever.
   uint8_t override_depth_{0};
+  /// Table-driven remote button actions (D-pad, Power, Channel, colour, apps).
+  /// Returns false if the name isn't one of them, so the caller falls through.
+  bool execute_remote_action_(const std::string &action);
+
   const std::string *find_override_(uint8_t slot, const std::string &name) const;
   void load_overrides_();
   void save_overrides_(uint8_t slot);

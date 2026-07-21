@@ -1770,6 +1770,55 @@ void EspidfBleKeyboard::send_media_next()        { send_consumer(0x00B5); }
 void EspidfBleKeyboard::send_media_prev()        { send_consumer(0x00B6); }
 void EspidfBleKeyboard::send_media_stop()        { send_consumer(0x00B7); }
 void EspidfBleKeyboard::send_media_record()      { send_consumer(0x00B2); }
+
+// ── Remote button actions ─────────────────────────────────────────
+//
+// The remote's buttons used to be hardcoded "consumer:0x...." / "combo:.:.."
+// strings in the UIs. They are named here instead so each one can be remapped
+// per host slot (parametric forms are dispatched before the override lookup and
+// stay literal by design). The codes are exactly what those buttons sent
+// before, so the default behaviour is unchanged.
+//
+// Note "remote_power" is not "power": the latter is a System Power Down report,
+// a different thing from the remote's HID consumer Power usage.
+
+struct NamedConsumer {
+    const char *name;
+    uint16_t usage;
+};
+static const NamedConsumer NAMED_CONSUMERS[] = {
+    {"remote_power", 0x0030}, {"search", 0x0221}, {"info", 0x0209},
+    {"home", 0x0223},         {"back", 0x0224},
+    {"up", 0x0042},           {"down", 0x0043},   {"left", 0x0044},
+    {"right", 0x0045},        {"ok", 0x0041},
+    {"rewind", 0x00B4},       {"fast_forward", 0x00B3},
+    {"app_explorer", 0x0194}, {"app_browser", 0x0223},
+    {"app_email", 0x018A},    {"app_calc", 0x0192},
+};
+
+struct NamedCombo {
+    const char *name;
+    uint8_t modifier;
+    uint8_t keycode;
+};
+static const NamedCombo NAMED_COMBOS[] = {
+    {"channel_up", 0, 0x4B},    // Page Up
+    {"channel_down", 0, 0x4E},  // Page Down
+    {"color_red", 0, 0x3A},     // F1
+    {"color_green", 0, 0x3B},   // F2
+    {"color_yellow", 0, 0x3C},  // F3
+    {"color_blue", 0, 0x3D},    // F4
+};
+
+bool EspidfBleKeyboard::execute_remote_action_(const std::string &action) {
+    for (const auto &e : NAMED_CONSUMERS) {
+        if (action == e.name) { send_consumer(e.usage); return true; }
+    }
+    for (const auto &e : NAMED_COMBOS) {
+        if (action == e.name) { send_key_combo(e.modifier, e.keycode); return true; }
+    }
+    return false;
+}
 void EspidfBleKeyboard::send_volume_up()         { send_consumer(0x00E9); }
 void EspidfBleKeyboard::send_volume_down()       { send_consumer(0x00EA); }
 void EspidfBleKeyboard::send_mute()              { send_consumer(0x00E2); }
@@ -2135,6 +2184,9 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
             send_string(custom_texts_[idx]->state);
     }
 #endif
+    // Remote buttons (D-pad, Power, Channel, colour and app keys) — table-driven
+    // so the chain doesn't carry 22 near-identical branches.
+    else if (execute_remote_action_(action)) { /* handled */ }
     else if (action.find("string:") == 0) send_string(action.substr(7));
     else send_string(action);  // Fallback: send as typed text
 }
