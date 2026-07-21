@@ -83,6 +83,7 @@ class EspidfBleKeyboard : public Component
   void send_media_next();
   void send_media_prev();
   void send_media_stop();
+  void send_media_record();
   void send_volume_up();
   void send_volume_down();
   void send_mute();

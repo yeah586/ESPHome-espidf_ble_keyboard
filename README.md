@@ -451,6 +451,7 @@ espidf_ble_keyboard:
 | `"next_track"` | Skip to next track. |
 | `"prev_track"` | Previous track. |
 | `"stop"` | Stop media playback. |
+| `"record"` | Start / stop recording (HID Record). |
 | `"left_click"` | Mouse left click. |
 | `"right_click"` | Mouse right click. |
 | `"middle_click"` | Mouse middle click. |
@@ -1239,7 +1240,7 @@ Features:
 - **Back & Home** — Escape and Windows key for quick navigation.
 - **Volume** — up, down, and mute with hold-to-repeat.
 - **Channel** — Page Up/Down with hold-to-repeat for channel surfing.
-- **Media playback** — play/pause, stop, previous, next, rewind, fast forward.
+- **Media playback** — play/pause, stop, previous, next, rewind, fast forward, record.
 - **App launchers** — quick launch Explorer, Browser, Email, Calculator, Search.
 - **Number pad** — optional 0–9 keypad for channel/PIN entry.
 - **Color buttons** — optional red/green/yellow/blue (F1–F4).

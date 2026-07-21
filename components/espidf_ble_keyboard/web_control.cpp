@@ -126,6 +126,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .rmt-divider{height:1px;background:var(--border);margin:10px 0}
 .rmt-media-row{display:flex;justify-content:center;gap:8px}
 .rmt-btn.media{width:42px;height:42px}
+.rmt-btn.rec{background:#c62828;color:#fff;border-color:#c62828}
+.rmt-btn.rec:active,.rmt-btn.rec.p{background:#e53935}
 </style></head><body>
 
 <div id="scalable" class="scalable">
@@ -134,7 +136,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
 <span class="dev-name" id="dname"></span>
-<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.2.0</span>
+<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.3.0</span>
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
@@ -261,6 +263,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="rmt-btn media" data-action="stop" title="Stop"><svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg></button>
 <button class="rmt-btn media" data-action="consumer:0x00B3" data-repeat="1" title="Fast Forward"><svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg></button>
 <button class="rmt-btn media" data-action="next_track" title="Next"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+<button class="rmt-btn media rec" data-action="record" title="Record"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></button>
 </div></div>
 </div>
 
@@ -281,6 +284,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="next_track">Next Track</option>
 <option value="prev_track">Prev Track</option>
 <option value="stop">Stop</option>
+<option value="record">Record</option>
 <option value="volume_up">Volume Up</option>
 <option value="volume_down">Volume Down</option>
 <option value="mute">Mute</option>

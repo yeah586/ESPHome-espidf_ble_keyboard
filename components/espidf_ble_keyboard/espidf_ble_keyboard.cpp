@@ -1633,6 +1633,7 @@ void EspidfBleKeyboard::send_media_play_pause() { send_consumer(0x00CD); }
 void EspidfBleKeyboard::send_media_next()        { send_consumer(0x00B5); }
 void EspidfBleKeyboard::send_media_prev()        { send_consumer(0x00B6); }
 void EspidfBleKeyboard::send_media_stop()        { send_consumer(0x00B7); }
+void EspidfBleKeyboard::send_media_record()      { send_consumer(0x00B2); }
 void EspidfBleKeyboard::send_volume_up()         { send_consumer(0x00E9); }
 void EspidfBleKeyboard::send_volume_down()       { send_consumer(0x00EA); }
 void EspidfBleKeyboard::send_mute()              { send_consumer(0x00E2); }
@@ -1951,6 +1952,7 @@ void EspidfBleKeyboard::execute_action(const std::string &action) {
     else if (action == "next_track")   send_media_next();
     else if (action == "prev_track")   send_media_prev();
     else if (action == "stop")         send_media_stop();
+    else if (action == "record")       send_media_record();
     else if (action == "volume_up")    send_volume_up();
     else if (action == "volume_down")  send_volume_down();
     else if (action == "mute")         send_mute();

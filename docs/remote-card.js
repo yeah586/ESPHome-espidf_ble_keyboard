@@ -103,6 +103,10 @@ class BleRemoteCard extends HTMLElement {
         .btn.power { background: #c62828; color: #fff; border-color: #c62828; }
         .btn.power:active, .btn.power.p { background: #e53935; }
 
+        /* Record button */
+        .btn.rec { background: #c62828; color: #fff; border-color: #c62828; }
+        .btn.rec:active, .btn.rec.p { background: #e53935; }
+
         /* Color buttons */
         .btn.red { background: #e53935; color: #fff; border: none; width: 44px; height: 44px; }
         .btn.green { background: #43a047; color: #fff; border: none; width: 44px; height: 44px; }
@@ -239,6 +243,9 @@ class BleRemoteCard extends HTMLElement {
             </button>
             <button class="btn media" id="next" title="Next Track">
               <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+            </button>
+            <button class="btn media rec" id="rec" title="Record">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg>
             </button>
           </div>
         </div>
@@ -383,6 +390,7 @@ class BleRemoteCard extends HTMLElement {
       next:   () => this._sendConsumer(0x00B5),     // Next
       rew:    () => this._sendConsumer(0x00B4),     // Rewind
       fwd:    () => this._sendConsumer(0x00B3),     // Fast Forward
+      rec:    () => this._sendConsumer(0x00B2),     // Record
 
       // Color buttons (F1-F4, common for media apps)
       c_red:    () => this._sendKey(0, 0x3A),       // F1
