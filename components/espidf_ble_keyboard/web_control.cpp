@@ -139,6 +139,8 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .rmt-btn.green{background:#43a047}
 .rmt-btn.yellow{background:#fdd835}
 .rmt-btn.blue{background:#1e88e5}
+.rmt-app-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.rmt-btn.app{width:auto;height:38px;border-radius:19px;padding:0 14px;font-size:11px}
 </style></head><body>
 
 <div id="scalable" class="scalable">
@@ -283,6 +285,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="rmt-btn col green" data-action="color_green" title="Green (F2)"></button>
 <button class="rmt-btn col yellow" data-action="color_yellow" title="Yellow (F3)"></button>
 <button class="rmt-btn col blue" data-action="color_blue" title="Blue (F4)"></button>
+</div></div>
+<div class="rmt-divider"></div>
+<div class="rmt-section"><div class="rmt-app-row">
+<button class="rmt-btn app" data-action="app_explorer" title="File Explorer">Explorer</button>
+<button class="rmt-btn app" data-action="app_browser" title="Web Browser">Browser</button>
+<button class="rmt-btn app" data-action="app_email" title="Email Client">Email</button>
+<button class="rmt-btn app" data-action="app_calc" title="Calculator">Calc</button>
+<button class="rmt-btn app" data-action="search" title="Search (same key as the magnifier above)">Search</button>
 </div></div>
 </div>
 
