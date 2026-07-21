@@ -84,6 +84,10 @@ external_components:
     refresh: 0s  
     components: [ espidf_ble_keyboard ]
 
+# Required by `web_control: true` below — it hosts the control page.
+web_server:
+  port: 80
+
 espidf_ble_keyboard:
   id: my_keyboard
   # Optional: BLE device name shown during pairing (max 29 chars, default: "ESP32 BLE KB")
