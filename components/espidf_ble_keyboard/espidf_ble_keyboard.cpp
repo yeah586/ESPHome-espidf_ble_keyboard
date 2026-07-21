@@ -899,6 +899,21 @@ void EspidfBleKeyboard::load_host_slots_() {
     nvs_close(handle);
 }
 
+bool EspidfBleKeyboard::host_slot_bonded(uint8_t slot) const {
+    if (slot >= MAX_HOST_SLOTS || !hosts_[slot].occupied) return false;
+    int dev_num = esp_ble_get_bond_device_num();
+    if (dev_num <= 0) return false;
+    std::vector<esp_ble_bond_dev_t> bonded(static_cast<size_t>(dev_num));
+    int query_num = dev_num;
+    if (esp_ble_get_bond_device_list(&query_num, bonded.data()) != ESP_OK) return false;
+    for (int i = 0; i < query_num; i++) {
+        if (memcmp(bonded[static_cast<size_t>(i)].bd_addr, hosts_[slot].addr,
+                   sizeof(esp_bd_addr_t)) == 0)
+            return true;
+    }
+    return false;
+}
+
 void EspidfBleKeyboard::save_host_slots_() {
     nvs_handle_t handle;
     if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
@@ -1663,6 +1678,50 @@ void EspidfBleKeyboard::save_goto_scale_for_host() {
     nvs_commit(handle);
     nvs_close(handle);
     ESP_LOGI(TAG, "Saved goto scale for host %u: x=%.4f y=%.4f", active_slot_, goto_scale_x_, goto_scale_y_);
+}
+
+bool EspidfBleKeyboard::get_saved_goto_scale(uint8_t slot, float &x, float &y) const {
+    if (slot >= MAX_HOST_SLOTS) return false;
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return false;
+    char kx[12], ky[12];
+    snprintf(kx, sizeof(kx), "gsx%u", slot);
+    snprintf(ky, sizeof(ky), "gsy%u", slot);
+    // Both axes must be present and in range — a half-read would otherwise put a
+    // zero into a backup, which restore would then reject.
+    bool got_x = false, got_y = false;
+    uint32_t b;
+    if (nvs_get_u32(handle, kx, &b) == ESP_OK) {
+        float f; memcpy(&f, &b, sizeof(f));
+        if (f >= 0.05f && f <= 20.0f) { x = f; got_x = true; }
+    }
+    if (nvs_get_u32(handle, ky, &b) == ESP_OK) {
+        float f; memcpy(&f, &b, sizeof(f));
+        if (f >= 0.05f && f <= 20.0f) { y = f; got_y = true; }
+    }
+    nvs_close(handle);
+    return got_x && got_y;
+}
+
+void EspidfBleKeyboard::set_saved_goto_scale(uint8_t slot, float x, float y) {
+    if (slot >= MAX_HOST_SLOTS) return;
+    if (x < 0.05f || x > 20.0f || y < 0.05f || y > 20.0f) return;
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+    char kx[12], ky[12];
+    snprintf(kx, sizeof(kx), "gsx%u", slot);
+    snprintf(ky, sizeof(ky), "gsy%u", slot);
+    uint32_t bx, by;
+    memcpy(&bx, &x, sizeof(bx));
+    memcpy(&by, &y, sizeof(by));
+    nvs_set_u32(handle, kx, bx);
+    nvs_set_u32(handle, ky, by);
+    nvs_commit(handle);
+    nvs_close(handle);
+    // Apply immediately if this is the slot in use, so a restore doesn't need a
+    // host switch to take effect.
+    if (slot == active_slot_) { goto_scale_x_ = x; goto_scale_y_ = y; }
+    ESP_LOGI(TAG, "Set goto scale for host %u: x=%.4f y=%.4f", (unsigned) slot, x, y);
 }
 
 void EspidfBleKeyboard::load_goto_scale_for_host(uint8_t slot) {

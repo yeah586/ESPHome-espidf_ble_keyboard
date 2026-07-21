@@ -92,6 +92,9 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .mod-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
 .macro-edit-btn{margin-left:auto;padding:4px 11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--name);font-size:11px;cursor:pointer}
 .macro-edit-btn.on{background:var(--active);color:#fff;border-color:var(--active)}
+/* Second button in a heading sits next to the first, not spaced apart —
+   .macro-edit-btn's margin-left:auto would otherwise split the free space. */
+#bk-load{margin-left:0}
 .macros-card:not(.editing) .macro-act,.macros-card:not(.editing) .macro-form{display:none}
 .ovr-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
 .ovr-row:last-child{border-bottom:none}
@@ -149,7 +152,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
 <span class="dev-name" id="dname"></span>
-<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.3.0</span>
+<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.4.0</span>
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
@@ -421,7 +424,9 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 
 <div class="card" id="hostact-card">
-<h2><svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>Host Actions</h2>
+<h2><svg viewBox="0 0 24 24"><path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>Host Actions<button class="macro-edit-btn" id="bk-save" title="Download all settings as a JSON file">Backup</button><button class="macro-edit-btn" id="bk-load" title="Restore settings from a backup file">Restore</button></h2>
+<input type="file" id="bk-file" accept="application/json,.json" style="display:none">
+<div id="bk-status" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
 <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Remap a <strong>named</strong> action for one host, so the same button suits each machine &mdash; e.g. <code>record</code> &rarr; <code>combo:0x0C:0x15</code> (Game Bar) on a Windows host, while a TV host keeps HID Record. Saved per host; YAML rows come from your config and are restored when you delete the override on top.</div>
 <div class="macro-form" style="margin-top:0;margin-bottom:8px">
 <select id="ov-slot" style="flex:1 1 100%"></select>
@@ -746,6 +751,166 @@ setInterval(pollStatus,3000);
   });
 
   loadSlots().then(load).catch(()=>{list.innerHTML='<span class="prog-empty">Error loading</span>'});
+
+  // ── Backup / Restore ──
+  // Restore replays the file through the same endpoints the UI already uses,
+  // rather than uploading it: the handler parses query args only, and reusing
+  // those endpoints keeps their validation (name/action limits, slot range).
+  // The trade-off is that a restore is NOT atomic — it stops at the first
+  // failure and reports how far it got.
+  const UI_KEYS=['blekb_theme','blekb_zoom','blekb_sections','blekb_order','blekb_finder_unlocked'];
+  const bkSave=document.getElementById('bk-save');
+  const bkLoad=document.getElementById('bk-load');
+  const bkFile=document.getElementById('bk-file');
+  const bkStatus=document.getElementById('bk-status');
+  function status(msg,err){if(bkStatus){bkStatus.textContent=msg;bkStatus.style.color=err?'#c44':'var(--muted)'}}
+
+  if(bkSave)bkSave.addEventListener('click',()=>{
+    status('Reading settings...');
+    fetch('/api/ble_keyboard/backup').then(r=>{
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(d=>{
+      const ui={};
+      UI_KEYS.forEach(k=>{const v=localStorage.getItem(k);if(v!==null)ui[k]=v});
+      d.ui=ui;
+      const name='ble-kb-backup-'+(d.device||'device').replace(/[^A-Za-z0-9_-]/g,'_')+'.json';
+      const url=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
+      const a=document.createElement('a');
+      a.href=url;a.download=name;a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      const nm=(d.macros||[]).length, no=Object.keys(d.overrides||{}).length, nh=(d.hosts||[]).length;
+      status('Saved '+name+' — '+nm+' macro(s), '+no+' slot(s) with overrides, '+nh+' host(s).');
+    }).catch(e=>status('Backup failed: '+e.message,true));
+  });
+
+  if(bkLoad)bkLoad.addEventListener('click',()=>bkFile.click());
+
+  // POST a restore step; reject on a non-OK so the run stops with a clear cause.
+  function post(ep,params){
+    return fetch('/api/ble_keyboard/'+ep+'?'+new URLSearchParams(params),{method:'POST'})
+      .then(r=>r.text().then(t=>{
+        if(!r.ok)throw new Error(ep+': '+t);
+        return t;
+      }));
+  }
+
+  if(bkFile)bkFile.addEventListener('change',()=>{
+    const f=bkFile.files&&bkFile.files[0];
+    if(!f)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      let d;
+      try{d=JSON.parse(reader.result)}catch(e){status('Not a valid backup file: '+e.message,true);bkFile.value='';return}
+      if(!d||typeof d!=='object'||!d.schema){status('Not a backup file (missing "schema").',true);bkFile.value='';return}
+      const macros=Array.isArray(d.macros)?d.macros:[];
+      const overrides=d.overrides&&typeof d.overrides==='object'?d.overrides:{};
+      const scales=d.goto_scale&&typeof d.goto_scale==='object'?d.goto_scale:{};
+      const hosts=Array.isArray(d.hosts)?d.hosts:[];
+      let msg='Restore from "'+(d.device||'unknown')+'"?\n\n'
+        +'This REPLACES current settings:\n'
+        +'  • '+macros.length+' macro(s) — existing macros are deleted first\n'
+        +'  • overrides on '+Object.keys(overrides).length+' host slot(s) — existing saved overrides are cleared\n'
+        +'  • keyboard layout: '+(d.layout||'unchanged')+'\n'
+        +'  • calibration for '+Object.keys(scales).length+' slot(s)\n'
+        +'  • UI preferences (theme, zoom, section layout)';
+      if(!confirm(msg)){bkFile.value='';return}
+      let doHosts=false;
+      if(hosts.length){
+        doHosts=confirm('Also restore '+hosts.length+' learned host slot(s)?\n\n'
+          +'This restores addresses ONLY. Bluetooth pairing keys cannot be backed up, '
+          +'so any host whose bond is no longer on this device will need to be paired again — '
+          +'the slot will look occupied but will not connect until you do.\n\n'
+          +'OK = restore addresses, Cancel = leave host slots alone.');
+      }
+      restore(d,macros,overrides,scales,hosts,doHosts);
+      bkFile.value='';
+    };
+    reader.onerror=()=>{status('Could not read the file.',true);bkFile.value=''};
+    reader.readAsText(f);
+  });
+
+  function restore(d,macros,overrides,scales,hosts,doHosts){
+    const notes=[];
+    status('Restoring: clearing macros...');
+    // Fetch current state first so we know what to clear.
+    fetch('/api/ble_keyboard/buttons').then(r=>r.json()).then(btns=>{
+      // Delete highest index first so earlier indices don't shift under us.
+      const idx=btns.filter(b=>b.editable).map(b=>b.index).sort((a,b)=>b-a);
+      let chain=Promise.resolve();
+      idx.forEach(i=>{chain=chain.then(()=>post('macro_delete',{index:i}))});
+      return chain;
+    }).then(()=>{
+      status('Restoring: macros...');
+      let chain=Promise.resolve();
+      macros.forEach(m=>{
+        if(!m||!m.name||!m.action)return;
+        chain=chain.then(()=>post('macro_add',{name:m.name,action:m.action}));
+      });
+      return chain;
+    }).then(()=>{
+      status('Restoring: host actions...');
+      // Clear every saved override on every slot, then apply the file's.
+      let chain=Promise.resolve();
+      for(let s=0;s<slotSel.options.length;s++){
+        const sl=parseInt(slotSel.options[s].value);
+        chain=chain.then(()=>fetch('/api/ble_keyboard/overrides?'+new URLSearchParams({slot:sl}))
+          .then(r=>r.json()).then(cur=>{
+            let c=Promise.resolve();
+            cur.items.filter(it=>it.src==='nvs').forEach(it=>{
+              c=c.then(()=>post('override_clear',{slot:sl,name:it.name}));
+            });
+            return c;
+          }));
+      }
+      Object.keys(overrides).forEach(sl=>{
+        const map=overrides[sl]||{};
+        Object.keys(map).forEach(name=>{
+          chain=chain.then(()=>post('override_set',{slot:sl,name:name,action:map[name]}));
+        });
+      });
+      return chain;
+    }).then(()=>{
+      if(!d.layout)return;
+      status('Restoring: layout...');
+      return post('set_layout',{id:d.layout});
+    }).then(()=>{
+      status('Restoring: calibration...');
+      let chain=Promise.resolve();
+      Object.keys(scales).forEach(sl=>{
+        const v=scales[sl]||{};
+        if(typeof v.x!=='number'||typeof v.y!=='number')return;
+        chain=chain.then(()=>post('goto_scale_slot',{slot:sl,x:v.x,y:v.y}));
+      });
+      return chain;
+    }).then(()=>{
+      if(!doHosts)return;
+      status('Restoring: host slots...');
+      let chain=Promise.resolve();
+      hosts.forEach(h=>{
+        if(!h||typeof h.slot!=='number'||!h.addr)return;
+        chain=chain.then(()=>post('set_host_slot',{slot:h.slot,addr:h.addr,type:h.type||0})
+          .then(t=>{if(t==='OK-NOBOND')notes.push('host '+h.slot+' needs re-pairing')}));
+      });
+      return chain;
+    }).then(()=>{
+      // UI prefs last — writing them means a reload to take effect.
+      let uiRestored=false;
+      if(d.ui&&typeof d.ui==='object'){
+        UI_KEYS.forEach(k=>{if(typeof d.ui[k]==='string'){localStorage.setItem(k,d.ui[k]);uiRestored=true}});
+      }
+      let msg='Restore complete.';
+      if(notes.length)msg+=' Note: '+notes.join(', ')+'.';
+      status(msg);
+      if(uiRestored){
+        alert(msg+'\n\nReloading to apply the interface preferences.');
+        location.reload();
+      }else{
+        alert(msg);
+        load();
+      }
+    }).catch(e=>status('Restore stopped at "'+e.message+'" — the device is partly restored.',true));
+  }
 })();
 
 // ── Keyboard ──
@@ -1600,6 +1765,67 @@ class BleKbWebHandler : public AsyncWebHandler {
       return;
     }
 
+    if (path == "backup") {
+      // Everything the user can edit at runtime, in one document. Deliberately
+      // excludes the passkey and the generated per-slot addresses (device
+      // identity, not settings) and YAML-defined overrides (restoring those as
+      // NVS entries would shadow later YAML edits). The browser adds its own
+      // "ui" section before saving the file.
+      std::string json = "{\"schema\":1,\"device\":\"";
+      json += json_escape(kb_->device_name());
+      json += "\",\"layout\":\"";
+      json += json_escape(kb_->active_layout_id());
+      json += "\",\"macros\":[";
+      const auto &macros = kb_->get_macros();
+      for (size_t i = 0; i < macros.size(); i++) {
+        if (i > 0) json += ",";
+        json += "{\"name\":\"" + json_escape(macros[i].name) +
+                "\",\"action\":\"" + json_escape(macros[i].action) + "\"}";
+      }
+      json += "],\"overrides\":{";
+      bool first_slot = true;
+      for (uint8_t s = 0; s < kb_->host_slots(); s++) {
+        const auto &ovr = kb_->get_nvs_overrides(s);
+        if (ovr.empty()) continue;
+        if (!first_slot) json += ",";
+        first_slot = false;
+        json += "\"" + std::to_string(s) + "\":{";
+        for (size_t i = 0; i < ovr.size(); i++) {
+          if (i > 0) json += ",";
+          json += "\"" + json_escape(ovr[i].name) + "\":\"" + json_escape(ovr[i].action) + "\"";
+        }
+        json += "}";
+      }
+      json += "},\"goto_scale\":{";
+      bool first_scale = true;
+      for (uint8_t s = 0; s < kb_->host_slots(); s++) {
+        float gx = 0, gy = 0;
+        if (!kb_->get_saved_goto_scale(s, gx, gy)) continue;
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%s\"%u\":{\"x\":%.4f,\"y\":%.4f}",
+                 first_scale ? "" : ",", (unsigned) s, gx, gy);
+        first_scale = false;
+        json += buf;
+      }
+      json += "},\"hosts\":[";
+      bool first_host = true;
+      for (uint8_t s = 0; s < kb_->host_slots(); s++) {
+        const auto &h = kb_->get_host_slot(s);
+        if (!h.occupied) continue;
+        char buf[128];
+        snprintf(buf, sizeof(buf),
+                 "%s{\"slot\":%u,\"addr\":\"%02X:%02X:%02X:%02X:%02X:%02X\",\"type\":%u,\"bonded\":%s}",
+                 first_host ? "" : ",", (unsigned) s,
+                 h.addr[0], h.addr[1], h.addr[2], h.addr[3], h.addr[4], h.addr[5],
+                 (unsigned) h.addr_type, kb_->host_slot_bonded(s) ? "true" : "false");
+        first_host = false;
+        json += buf;
+      }
+      json += "]}";
+      send_response(200, "application/json", json.c_str());
+      return;
+    }
+
     // Remaining endpoints — POST only
     if (request->method() != HTTP_POST) {
       send_response(405, "text/plain", "POST only");
@@ -1763,6 +1989,45 @@ class BleKbWebHandler : public AsyncWebHandler {
         send_response(400, "text/plain", "Max overrides reached for this host (8)");
       } else {
         send_response(200, "text/plain", "OK");
+      }
+
+    } else if (path == "goto_scale_slot") {
+      // Restore calibration for any slot, not just the active one.
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : -1;
+      float x = request->hasArg("x") ? atof(request->arg("x").c_str()) : 0.0f;
+      float y = request->hasArg("y") ? atof(request->arg("y").c_str()) : 0.0f;
+      if (slot < 0 || slot >= kb_->host_slots()) {
+        send_response(400, "text/plain", "Invalid slot");
+      } else if (x < 0.05f || x > 20.0f || y < 0.05f || y > 20.0f) {
+        send_response(400, "text/plain", "Scale must be 0.05-20.0");
+      } else {
+        kb_->set_saved_goto_scale((uint8_t) slot, x, y);
+        send_response(200, "text/plain", "OK");
+      }
+
+    } else if (path == "set_host_slot") {
+      // Restores the slot -> address mapping only. BLE bonding keys live in the
+      // stack's own NVS and cannot be exported, so a slot restored without a
+      // surviving bond will advertise at a host that refuses encryption until
+      // it is re-paired. The UI warns about this before calling here.
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : -1;
+      std::string addr_str = request->hasArg("addr") ? request->arg("addr").c_str() : "";
+      int type = request->hasArg("type") ? atoi(request->arg("type").c_str()) : 0;
+      unsigned int b[6];
+      if (slot < 0 || slot >= kb_->host_slots()) {
+        send_response(400, "text/plain", "Invalid slot");
+      } else if (addr_str.size() != 17 ||
+                 sscanf(addr_str.c_str(), "%02X:%02X:%02X:%02X:%02X:%02X",
+                        &b[0], &b[1], &b[2], &b[3], &b[4], &b[5]) != 6) {
+        send_response(400, "text/plain", "addr must be AA:BB:CC:DD:EE:FF");
+      } else if (type < 0 || type > 3) {
+        send_response(400, "text/plain", "Invalid address type");
+      } else {
+        esp_bd_addr_t addr;
+        for (int i = 0; i < 6; i++) addr[i] = (uint8_t) b[i];
+        kb_->assign_host_slot_((uint8_t) slot, addr, (esp_ble_addr_type_t) type);
+        kb_->save_host_slots_();
+        send_response(200, "text/plain", kb_->host_slot_bonded((uint8_t) slot) ? "OK" : "OK-NOBOND");
       }
 
     } else if (path == "override_clear") {

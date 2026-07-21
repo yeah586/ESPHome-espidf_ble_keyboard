@@ -155,6 +155,11 @@ class EspidfBleKeyboard : public Component
   // each paired host (different DPI / pointer settings) keeps its own values.
   void save_goto_scale_for_host();
   void load_goto_scale_for_host(uint8_t slot);
+  // Backup/restore accessors: read or write any slot's stored calibration
+  // without disturbing the live values (load_goto_scale_for_host applies what it
+  // reads, and save_goto_scale_for_host only ever writes the active slot).
+  bool get_saved_goto_scale(uint8_t slot, float &x, float &y) const;
+  void set_saved_goto_scale(uint8_t slot, float x, float y);
   // Reset the goto scale back to the YAML-configured defaults and save to host.
   void reset_goto_scale_for_host() {
     goto_scale_x_ = yaml_goto_scale_x_;
@@ -280,6 +285,10 @@ class EspidfBleKeyboard : public Component
   const uint8_t *get_slot_addr(uint8_t slot) const { return slot_addrs_[slot]; }
   void assign_host_slot_(uint8_t slot, const esp_bd_addr_t addr, esp_ble_addr_type_t addr_type);
   void save_host_slots_();
+  /// True if the BLE stack still holds a bond for this slot's address. A slot can
+  /// hold an address with no bond (e.g. after a restore) — it will advertise at a
+  /// host that then refuses encryption, so the UI must surface the difference.
+  bool host_slot_bonded(uint8_t slot) const;
 
   void set_host_slot_passkey(uint8_t slot, uint32_t passkey, bool secure_connections) {
     if (slot < MAX_HOST_SLOTS) {

@@ -1075,6 +1075,7 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Scroll controls** — buttons + mouse wheel on the touchpad
 - **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat, media transport including Record, red/green/yellow/blue colour keys (F1–F4), and app launchers (Explorer, Browser, Email, Calc, Search). Every button is a named action, so any of them can be remapped per host — see [Per-host action overrides](#per-host-action-overrides)
 - **Host Actions** — remap a named action per host slot (e.g. Record → Game Bar on a PC, HID Record on a TV), saved on the device — see [Per-host action overrides](#per-host-action-overrides)
+- **Backup & Restore** — download every runtime setting as a JSON file and re-apply it later or on another board — see [Backup and restore](#backup-and-restore)
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
 - **Zoom controls** — resize keyboard and mouse with +/- buttons in 5% steps (50%–200%), zoom level saved in browser
 - **Light/dark theme** — toggle between dark and light mode, preference saved in browser
@@ -1083,6 +1084,27 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Programmed buttons** — any buttons defined in YAML appear as clickable buttons on the web page
 - **Zero dependencies** — no HA, no custom cards, no JS files to install
 - **Works from any phone** — just open the URL in a mobile browser
+
+### Backup and restore
+
+Macros, host actions and `mouse_goto` calibration only exist in the device's NVS — none of it is in your YAML. An NVS erase, a re-flash that clears storage, or a board swap loses the lot, and the calibration in particular is tedious to redo. The **Backup** and **Restore** buttons next to the **Host Actions** heading save and re-apply all of it as a single JSON file.
+
+**Backup** downloads `ble-kb-backup-<device>.json` containing:
+
+- Macros
+- Saved per-host action overrides (the `SAVED` rows — YAML-defined ones are deliberately excluded, since writing them back as saved overrides would shadow later YAML edits)
+- The keyboard layout chosen in the web UI
+- Per-host `mouse_goto` calibration
+- Occupied host slots — address, address type, and whether the device still holds a Bluetooth bond for it
+- This browser's interface preferences: theme, zoom, and which sections are shown and in what order
+
+**Restore replaces, it doesn't merge.** Existing macros are deleted and saved overrides cleared before the file is applied, so the device ends up exactly as the backup describes. You'll get a confirmation dialog listing what's about to change.
+
+> **Learned hosts restore addresses, not pairing.** A Bluetooth bond is the peer address *plus* the pairing keys, and the keys live inside the ESP32's Bluetooth stack where no API can export them. Restoring host slots is therefore a separate opt-in prompt: it brings back which host was in which slot, but any host whose bond is no longer on the device **must be paired again**. Until you do, the slot will look occupied and simply fail to connect. The restore summary names the slots this applies to, and the backup file records a `bonded` flag for each so you can tell in advance.
+
+Not included: the pairing passkey and the generated per-slot Bluetooth addresses — those are device identity rather than settings, and come from your YAML.
+
+Restore is **not atomic**. It replays the file through the same API endpoints the UI uses, one step at a time; if a step fails it stops and tells you where, leaving the device partly restored. Re-running a restore from the same file is safe and will bring it the rest of the way.
 
 ### REST API
 
@@ -1114,6 +1136,9 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/overrides` | GET | `slot` (int, default active) | Per-host action overrides: `{"slot":N,"active":M,"items":[{"name":"record","action":"combo:0x0C:0x15","src":"nvs"\|"yaml"}]}` |
 | `/api/ble_keyboard/override_set` | POST | `slot`, `name`, `action` | Set a per-host action override (max 8 per slot); persists to NVS |
 | `/api/ble_keyboard/override_clear` | POST | `slot`, `name` | Delete a saved override, falling back to YAML / built-in |
+| `/api/ble_keyboard/backup` | GET | — | All runtime settings as JSON: macros, saved overrides, layout, per-host calibration, and occupied host slots (with a `bonded` flag) |
+| `/api/ble_keyboard/goto_scale_slot` | POST | `slot`, `x`, `y` | Write `mouse_goto` calibration for any slot (`goto_scale` only writes the active one) |
+| `/api/ble_keyboard/set_host_slot` | POST | `slot`, `addr`, `type` | Restore a host slot's address. Returns `OK-NOBOND` if the BLE bond is missing, meaning that host must be re-paired |
 
 Example: `curl -X POST "http://<device-ip>/api/ble_keyboard/string?keys=Hello"`
 
