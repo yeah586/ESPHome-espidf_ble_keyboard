@@ -101,6 +101,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .ovr-name{font-weight:600;color:var(--name);flex-shrink:0}
 .ovr-act{color:var(--fg);font-family:ui-monospace,monospace;word-break:break-all;flex:1}
 .ovr-tag{font-size:9px;font-weight:700;letter-spacing:.5px;padding:2px 5px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--muted);flex-shrink:0}
+.hid-panel{margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
+.hid-toggle{width:100%;text-align:left;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--name);font-size:12px;font-weight:600;cursor:pointer}
+.hid-panel:not(.open) .hid-body{display:none}
+.hid-group{margin:8px 0}
+.hid-group-name{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.hid-items{display:flex;flex-wrap:wrap;gap:4px 12px}
+.hid-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--fg);min-width:120px;cursor:pointer}
+.hid-item input{margin:0;cursor:pointer}
 .host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;overflow:hidden}
 .host-btn{flex:1 0 60px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
@@ -152,7 +160,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <div class="status-dot" id="sdot"></div>
 <span class="status-text" id="stxt">Disconnected</span>
 <span class="dev-name" id="dname"></span>
-<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.4.0</span>
+<span id="webver" style="font-size:11px;color:var(--muted);margin-left:6px;letter-spacing:.3px">v1.3.0</span>
 </div>
 <div class="toolbar-right">
 <div class="section-toggles" id="toggle-bar">
@@ -448,6 +456,14 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <select id="ov-preset"><option value="">Preset...</option></select>
 <button id="ov-save">+ Set</button>
 </div>
+<div class="hid-panel" id="hid-panel">
+<button class="hid-toggle" id="hid-toggle">Remote buttons &#9662;</button>
+<div class="hid-body" id="hid-body">
+<div style="font-size:12px;color:var(--muted);margin:6px 0">Untick a button to remove it from the remote on this host. The action still works from macros, buttons and Home Assistant &mdash; only the button goes away.</div>
+<div id="hid-list"></div>
+<div class="macro-form"><button id="hid-save">Save buttons</button><button id="hid-all" class="cancel">All</button><button id="hid-none" class="cancel">None</button></div>
+</div>
+</div>
 </div>
 </div>
 
@@ -515,6 +531,9 @@ setInterval(pollStatus,3000);
       if(txt===lastHostsRaw)return;
       lastHostsRaw=txt;
       const d=JSON.parse(txt);
+      // Before the single-slot early return below: a one-host device still has
+      // a hidden set to apply, and the active slot may have changed.
+      if(window.applyHidden)window.applyHidden(false);
       if(!d.slots||d.slots.length<=1){bar.style.display='none';return}
       bar.style.display='';
       bar.innerHTML='';
@@ -738,7 +757,11 @@ setInterval(pollStatus,3000);
     }).catch(()=>{list.innerHTML='<span class="prog-empty">Error loading</span>'});
   }
 
-  slotSel.addEventListener('change',()=>{slot=parseInt(slotSel.value);load()});
+  slotSel.addEventListener('change',()=>{
+    slot=parseInt(slotSel.value);
+    load();
+    if(hidPanel&&hidPanel.classList.contains('open'))loadHidden();
+  });
 
   saveBtn.addEventListener('click',()=>{
     const n=nameIn.value.trim(),a=actIn.value.trim();
@@ -751,6 +774,84 @@ setInterval(pollStatus,3000);
   });
 
   loadSlots().then(load).catch(()=>{list.innerHTML='<span class="prog-empty">Error loading</span>'});
+
+  // ── Hidden buttons (per host) ──
+  // The button list is built from the remote's own DOM rather than a hardcoded
+  // table, so it can never drift as buttons are added or removed.
+  const hidPanel=document.getElementById('hid-panel');
+  const hidToggle=document.getElementById('hid-toggle');
+  const hidList=document.getElementById('hid-list');
+  const hidSave=document.getElementById('hid-save');
+
+  function remoteButtons(){
+    const out=[],seen={};
+    document.querySelectorAll('#media-card [data-action]').forEach(b=>{
+      const a=b.dataset.action;
+      if(seen[a])return;              // e.g. search is on two buttons
+      seen[a]=true;
+      const sec=b.closest('.rmt-section');
+      const secs=[...document.querySelectorAll('#media-card .rmt-section')];
+      out.push({action:a,label:b.title||b.textContent.trim()||a,group:secs.indexOf(sec)});
+    });
+    return out;
+  }
+  const GROUP_NAMES=['Power &amp; navigation','D-pad','Volume &amp; channel','Media','Colours','Apps'];
+
+  function buildHidList(hidden){
+    const btns=remoteButtons();
+    hidList.innerHTML='';
+    const groups={};
+    btns.forEach(b=>{(groups[b.group]=groups[b.group]||[]).push(b)});
+    Object.keys(groups).sort((a,b)=>a-b).forEach(g=>{
+      const wrap=document.createElement('div');
+      wrap.className='hid-group';
+      const h=document.createElement('div');
+      h.className='hid-group-name';
+      h.innerHTML=GROUP_NAMES[g]||('Group '+(parseInt(g)+1));
+      wrap.appendChild(h);
+      const items=document.createElement('div');
+      items.className='hid-items';
+      groups[g].forEach(b=>{
+        const lab=document.createElement('label');
+        lab.className='hid-item';
+        const cb=document.createElement('input');
+        cb.type='checkbox';
+        cb.dataset.action=b.action;
+        cb.checked=hidden.indexOf(b.action)<0;   // ticked = shown
+        lab.appendChild(cb);
+        lab.appendChild(document.createTextNode(b.label));
+        items.appendChild(lab);
+      });
+      wrap.appendChild(items);
+      hidList.appendChild(wrap);
+    });
+  }
+
+  function loadHidden(){
+    if(!hidList)return Promise.resolve();
+    return fetch('/api/ble_keyboard/hidden?'+new URLSearchParams({slot:slot}))
+      .then(r=>r.json()).then(d=>buildHidList(d.hidden||[]))
+      .catch(()=>{hidList.innerHTML='<span class="prog-empty">Error loading</span>'});
+  }
+
+  if(hidToggle)hidToggle.addEventListener('click',()=>{
+    hidPanel.classList.toggle('open');
+    hidToggle.innerHTML='Remote buttons '+(hidPanel.classList.contains('open')?'▴':'▾');
+    if(hidPanel.classList.contains('open'))loadHidden();
+  });
+  const hidAll=document.getElementById('hid-all');
+  const hidNone=document.getElementById('hid-none');
+  if(hidAll)hidAll.addEventListener('click',()=>hidList.querySelectorAll('input').forEach(c=>c.checked=true));
+  if(hidNone)hidNone.addEventListener('click',()=>hidList.querySelectorAll('input').forEach(c=>c.checked=false));
+
+  if(hidSave)hidSave.addEventListener('click',()=>{
+    const off=[...hidList.querySelectorAll('input')].filter(c=>!c.checked).map(c=>c.dataset.action);
+    fetch('/api/ble_keyboard/hidden_set?'+new URLSearchParams({slot:slot,names:off.join(',')}),{method:'POST'})
+      .then(r=>{
+        if(!r.ok)return r.text().then(t=>{alert(t)});
+        if(window.applyHidden)window.applyHidden(true);
+      });
+  });
 
   // ── Backup / Restore ──
   // Restore replays the file through the same endpoints the UI already uses,
@@ -871,6 +972,18 @@ setInterval(pollStatus,3000);
       });
       return chain;
     }).then(()=>{
+      status('Restoring: hidden buttons...');
+      // Post every slot, including ones absent from the file, so Replace really
+      // clears a slot the backup doesn't mention.
+      const hid=d.hidden&&typeof d.hidden==='object'?d.hidden:{};
+      let chain=Promise.resolve();
+      for(let s=0;s<slotSel.options.length;s++){
+        const sl=parseInt(slotSel.options[s].value);
+        const names=Array.isArray(hid[sl])?hid[sl]:(Array.isArray(hid[String(sl)])?hid[String(sl)]:[]);
+        chain=chain.then(()=>post('hidden_set',{slot:sl,names:names.join(',')}));
+      }
+      return chain;
+    }).then(()=>{
       if(!d.layout)return;
       status('Restoring: layout...');
       return post('set_layout',{id:d.layout});
@@ -908,6 +1021,7 @@ setInterval(pollStatus,3000);
       }else{
         alert(msg);
         load();
+        if(window.applyHidden)window.applyHidden(true);
       }
     }).catch(e=>status('Restore stopped at "'+e.message+'" — the device is partly restored.',true));
   }
@@ -1265,6 +1379,37 @@ buildKeyboard();
   });
   card.addEventListener('pointercancel',()=>{if(ab)ab.classList.remove('p');ok=false;ab=null;stopRepeat()});
   }
+
+  // ── Per-host hidden buttons ──
+  // Hides the buttons this host has no use for, then collapses any container
+  // left empty so no stray label or divider is stranded behind them.
+  let lastHiddenKey=null;
+  window.applyHidden=function(force){
+    fetch('/api/ble_keyboard/hidden').then(r=>r.json()).then(d=>{
+      const key=d.slot+':'+(d.hidden||[]).join(',');
+      if(!force&&key===lastHiddenKey)return;
+      lastHiddenKey=key;
+      const hide=d.hidden||[];
+      card.querySelectorAll('[data-action]').forEach(b=>{
+        b.style.display=hide.indexOf(b.dataset.action)>=0?'none':'';
+      });
+      // Collapse a group/section once every button inside it is gone.
+      const empty=el=>![...el.querySelectorAll('[data-action]')].some(b=>b.style.display!=='none');
+      card.querySelectorAll('.rmt-strip-group').forEach(g=>{g.style.display=empty(g)?'none':''});
+      card.querySelectorAll('.rmt-section').forEach(s=>{s.style.display=empty(s)?'none':''});
+      // A divider only earns its place between two visible sections.
+      const kids=[...card.children];
+      kids.forEach((el,i)=>{
+        if(!el.classList.contains('rmt-divider'))return;
+        const vis=j=>j.classList&&j.classList.contains('rmt-section')&&j.style.display!=='none';
+        let before=false,after=false;
+        for(let j=i-1;j>=0;j--){if(vis(kids[j])){before=true;break}}
+        for(let j=i+1;j<kids.length;j++){if(vis(kids[j])){after=true;break}}
+        el.style.display=(before&&after)?'':'none';
+      });
+    }).catch(()=>{});
+  };
+  window.applyHidden(true);
 })();
 
 // ── Position Finder ──
@@ -1765,6 +1910,23 @@ class BleKbWebHandler : public AsyncWebHandler {
       return;
     }
 
+    if (path == "hidden") {
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : kb_->active_host_slot();
+      if (slot < 0 || slot >= kb_->host_slots()) {
+        send_response(400, "text/plain", "Invalid slot");
+        return;
+      }
+      const auto &h = kb_->get_hidden((uint8_t) slot);
+      std::string json = "{\"slot\":" + std::to_string(slot) + ",\"hidden\":[";
+      for (size_t i = 0; i < h.size(); i++) {
+        if (i > 0) json += ",";
+        json += "\"" + json_escape(h[i]) + "\"";
+      }
+      json += "]}";
+      send_response(200, "application/json", json.c_str());
+      return;
+    }
+
     if (path == "backup") {
       // Everything the user can edit at runtime, in one document. Deliberately
       // excludes the passkey and the generated per-slot addresses (device
@@ -1795,6 +1957,20 @@ class BleKbWebHandler : public AsyncWebHandler {
           json += "\"" + json_escape(ovr[i].name) + "\":\"" + json_escape(ovr[i].action) + "\"";
         }
         json += "}";
+      }
+      json += "},\"hidden\":{";
+      bool first_hidden = true;
+      for (uint8_t s = 0; s < kb_->host_slots(); s++) {
+        const auto &h = kb_->get_hidden(s);
+        if (h.empty()) continue;
+        if (!first_hidden) json += ",";
+        first_hidden = false;
+        json += "\"" + std::to_string(s) + "\":[";
+        for (size_t i = 0; i < h.size(); i++) {
+          if (i > 0) json += ",";
+          json += "\"" + json_escape(h[i]) + "\"";
+        }
+        json += "]";
       }
       json += "},\"goto_scale\":{";
       bool first_scale = true;
@@ -1987,6 +2163,29 @@ class BleKbWebHandler : public AsyncWebHandler {
         send_response(400, "text/plain", "Action required, max 255 chars");
       } else if (!kb_->set_override((uint8_t) slot, name, action)) {
         send_response(400, "text/plain", "Max overrides reached for this host (8)");
+      } else {
+        send_response(200, "text/plain", "OK");
+      }
+
+    } else if (path == "hidden_set") {
+      // Replaces the whole set for one slot; an empty "names" clears it.
+      int slot = request->hasArg("slot") ? atoi(request->arg("slot").c_str()) : -1;
+      std::string names = request->hasArg("names") ? request->arg("names").c_str() : "";
+      std::vector<std::string> list;
+      size_t start = 0;
+      while (start < names.size()) {
+        size_t end = names.find(',', start);
+        if (end == std::string::npos) end = names.size();
+        std::string n = names.substr(start, end - start);
+        start = end + 1;
+        if (!n.empty()) list.push_back(n);
+      }
+      if (slot < 0 || slot >= kb_->host_slots()) {
+        send_response(400, "text/plain", "Invalid slot");
+      } else if (list.size() > EspidfBleKeyboard::MAX_HIDDEN) {
+        send_response(400, "text/plain", "Too many hidden buttons (max 40)");
+      } else if (!kb_->set_hidden((uint8_t) slot, list)) {
+        send_response(400, "text/plain", "Invalid button name in list");
       } else {
         send_response(200, "text/plain", "OK");
       }

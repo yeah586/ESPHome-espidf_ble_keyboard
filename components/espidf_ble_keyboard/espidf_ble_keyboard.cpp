@@ -1076,6 +1076,105 @@ void EspidfBleKeyboard::save_overrides_(uint8_t slot) {
     nvs_close(handle);
 }
 
+// ── Per-host hidden remote buttons (NVS-persisted) ────────────────
+//
+// One NVS entry per slot (key "hid<slot>"), value a comma-separated list of
+// action names. Presentation only: nothing here touches execute_action(), so a
+// hidden button's action still runs from macros, YAML and the API.
+
+std::string EspidfBleKeyboard::hidden_csv(uint8_t slot) const {
+    std::string out;
+    if (slot >= MAX_HOST_SLOTS) return out;
+    for (const auto &n : hidden_[slot]) {
+        if (!out.empty()) out += ",";
+        out += n;
+    }
+    return out;
+}
+
+bool EspidfBleKeyboard::set_hidden(uint8_t slot, const std::vector<std::string> &names) {
+    if (slot >= MAX_HOST_SLOTS || names.size() > MAX_HIDDEN) return false;
+    for (const auto &n : names) {
+        // valid_override_name() already rejects '=', '|' and whitespace; the
+        // comma is this list's own separator.
+        if (!valid_override_name(n) || n.find(',') != std::string::npos) return false;
+    }
+    hidden_[slot] = names;
+    save_hidden_(slot);
+    if (slot == active_slot_) publish_hidden_();
+    ESP_LOGI(TAG, "Hidden buttons for host %u: %u", (unsigned) slot, (unsigned) names.size());
+    return true;
+}
+
+void EspidfBleKeyboard::publish_hidden_() {
+    if (hidden_sensor_ == nullptr) return;
+    std::string csv = hidden_csv(active_slot_);
+    // Home Assistant rejects state strings over 255 chars. Truncate on a name
+    // boundary — a half name would be silently meaningless to the card.
+    if (csv.size() > 255) {
+        size_t cut = csv.rfind(',', 255);
+        csv = (cut == std::string::npos) ? "" : csv.substr(0, cut);
+        unsigned kept = 0;
+        for (char c : csv) if (c == ',') kept++;
+        if (!csv.empty()) kept++;
+        ESP_LOGW(TAG, "Hidden list for host %u exceeds the 255-char sensor limit — sent %u name(s)",
+                 (unsigned) active_slot_, kept);
+    }
+    hidden_sensor_->publish_state(csv);
+}
+
+void EspidfBleKeyboard::load_hidden_() {
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READONLY, &handle) != ESP_OK) return;
+
+    for (uint8_t slot = 0; slot < MAX_HOST_SLOTS; slot++) {
+        char key[12];
+        snprintf(key, sizeof(key), "hid%u", slot);
+
+        size_t len = 0;
+        if (nvs_get_str(handle, key, nullptr, &len) != ESP_OK || len == 0) continue;
+        if (len > MAX_HIDDEN * 33 + 1) {
+            ESP_LOGW(TAG, "Hidden list for slot %u is oversized (%u bytes) — ignoring",
+                     (unsigned) slot, (unsigned) len);
+            continue;
+        }
+
+        std::vector<char> buf(len);
+        if (nvs_get_str(handle, key, buf.data(), &len) != ESP_OK) continue;
+
+        std::string blob(buf.data());
+        size_t start = 0;
+        while (start < blob.size() && hidden_[slot].size() < MAX_HIDDEN) {
+            size_t end = blob.find(',', start);
+            if (end == std::string::npos) end = blob.size();
+            std::string name = blob.substr(start, end - start);
+            start = end + 1;
+            if (valid_override_name(name)) hidden_[slot].push_back(name);
+        }
+        if (!hidden_[slot].empty())
+            ESP_LOGI(TAG, "Loaded %u hidden button(s) for host %u",
+                     (unsigned) hidden_[slot].size(), (unsigned) slot);
+    }
+    nvs_close(handle);
+}
+
+void EspidfBleKeyboard::save_hidden_(uint8_t slot) {
+    if (slot >= MAX_HOST_SLOTS) return;
+    nvs_handle_t handle;
+    if (nvs_open("espidf_ble_kb", NVS_READWRITE, &handle) != ESP_OK) return;
+
+    char key[12];
+    snprintf(key, sizeof(key), "hid%u", slot);
+    if (hidden_[slot].empty()) {
+        nvs_erase_key(handle, key);
+    } else {
+        std::string blob = hidden_csv(slot);
+        nvs_set_str(handle, key, blob.c_str());
+    }
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
 // ── User-editable macros (NVS-persisted) ──────────────────────────
 
 void EspidfBleKeyboard::load_macros_() {
@@ -1188,6 +1287,7 @@ void EspidfBleKeyboard::switch_host(uint8_t slot) {
     save_host_slots_();
     if (active_host_sensor_ != nullptr)
         active_host_sensor_->publish_state(slot);
+    publish_hidden_();  // the new host may hide a different set of buttons
 
     // Re-apply security params for the new slot's passkey config
     bool slot_has_pk; uint32_t slot_pk; bool slot_sc;
@@ -1315,6 +1415,7 @@ void EspidfBleKeyboard::setup() {
     load_goto_scale_for_host(active_slot_);  // per-host calibration override (if saved)
     load_macros_();
     load_overrides_();  // all slots, so the web UI can edit an inactive slot
+    load_hidden_();
     // Apply YAML default if no setter ran (defensive), then let NVS override.
     if (active_layout_ == nullptr) active_layout_ = default_layout();
     load_layout_();
@@ -1325,6 +1426,7 @@ void EspidfBleKeyboard::setup() {
     generate_slot_addrs_();
     if (active_host_sensor_ != nullptr)
         active_host_sensor_->publish_state(active_slot_);
+    publish_hidden_();
 
     // If active slot has a bonded host, use directed advertising on startup
     // Skip directed for RPA addresses (Android rotates these)

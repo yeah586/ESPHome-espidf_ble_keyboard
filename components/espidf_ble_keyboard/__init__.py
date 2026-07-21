@@ -5,7 +5,10 @@ from esphome.const import CONF_ID
 from esphome import automation
 
 DEPENDENCIES = ["esp32"]
-AUTO_LOAD = ["sensor", "binary_sensor", "button", "text"]
+# text_sensor is auto-loaded because espidf_ble_keyboard.h includes its header
+# unconditionally (like sensor/binary_sensor) — without it, a config that never
+# declares a text_sensor fails to compile on the missing include.
+AUTO_LOAD = ["sensor", "binary_sensor", "button", "text", "text_sensor"]
 
 # Define configuration keys
 CONF_DEVICE_NAME = "device_name"

@@ -747,6 +747,30 @@ The replacement can be any action string, including a multi-step chain: `record:
 
 **Editing without a reflash:** the web UI has a **Host Actions** card. Pick a host slot, then add or edit overrides for it; they persist to NVS and win over the YAML value. The action-name box offers every overridable name as you type, and the replacement box has the same preset dropdown as the macro editor, so neither has to be typed from memory. Rows tagged `YAML` come from your config and are read-only — set an override of the same name to shadow one, and delete that override to fall back. You can edit a slot other than the one currently active.
 
+### Removing Remote Buttons Per Host
+
+Most hosts need only a fraction of the remote. A TV box has no use for Explorer/Calc/Email, a PC has no use for the coloured DVB keys. Open **Remote buttons** in the Host Actions card, pick the host, and untick whatever that host doesn't need — the buttons disappear from the remote for that host only.
+
+This is **presentation only**. The action still runs from macros, YAML `button` actions and the `run_action` service, so a macro calling `record` still records even with the Record button hidden. Removing a button declutters the remote; it does not disable anything.
+
+The number pad on the Home Assistant card is the one thing not listed, since its digits type characters rather than firing a named action. Note also that hiding `search` removes both the magnifier and the app row's Search button, because both fire the same action.
+
+Hidden sets are stored per host on the device (max 40 buttons per slot) and are included in [Backup and restore](#backup-and-restore).
+
+**Making the Home Assistant card follow too** is optional and needs one extra entity — the card can't read the device's HTTP API, so the list travels through Home Assistant:
+
+```yaml
+text_sensor:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    type: hidden_buttons
+    name: "Hidden Buttons"
+```
+
+The card picks up `sensor.<device>_hidden_buttons` automatically (override with `hidden_entity:` on the card) and hides the same buttons, following host switches live. Without the text sensor the card simply shows everything.
+
+> Home Assistant caps entity states at 255 characters. Hiding nearly every button on a host exceeds that, so the device truncates the published list at a whole-name boundary and logs a warning — a couple of buttons would stay visible on the card, though the web remote is unaffected. Normal-sized sets are nowhere near the limit.
+
 ### Action Reference
 
 | Action | Description |
@@ -1076,6 +1100,7 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat, media transport including Record, red/green/yellow/blue colour keys (F1–F4), and app launchers (Explorer, Browser, Email, Calc, Search). Every button is a named action, so any of them can be remapped per host — see [Per-host action overrides](#per-host-action-overrides)
 - **Host Actions** — remap a named action per host slot (e.g. Record → Game Bar on a PC, HID Record on a TV), saved on the device — see [Per-host action overrides](#per-host-action-overrides)
 - **Backup & Restore** — download every runtime setting as a JSON file and re-apply it later or on another board — see [Backup and restore](#backup-and-restore)
+- **Remove buttons per host** — untick the remote buttons a host doesn't need; they disappear for that host only — see [Removing remote buttons per host](#removing-remote-buttons-per-host)
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
 - **Zoom controls** — resize keyboard and mouse with +/- buttons in 5% steps (50%–200%), zoom level saved in browser
 - **Light/dark theme** — toggle between dark and light mode, preference saved in browser
@@ -1095,6 +1120,7 @@ Macros, host actions and `mouse_goto` calibration only exist in the device's NVS
 - Saved per-host action overrides (the `SAVED` rows — YAML-defined ones are deliberately excluded, since writing them back as saved overrides would shadow later YAML edits)
 - The keyboard layout chosen in the web UI
 - Per-host `mouse_goto` calibration
+- Per-host hidden remote buttons
 - Occupied host slots — address, address type, and whether the device still holds a Bluetooth bond for it
 - This browser's interface preferences: theme, zoom, and which sections are shown and in what order
 
@@ -1136,6 +1162,8 @@ The web control page uses these local HTTP endpoints (useful for custom integrat
 | `/api/ble_keyboard/overrides` | GET | `slot` (int, default active) | Per-host action overrides: `{"slot":N,"active":M,"items":[{"name":"record","action":"combo:0x0C:0x15","src":"nvs"\|"yaml"}]}` |
 | `/api/ble_keyboard/override_set` | POST | `slot`, `name`, `action` | Set a per-host action override (max 8 per slot); persists to NVS |
 | `/api/ble_keyboard/override_clear` | POST | `slot`, `name` | Delete a saved override, falling back to YAML / built-in |
+| `/api/ble_keyboard/hidden` | GET | `slot` (int, default active) | Buttons removed from the remote for that host: `{"slot":N,"hidden":["record"]}` |
+| `/api/ble_keyboard/hidden_set` | POST | `slot`, `names` (comma-separated) | Replace a host's hidden-button set; empty `names` clears it (max 40) |
 | `/api/ble_keyboard/backup` | GET | — | All runtime settings as JSON: macros, saved overrides, layout, per-host calibration, and occupied host slots (with a `bonded` flag) |
 | `/api/ble_keyboard/goto_scale_slot` | POST | `slot`, `x`, `y` | Write `mouse_goto` calibration for any slot (`goto_scale` only writes the active one) |
 | `/api/ble_keyboard/set_host_slot` | POST | `slot`, `addr`, `type` | Restore a host slot's address. Returns `OK-NOBOND` if the BLE bond is missing, meaning that host must be re-paired |
@@ -1303,6 +1331,7 @@ Optional configuration:
 | `show_numpad` | `false` | Show a number pad (0–9) for channel entry or PIN input. |
 | `show_apps` | `true` | Show app launch buttons (Explorer, Browser, Email, Calc, Search). |
 | `show_color` | `false` | Show red/green/yellow/blue color buttons (mapped to F1–F4). |
+| `hidden_entity` | `sensor.<device>_hidden_buttons` | Text sensor carrying the active host's hidden buttons, so the card mirrors the web remote's [per-host hiding](#removing-remote-buttons-per-host). Optional — without the entity every button is shown. |
 
 Features:
 - **Power button** — HID power signal for clean OS-level power control.

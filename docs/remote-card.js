@@ -26,6 +26,11 @@
  *   # show_numpad: true            # show number pad (default false)
  *   # show_apps: true              # show app launch row (default true)
  *   # show_color: true             # show color buttons (default false)
+ *   # hidden_entity: sensor.x_hidden_buttons   # override the auto-detected id
+ *
+ * Per-host hiding: if the device exposes the optional `hidden_buttons` text
+ * sensor, this card hides whatever the active host hides on the web remote, and
+ * follows a host switch live. Without that sensor every button is shown.
  *
  * Full example with overrides:
  *   type: custom:ble-remote-card
@@ -42,6 +47,7 @@ class BleRemoteCard extends HTMLElement {
     if (!this._initialized) {
       this._initialize();
     }
+    this._applyHidden();
   }
 
   setConfig(config) {
@@ -54,7 +60,40 @@ class BleRemoteCard extends HTMLElement {
       show_numpad: config.show_numpad === true,
       show_apps: config.show_apps !== false,
       show_color: config.show_color === true,
+      // Optional text sensor carrying the active host's hidden buttons, so the
+      // card mirrors the web remote's per-host hiding. Absent entity = show all.
+      hidden_entity: config.hidden_entity ||
+        `sensor.${config.device.replace(/-/g, '_')}_hidden_buttons`,
     };
+  }
+
+  // Hide the buttons the active host has no use for. Driven by the text sensor,
+  // so it follows a host switch without a dashboard reload.
+  _applyHidden() {
+    if (!this._hass || !this.shadowRoot) return;
+    const ent = this._hass.states[this._config.hidden_entity];
+    const raw = ent && typeof ent.state === 'string' &&
+                ent.state !== 'unknown' && ent.state !== 'unavailable' ? ent.state : '';
+    if (raw === this._lastHidden) return;   // states stream constantly; only act on change
+    this._lastHidden = raw;
+
+    const hide = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const map = this._actionMap || {};
+    Object.keys(map).forEach(id => {
+      const el = this.shadowRoot.getElementById(id);
+      if (el) el.style.display = hide.includes(map[id]) ? 'none' : '';
+    });
+    // App buttons are built dynamically and carry their action on the element.
+    this.shadowRoot.querySelectorAll('[data-action]').forEach(el => {
+      el.style.display = hide.includes(el.dataset.action) ? 'none' : '';
+    });
+    // Collapse the optional rows once everything in them is hidden.
+    ['color-section', 'app-section'].forEach(id => {
+      const sec = this.shadowRoot.getElementById(id);
+      if (!sec || sec.dataset.enabled !== '1') return;
+      const anyVisible = [...sec.querySelectorAll('button')].some(b => b.style.display !== 'none');
+      sec.style.display = anyVisible ? '' : 'none';
+    });
   }
 
   _initialize() {
@@ -280,9 +319,13 @@ class BleRemoteCard extends HTMLElement {
       </div>
     `;
 
-    // Show optional sections
+    // Show optional sections. `enabled` marks the ones the config turned on, so
+    // per-host hiding can collapse them without re-showing a section the user
+    // disabled outright.
     if (this._config.show_color) {
-      shadow.getElementById('color-section').style.display = '';
+      const sec = shadow.getElementById('color-section');
+      sec.style.display = '';
+      sec.dataset.enabled = '1';
     }
 
     if (this._config.show_numpad) {
@@ -319,6 +362,7 @@ class BleRemoteCard extends HTMLElement {
     if (this._config.show_apps) {
       const section = shadow.getElementById('app-section');
       section.style.display = '';
+      section.dataset.enabled = '1';
       const row = shadow.getElementById('app-row');
       // Named actions so these are remappable per host too. 'Search' shares the
       // Search button's action — both are AC Search 0x0221.
@@ -333,6 +377,7 @@ class BleRemoteCard extends HTMLElement {
         const btn = document.createElement('button');
         btn.className = 'btn app';
         btn.textContent = app.name;
+        btn.dataset.action = app.action;   // so per-host hiding can find it
         btn.addEventListener('pointerdown', (e) => {
           e.preventDefault();
           this._press(btn);
@@ -410,6 +455,9 @@ class BleRemoteCard extends HTMLElement {
       c_yellow: 'color_yellow',
       c_blue:   'color_blue',
     };
+
+    // Kept so _applyHidden can map a hidden action name back to its button id.
+    this._actionMap = actions;
 
     for (const [id, action] of Object.entries(actions)) {
       const el = shadow.getElementById(id);

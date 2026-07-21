@@ -4,6 +4,7 @@
 #include "esphome/components/button/button.h"
 #include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h"
 #ifdef USE_API
 #include "esphome/components/api/custom_api_device.h"
 #endif
@@ -217,6 +218,16 @@ class EspidfBleKeyboard : public Component
   /// would corrupt the NVS blob, and within the length cap).
   static bool valid_override_name(const std::string &name);
 
+  // Per-host hidden remote buttons. Presentation only — the actions still run
+  // from macros, YAML and the API; this just removes the buttons from the
+  // remote for hosts that have no use for them. Stored separately from the
+  // overrides above so it doesn't eat into MAX_OVERRIDES.
+  static const uint8_t MAX_HIDDEN = 40;
+  const std::vector<std::string> &get_hidden(uint8_t slot) const { return hidden_[slot]; }
+  bool set_hidden(uint8_t slot, const std::vector<std::string> &names);  // replaces the set
+  /// The active slot's hidden list as a comma-separated string, for the text sensor.
+  std::string hidden_csv(uint8_t slot) const;
+
   /// Execute an action string (combo:, consumer:, named actions, or literal text).
   /// Used by buttons, macros, web API, and YAML automations.
   void execute_action(const std::string &action);
@@ -314,6 +325,13 @@ class EspidfBleKeyboard : public Component
   // Active host sensor
   void set_active_host_sensor(sensor::Sensor *sensor) { active_host_sensor_ = sensor; }
 
+  // Hidden-buttons text sensor — lets the Home Assistant card mirror the web
+  // remote's per-host hiding. Optional; without it the card shows everything.
+  void set_hidden_sensor(text_sensor::TextSensor *sensor) {
+    hidden_sensor_ = sensor;
+    publish_hidden_();
+  }
+
   // RSSI sensor
   void set_rssi_sensor(sensor::Sensor *sensor) { rssi_sensor_ = sensor; }
   void set_rssi_update_interval(uint32_t ms) { rssi_update_interval_ms_ = ms; }
@@ -324,6 +342,7 @@ class EspidfBleKeyboard : public Component
   // Peer address and RSSI state — public so static GAP/GATTS handlers can access them directly
   esp_bd_addr_t peer_addr_{};
   sensor::Sensor *active_host_sensor_{nullptr};
+  text_sensor::TextSensor *hidden_sensor_{nullptr};
   sensor::Sensor *rssi_sensor_{nullptr};
   bool rssi_pending_{false};
   std::atomic<bool> pending_rssi_nan_{false};
@@ -408,6 +427,12 @@ class EspidfBleKeyboard : public Component
   const std::string *find_override_(uint8_t slot, const std::string &name) const;
   void load_overrides_();
   void save_overrides_(uint8_t slot);
+
+  // Per-host hidden buttons (NVS key "hid<slot>", comma-separated names).
+  std::vector<std::string> hidden_[MAX_HOST_SLOTS];
+  void load_hidden_();
+  void save_hidden_(uint8_t slot);
+  void publish_hidden_();  // push the active slot's list to the text sensor
 
   // Multi-host state
   uint8_t host_slots_{MAX_HOST_SLOTS};
