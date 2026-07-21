@@ -1073,7 +1073,7 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground (up to 4x)
 - **Mouse buttons** — Left, Middle, Right click; long-press a button to hold it for dragging (drag the touchpad or run `mouse_goto` while held), tap the held button to release
 - **Scroll controls** — buttons + mouse wheel on the touchpad
-- **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat, media transport including Record
+- **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat, media transport including Record, and red/green/yellow/blue colour keys (F1–F4). Every button is a named action, so any of them can be remapped per host — see [Per-host action overrides](#per-host-action-overrides)
 - **Host Actions** — remap a named action per host slot (e.g. Record → Game Bar on a PC, HID Record on a TV), saved on the device — see [Per-host action overrides](#per-host-action-overrides)
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
 - **Zoom controls** — resize keyboard and mouse with +/- buttons in 5% steps (50%–200%), zoom level saved in browser

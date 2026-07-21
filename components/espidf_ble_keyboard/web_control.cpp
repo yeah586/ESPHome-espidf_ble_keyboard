@@ -133,6 +133,12 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .rmt-btn.media{width:42px;height:42px}
 .rmt-btn.rec{background:#c62828;color:#fff;border-color:#c62828}
 .rmt-btn.rec:active,.rmt-btn.rec.p{background:#e53935}
+.rmt-btn.col{width:44px;height:44px;border:none}
+.rmt-btn.col:active,.rmt-btn.col.p{transform:scale(.93);filter:brightness(1.25)}
+.rmt-btn.red{background:#e53935}
+.rmt-btn.green{background:#43a047}
+.rmt-btn.yellow{background:#fdd835}
+.rmt-btn.blue{background:#1e88e5}
 </style></head><body>
 
 <div id="scalable" class="scalable">
@@ -270,6 +276,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <button class="rmt-btn media" data-action="fast_forward" data-repeat="1" title="Fast Forward"><svg viewBox="0 0 24 24"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg></button>
 <button class="rmt-btn media" data-action="next_track" title="Next"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
 <button class="rmt-btn media rec" data-action="record" title="Record"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></svg></button>
+</div></div>
+<div class="rmt-divider"></div>
+<div class="rmt-section"><div class="rmt-media-row">
+<button class="rmt-btn col red" data-action="color_red" title="Red (F1)"></button>
+<button class="rmt-btn col green" data-action="color_green" title="Green (F2)"></button>
+<button class="rmt-btn col yellow" data-action="color_yellow" title="Yellow (F3)"></button>
+<button class="rmt-btn col blue" data-action="color_blue" title="Blue (F4)"></button>
 </div></div>
 </div>
 
