@@ -257,6 +257,14 @@ text:
     mode: text
     optimistic: true
 
+# Optional: lets the Home Assistant remote card mirror the web UI's
+# per-host button hiding. Omit it and the card just shows every button.
+text_sensor:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    type: hidden_buttons
+    name: "Hidden Buttons"
+
 binary_sensor:
   - platform: espidf_ble_keyboard
     keyboard_id: my_keyboard
