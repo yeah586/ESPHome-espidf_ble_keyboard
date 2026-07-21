@@ -433,7 +433,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 </div>
 <div id="ov-list"><span class="prog-empty">Loading...</span></div>
 <div class="macro-form">
-<input id="ov-name" list="ov-names" placeholder="Action name (e.g. record)" maxlength="31">
+<input id="ov-name" list="ov-names" placeholder="Action name (e.g. record)" maxlength="31" title="The named action to remap on this host &mdash; start typing to pick from the list.&#10;Only named actions can be overridden; parametric forms like combo: and consumer: always mean exactly what they say.">
 <datalist id="ov-names">
 <option value="record"><option value="play_pause"><option value="stop"><option value="next_track"><option value="prev_track">
 <option value="rewind"><option value="fast_forward"><option value="volume_up"><option value="volume_down"><option value="mute">
@@ -444,7 +444,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="ctrl_alt_del"><option value="power"><option value="sleep"><option value="shutdown"><option value="hibernate">
 <option value="left_click"><option value="right_click"><option value="middle_click"><option value="mouse_release">
 </datalist>
-<input id="ov-act" placeholder="Replacement action" maxlength="255">
+<input id="ov-act" placeholder="Replacement action" maxlength="255" title="What this action should do on the selected host.&#10;&#10;Examples:&#10;combo:0x0C:0x15 = Win+Alt+R (Game Bar record)&#10;combo:0x01:0x15 = Ctrl+R (Sound Recorder, needs focus)&#10;consumer:0x00B2 = raw HID usage&#10;play_pause = another named action&#10;string:hello = type text&#10;&#10;Chain steps with a | between them:&#10;combo:0x0C:0x15 | delay:500 | string:rec&#10;&#10;Modifier bits add up: 1=Ctrl, 2=Shift, 4=Alt, 8=Win&#10;so Win+Alt = 12 = 0x0C. Decimal or 0x hex both work.">
 <select id="ov-preset"><option value="">Preset...</option></select>
 <button id="ov-save">+ Set</button>
 </div>
