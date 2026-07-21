@@ -500,6 +500,28 @@ espidf_ble_keyboard:
 
 ---
 
+### `text_sensor` (Platform: `espidf_ble_keyboard`)
+
+Optional. Publishes the active host's hidden remote buttons so the [Media Remote Card](#media-remote-card-for-home-assistant) can mirror the web remote's [per-host button removal](#removing-remote-buttons-per-host). Without it the card simply shows every button; the web remote does not need it either way.
+
+* **keyboard_id** (Required, ID): The ID of the `espidf_ble_keyboard` component.
+* **type** (Optional, string): `hidden_buttons` (the default and only type).
+* **name** (Optional, string): Friendly entity name shown in Home Assistant.
+
+```yaml
+text_sensor:
+  - platform: espidf_ble_keyboard
+    keyboard_id: my_keyboard
+    type: hidden_buttons
+    name: "Hidden Buttons"
+```
+
+The state is a comma-separated list of action names — `record,app_calc,color_red` — or empty when the active host hides nothing. It republishes when you save in the Host Actions card and whenever the host is switched.
+
+> ESPHome text sensors appear in Home Assistant under the **`sensor.`** domain, not `text_sensor.`. With the YAML above the entity is `sensor.<device>_hidden_buttons`, which is exactly what the card auto-detects. If you give it a different `name`, set `hidden_entity:` on the card to match.
+
+---
+
 ## Dict Action Format
 
 Instead of a string, `action` also accepts a mapping with a `type` key. This can be more readable for complex actions:
