@@ -109,8 +109,11 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .hid-items{display:flex;flex-wrap:wrap;gap:4px 12px}
 .hid-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--fg);min-width:120px;cursor:pointer}
 .hid-item input{margin:0;cursor:pointer}
-.host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;overflow:hidden}
-.host-btn{flex:1 0 60px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s}
+/* Grid, not flex-wrap: with flex:1 the buttons grow to share their row, so a
+   lone host on a second row stretched across the full width. Equal columns keep
+   every slot the same size however many wrap. 140px fits a MAC at 11px. */
+.host-bar{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.host-btn{padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s;overflow:hidden}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
 .host-btn.occupied{border-color:var(--accent)}
 .host-btn .slot-label{font-size:11px;color:var(--fg);display:block}
@@ -725,7 +728,11 @@ setInterval(pollStatus,3000);
       d.slots.forEach(s=>{
         const o=document.createElement('option');
         o.value=s.slot;
-        o.textContent='Host '+s.slot+(s.name?' — '+s.name:'')+(s.slot===d.active?' (active)':'');
+        // Name it the same way the host bar does (1-based, or the switch_host
+        // button's name), but also state the raw slot number — this card maps
+        // straight onto YAML `slot:` and the API's 0-based slot argument.
+        const label=s.name||('Host '+(s.slot+1));
+        o.textContent=label+' — slot '+s.slot+(s.slot===d.active?' (active)':'');
         slotSel.appendChild(o);
       });
       slotSel.value=slot;
@@ -756,7 +763,7 @@ setInterval(pollStatus,3000);
           const db=document.createElement('button');
           db.className='macro-act del';db.textContent='✕';db.title='Delete (revert to YAML/built-in)';
           db.addEventListener('click',()=>{
-            if(confirm('Delete override "'+it.name+'" on host '+slot+'?')){
+            if(confirm('Delete override "'+it.name+'" on slot '+slot+'?')){
               fetch('/api/ble_keyboard/override_clear?'+new URLSearchParams({slot:slot,name:it.name}),{method:'POST'}).then(load);
             }
           });
