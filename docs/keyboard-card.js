@@ -973,8 +973,8 @@ customElements.define('ble-keyboard-card', BleKeyboardCard);
  * Prefers Home Assistant's own <ha-form> so the panel matches built-in cards,
  * falling back to plain inputs if ha-form isn't registered.
  *
- * `host_names` is intentionally not exposed: it's a list, which has no good
- * single-field control. It is preserved untouched when editing here.
+ * `host_names` is a YAML list, so it edits here as one comma-separated field
+ * and is converted back to a list on the way out (see setConfig / _emit).
  * ---------------------------------------------------------------------- */
 
 const KB_EDITOR_SCHEMA = [
@@ -988,6 +988,7 @@ const KB_EDITOR_SCHEMA = [
   ], mode: 'dropdown' } } },
   { name: 'show_fkeys', selector: { boolean: {} } },
   { name: 'host_slots', selector: { number: { min: 0, max: 10, step: 1, mode: 'box' } } },
+  { name: 'host_names', selector: { text: {} } },
   { name: 'active_host_entity', selector: { entity: { domain: 'sensor' } } },
 ];
 
@@ -997,12 +998,18 @@ const KB_EDITOR_LABELS = {
   layout: 'Keyboard layout',
   show_fkeys: 'Show function key row',
   host_slots: 'Host switch buttons (0 = hide)',
+  host_names: 'Host names, comma-separated (optional)',
   active_host_entity: 'Active-host sensor (optional)',
 };
 
 class BleKeyboardCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = { layout: 'us', show_fkeys: true, host_slots: 0, ...config };
+    // host_names is a YAML list but edits as one comma-separated field; show it
+    // as text here and turn it back into a list in _emit().
+    if (Array.isArray(this._config.host_names)) {
+      this._config.host_names = this._config.host_names.join(', ');
+    }
     this._render();
   }
 
@@ -1013,8 +1020,15 @@ class BleKeyboardCardEditor extends HTMLElement {
 
   _emit(config) {
     this._config = config;
+    // Hand the card a real list again — it expects host_names to be an array.
+    const out = { ...config };
+    if (typeof out.host_names === 'string') {
+      const names = out.host_names.split(',').map((n) => n.trim()).filter(Boolean);
+      if (names.length) out.host_names = names;
+      else delete out.host_names;
+    }
     this.dispatchEvent(new CustomEvent('config-changed', {
-      detail: { config },
+      detail: { config: out },
       bubbles: true,
       composed: true,
     }));
