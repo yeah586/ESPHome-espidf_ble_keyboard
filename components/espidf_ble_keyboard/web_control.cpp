@@ -113,7 +113,7 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 /* max-width is what stops a lone host on a wrapped row from growing to the full
    width of the bar. flex-grow still lets several share a row and shrink to fit,
    so a row of hosts plus Forget Host stays on one line. */
-.host-btn{flex:1 0 115px;max-width:115px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s;overflow:hidden}
+.host-btn{flex:1 0 110px;max-width:110px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s;overflow:hidden}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
 .host-btn.occupied{border-color:var(--accent)}
 .host-btn .slot-label{font-size:11px;color:var(--fg);display:block}
