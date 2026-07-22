@@ -822,6 +822,43 @@ The card picks up `sensor.<device>_hidden_buttons` automatically (override with 
 
 ---
 
+## Installing the Cards via HACS
+
+The three Lovelace cards (mouse, keyboard, media remote) can be installed and kept up to date with [HACS](https://hacs.xyz). This repository isn't in the HACS default store, so add it as a **custom repository**:
+
+1. In Home Assistant, open **HACS**.
+2. Three-dot menu (top right) → **Custom repositories**.
+3. Repository: `https://github.com/markusg1234/ESPHome-espidf_ble_keyboard`
+   Type/Category: **Dashboard**
+4. **Add**, then find **ESPHome BLE Keyboard Cards** in HACS and click **Download**.
+5. Reload your browser. All three cards now appear in the dashboard's **Add card** picker.
+
+HACS registers the dashboard resource for you — there's no need to add anything under *Settings → Dashboards → Resources*. When a new version is released, HACS offers the update in the usual way.
+
+> **HACS installs the cards only — not the firmware.** There is no HACS category for ESPHome external components, so the `espidf_ble_keyboard` component is still added to your device YAML with `external_components:` (see [Usage Example](#usage-example)) and updated by re-flashing the device. A HACS update for this repository updates the dashboard cards and nothing else.
+
+Prefer not to use HACS? Every card section below also lists the manual copy-to-`www` steps, and the card files live in [`dist/`](dist/).
+
+---
+
+## Developing the Cards
+
+If you're editing the card files in [`dist/`](dist/), don't iterate through HACS — it needs a commit, a tag and a release for every change. Work directly against `config/www/` instead:
+
+1. Copy the card (or symlink it, if Home Assistant runs on the machine you're editing on) to `config/www/`.
+2. Add it once as a resource: **Settings → Dashboards → Resources**, URL `/local/remote-card.js?v=1`, type **JavaScript Module**.
+3. After each edit, bump that number — `?v=2`, `?v=3`. Editing the existing resource is enough; there's no need to delete and re-add it.
+
+**Why the cache is so stubborn.** Home Assistant's frontend registers a *service worker*, which serves cached assets before the browser's normal cache rules apply — so a hard reload (`Ctrl+Shift+R`) often still hands you the old card. The `?v=` change works because it's a different URL entirely.
+
+For a tighter loop, skip the version bumping: keep browser devtools open with **Disable cache** ticked, or work in a private window. Both bypass the service worker, so a plain reload always picks up the new file.
+
+> The device's own web UI has no such problem — it is served with `Cache-Control: no-cache`, so a firmware flash always shows the new interface. That only covers the page served by the ESP32; the Lovelace cards are files in Home Assistant and cache like any other web asset.
+
+Once a change is ready, cut a release so HACS users receive it — see [Installing the cards via HACS](#installing-the-cards-via-hacs).
+
+---
+
 ## Mouse Control Card for Home Assistant
 
 A custom Lovelace card is included that provides a touchpad, 3 mouse buttons, and scroll controls. It requires ESPHome services to be defined so Home Assistant can call the mouse functions with parameters.
@@ -875,7 +912,11 @@ api:
 
 ### 2. Install the card
 
-1. Copy `docs/mouse-card.js` to your Home Assistant `config/www/` folder.
+**With HACS (recommended)** — installs all three cards and keeps them updated; see [Installing the cards via HACS](#installing-the-cards-via-hacs).
+
+**By hand:**
+
+1. Copy `dist/mouse-card.js` to your Home Assistant `config/www/` folder.
 2. In Home Assistant: **Settings -> Dashboards -> Resources -> Add Resource**
    - URL: `/local/mouse-card.js`
    - Type: **JavaScript Module**
@@ -1246,7 +1287,11 @@ api:
 
 ### 2. Install the card
 
-1. Copy `docs/keyboard-card.js` to your Home Assistant `config/www/` folder.
+**With HACS (recommended)** — installs all three cards and keeps them updated; see [Installing the cards via HACS](#installing-the-cards-via-hacs).
+
+**By hand:**
+
+1. Copy `dist/keyboard-card.js` to your Home Assistant `config/www/` folder.
 2. In Home Assistant: **Settings -> Dashboards -> Resources -> Add Resource**
    - URL: `/local/keyboard-card.js`
    - Type: **JavaScript Module**
@@ -1346,7 +1391,11 @@ api:
 
 ### 2. Install the card
 
-1. Copy `docs/remote-card.js` to your Home Assistant `config/www/` folder.
+**With HACS (recommended)** — installs all three cards and keeps them updated; see [Installing the cards via HACS](#installing-the-cards-via-hacs).
+
+**By hand:**
+
+1. Copy `dist/remote-card.js` to your Home Assistant `config/www/` folder.
 2. In Home Assistant: **Settings -> Dashboards -> Resources -> Add Resource**
    - URL: `/local/remote-card.js`
    - Type: **JavaScript Module**
@@ -1626,7 +1675,7 @@ The layout system is intentionally small. Adding a new layout (e.g. French AZERT
 
 1. **`components/espidf_ble_keyboard/keyboard_layouts.cpp`** — add `HID_ASCII_MAP_XX[128]` + (optionally) `UNICODE_MAP_XX[]` and append one entry to the `LAYOUTS[]` registry array.
 2. **`components/espidf_ble_keyboard/__init__.py`** — append `"xx"` to `SUPPORTED_LAYOUTS`.
-3. **`components/espidf_ble_keyboard/web_control.cpp`** — append an `xx: { ROWS: [...] }` entry to the JS `LAYOUTS` object. If you also ship the HA keyboard card, mirror the entry into `docs/keyboard-card.js`.
+3. **`components/espidf_ble_keyboard/web_control.cpp`** — append an `xx: { ROWS: [...] }` entry to the JS `LAYOUTS` object. If you also ship the HA keyboard card, mirror the entry into `dist/keyboard-card.js`.
 
 No header changes, no `send_string` changes, no NVS code changes. The web UI dropdown, `/api/ble_keyboard/status` JSON, and YAML validation pick the new layout up automatically.
 
