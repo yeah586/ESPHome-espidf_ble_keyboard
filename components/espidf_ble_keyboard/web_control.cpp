@@ -109,11 +109,11 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 .hid-items{display:flex;flex-wrap:wrap;gap:4px 12px}
 .hid-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--fg);min-width:120px;cursor:pointer}
 .hid-item input{margin:0;cursor:pointer}
-/* Grid, not flex-wrap: with flex:1 the buttons grow to share their row, so a
-   lone host on a second row stretched across the full width. Equal columns keep
-   every slot the same size however many wrap. 140px fits a MAC at 11px. */
-.host-bar{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.host-btn{padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s;overflow:hidden}
+.host-bar{display:flex;gap:6px;padding:8px 10px;margin-bottom:10px;background:var(--card);border:1px solid var(--border);border-radius:10px;flex-wrap:wrap;overflow:hidden}
+/* max-width is what stops a lone host on a wrapped row from growing to the full
+   width of the bar. flex-grow still lets several share a row and shrink to fit,
+   so a row of hosts plus Forget Host stays on one line. */
+.host-btn{flex:1 0 60px;max-width:300px;padding:8px 4px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--fg);font-size:11px;font-weight:500;cursor:pointer;text-align:center;touch-action:manipulation;transition:background .15s;overflow:hidden}
 .host-btn.active{background:var(--active);color:#fff;border-color:var(--active)}
 .host-btn.occupied{border-color:var(--accent)}
 .host-btn .slot-label{font-size:11px;color:var(--fg);display:block}
