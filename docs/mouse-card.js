@@ -422,12 +422,138 @@ class BleMouseCard extends HTMLElement {
     return 4;
   }
 
+  // Enables the dashboard's visual editor; YAML editing is unaffected.
+  static getConfigElement() {
+    return document.createElement('ble-mouse-card-editor');
+  }
+
+  static getStubConfig() {
+    return { device: 'bluetooth_keyboard' };
+  }
+
   static getStubConfig() {
     return { device: 'bluetooth_keyboard' };
   }
 }
 
 customElements.define('ble-mouse-card', BleMouseCard);
+
+/* ── Visual editor ───────────────────────────────────────────────────────
+ * Prefers Home Assistant's own <ha-form> so the panel matches built-in cards,
+ * falling back to plain inputs if ha-form isn't registered.
+ * ---------------------------------------------------------------------- */
+
+const MOUSE_EDITOR_SCHEMA = [
+  { name: 'device', required: true, selector: { text: {} } },
+  { name: 'name', selector: { text: {} } },
+  { name: 'sensitivity', selector: { number: { min: 0.1, max: 10, step: 0.1, mode: 'box' } } },
+  { name: 'mouse_acceleration', selector: { number: { min: 0, max: 2, step: 0.05, mode: 'box' } } },
+  { name: 'mouse_max_speed', selector: { number: { min: 0.5, max: 20, step: 0.5, mode: 'box' } } },
+  { name: 'scroll_sensitivity', selector: { number: { min: 0.1, max: 10, step: 0.1, mode: 'box' } } },
+  { name: 'tap_to_click', selector: { boolean: {} } },
+];
+
+const MOUSE_EDITOR_LABELS = {
+  device: 'ESPHome device name',
+  name: 'Card title (optional)',
+  sensitivity: 'Pointer sensitivity',
+  mouse_acceleration: 'Acceleration',
+  mouse_max_speed: 'Max speed multiplier',
+  scroll_sensitivity: 'Scroll sensitivity',
+  tap_to_click: 'Tap touchpad to click',
+};
+
+class BleMouseCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = {
+      sensitivity: 1.5,
+      mouse_acceleration: 0.15,
+      mouse_max_speed: 4.5,
+      scroll_sensitivity: 2,
+      tap_to_click: true,
+      ...config,
+    };
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this._form) this._form.hass = hass;
+  }
+
+  _emit(config) {
+    this._config = config;
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _render() {
+    if (this._rendered) {
+      if (this._form) this._form.data = this._config;
+      return;
+    }
+    this._rendered = true;
+
+    if (customElements.get('ha-form')) {
+      const form = document.createElement('ha-form');
+      form.hass = this._hass;
+      form.data = this._config;
+      form.schema = MOUSE_EDITOR_SCHEMA;
+      form.computeLabel = (s) => MOUSE_EDITOR_LABELS[s.name] || s.name;
+      form.addEventListener('value-changed', (e) => this._emit(e.detail.value));
+      this.appendChild(form);
+      this._form = form;
+      return;
+    }
+
+    this.appendChild(buildMouseFallbackEditor(
+      MOUSE_EDITOR_SCHEMA, MOUSE_EDITOR_LABELS, () => this._config, (cfg) => this._emit(cfg),
+    ));
+  }
+}
+
+// `getConfig` is a function, not an object: _emit() replaces this._config on
+// every change, so a captured object would go stale after the first edit.
+function buildMouseFallbackEditor(schema, labels, getConfig, onChange) {
+  const config = getConfig();
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px 0';
+  schema.forEach((item) => {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px';
+    const isBool = !!item.selector.boolean;
+    const input = document.createElement('input');
+    if (isBool) {
+      input.type = 'checkbox';
+      input.checked = config[item.name] === true;
+    } else {
+      input.type = item.selector.number ? 'number' : 'text';
+      if (item.selector.number && item.selector.number.step) input.step = item.selector.number.step;
+      input.value = config[item.name] ?? '';
+      input.style.flex = '1';
+    }
+    const text = document.createElement('span');
+    text.textContent = (labels[item.name] || item.name) + (item.required ? ' *' : '');
+    text.style.cssText = isBool ? '' : 'min-width:180px';
+    if (isBool) { row.appendChild(input); row.appendChild(text); }
+    else { row.appendChild(text); row.appendChild(input); }
+
+    input.addEventListener('change', () => {
+      const next = { ...getConfig() };
+      if (isBool) next[item.name] = input.checked;
+      else if (input.value === '') delete next[item.name];
+      else next[item.name] = item.selector.number ? Number(input.value) : input.value;
+      onChange(next);
+    });
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+customElements.define('ble-mouse-card-editor', BleMouseCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({

@@ -476,7 +476,8 @@
       <tr><td><code>"record"</code></td><td class="desc">Start / stop recording (HID Record, <code>0x00B2</code>). Works on TV / DVR hosts; Windows ignores it — remap it per host with <code>actions:</code>, e.g. <code>"combo:0x0C:0x15"</code> for Game Bar.</td></tr>
       <tr><td><code>"rewind"</code> / <code>"fast_forward"</code></td><td class="desc">Rewind (<code>0x00B4</code>) / fast forward (<code>0x00B3</code>).</td></tr>
       <tr><td><code>"remote_power"</code></td><td class="desc">Remote Power key — HID consumer Power (<code>0x0030</code>). Distinct from <code>"power"</code>, which is a System Power Down report.</td></tr>
-      <tr><td><code>"up"</code> / <code>"down"</code> / <code>"left"</code> / <code>"right"</code> / <code>"ok"</code></td><td class="desc">D-pad navigation and select — HID Menu usages (<code>0x0041</code>–<code>0x0045</code>).</td></tr>
+      <tr><td><code>"up"</code> / <code>"down"</code> / <code>"left"</code> / <code>"right"</code></td><td class="desc">D-pad navigation — HID Menu usages (<code>0x0042</code>–<code>0x0045</code>).</td></tr>
+      <tr><td><code>"ok"</code></td><td class="desc">D-pad select — keyboard Enter (<code>0x28</code>), which more hosts accept than HID Menu Pick. Override per host with <code>"consumer:0x0041"</code> if a host needs Menu Pick.</td></tr>
       <tr><td><code>"home"</code> / <code>"back"</code> / <code>"search"</code> / <code>"info"</code></td><td class="desc">AC Home / Back / Search / More Info (<code>0x0223</code>, <code>0x0224</code>, <code>0x0221</code>, <code>0x0209</code>).</td></tr>
       <tr><td><code>"channel_up"</code> / <code>"channel_down"</code></td><td class="desc">Channel surf — Page Up / Page Down keypress.</td></tr>
       <tr><td><code>"color_red"</code> / <code>"color_green"</code> / <code>"color_yellow"</code> / <code>"color_blue"</code></td><td class="desc">Coloured remote keys — F1–F4.</td></tr>

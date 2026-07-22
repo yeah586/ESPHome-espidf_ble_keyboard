@@ -372,12 +372,19 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="consumer:0x0224">HID Back</option>
 <option value="consumer:0x0221">HID Search</option>
 </optgroup>
-<optgroup label="Other">
-<option value="send_custom_text">Send Custom Text</option>
-<option value="string:">Type Text</option>
-<option value="delay:100">Delay 100ms</option>
-<option value="delay:500">Delay 500ms</option>
-<option value="repeat:3:">Repeat 3&times; (edit)</option>
+<optgroup label="Mouse">
+<option value="left_click">Left Click</option>
+<option value="right_click">Right Click</option>
+<option value="middle_click">Middle Click</option>
+<option value="left_click_hold">Hold Left Button (drag)</option>
+<option value="right_click_hold">Hold Right Button</option>
+<option value="middle_click_hold">Hold Middle Button</option>
+<option value="mouse_release">Release Mouse Buttons</option>
+<option value="mouse_move:0:-10">Move Cursor (edit x:y)</option>
+<option value="mouse_scroll:1">Scroll Up</option>
+<option value="mouse_scroll:-1">Scroll Down</option>
+</optgroup>
+<optgroup label="Cursor Position">
 <option value="mouse_abs:0:0">Cursor Top-Left</option>
 <option value="mouse_abs:50:50">Cursor Center</option>
 <option value="mouse_abs:100:100">Cursor Bottom-Right</option>
@@ -386,10 +393,13 @@ h2 svg{width:18px;height:18px;fill:var(--accent)}
 <option value="mouse_goto:0:0">Goto desktop px — all monitors (edit x:y)</option>
 <option value="mouse_abs_save">Save Cursor Pos</option>
 <option value="mouse_abs_restore">Restore Cursor Pos</option>
-<option value="left_click_hold">Hold Left Button (drag)</option>
-<option value="right_click_hold">Hold Right Button</option>
-<option value="middle_click_hold">Hold Middle Button</option>
-<option value="mouse_release">Release Mouse Buttons</option>
+</optgroup>
+<optgroup label="Other">
+<option value="send_custom_text">Send Custom Text</option>
+<option value="string:">Type Text</option>
+<option value="delay:100">Delay 100ms</option>
+<option value="delay:500">Delay 500ms</option>
+<option value="repeat:3:">Repeat 3&times; (edit)</option>
 </optgroup>
 </select>
 <button id="macro-save">+ Add</button>

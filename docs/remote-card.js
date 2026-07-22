@@ -430,7 +430,7 @@ class BleRemoteCard extends HTMLElement {
       down:   'down',           // Menu Down 0x0043
       left:   'left',           // Menu Left 0x0044
       right:  'right',          // Menu Right 0x0045
-      ok:     'ok',             // Menu Pick 0x0041
+      ok:     'ok',             // Enter 0x28 (not Menu Pick — see README)
 
       // Volume
       vol_up: 'volume_up',      // 0x00E9
@@ -502,9 +502,148 @@ class BleRemoteCard extends HTMLElement {
   getCardSize() {
     return 6;
   }
+
+  // Enables the dashboard's visual editor instead of "Visual editor is not
+  // supported". YAML editing keeps working exactly as before.
+  static getConfigElement() {
+    return document.createElement('ble-remote-card-editor');
+  }
+
+  static getStubConfig() {
+    return { device: 'bluetooth_keyboard' };
+  }
 }
 
 customElements.define('ble-remote-card', BleRemoteCard);
+
+/* ── Visual editor ───────────────────────────────────────────────────────
+ * Prefers Home Assistant's own <ha-form> so the panel matches built-in cards.
+ * If ha-form isn't registered in the frontend, falls back to plain inputs —
+ * an unstyled editor is still better than a blank panel.
+ * ---------------------------------------------------------------------- */
+
+const REMOTE_EDITOR_SCHEMA = [
+  { name: 'device', required: true, selector: { text: {} } },
+  { name: 'name', selector: { text: {} } },
+  { name: 'show_numpad', selector: { boolean: {} } },
+  { name: 'show_apps', selector: { boolean: {} } },
+  { name: 'show_color', selector: { boolean: {} } },
+  { name: 'hidden_entity', selector: { entity: { domain: 'sensor' } } },
+];
+
+const REMOTE_EDITOR_LABELS = {
+  device: 'ESPHome device name',
+  name: 'Card title (optional)',
+  show_numpad: 'Show number pad',
+  show_apps: 'Show app launcher row',
+  show_color: 'Show colour buttons',
+  hidden_entity: 'Hidden-buttons sensor (optional)',
+};
+
+class BleRemoteCardEditor extends HTMLElement {
+  setConfig(config) {
+    // Seed the toggles with their real defaults so the editor doesn't show
+    // show_apps as off just because the key is absent. Spreading config last
+    // preserves `type` and anything else the editor doesn't manage.
+    this._config = {
+      show_numpad: false,
+      show_apps: true,
+      show_color: false,
+      ...config,
+    };
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this._form) this._form.hass = hass;
+  }
+
+  _emit(config) {
+    this._config = config;
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _render() {
+    if (this._rendered) {
+      if (this._form) this._form.data = this._config;
+      return;
+    }
+    this._rendered = true;
+
+    if (customElements.get('ha-form')) {
+      const form = document.createElement('ha-form');
+      form.hass = this._hass;
+      form.data = this._config;
+      form.schema = REMOTE_EDITOR_SCHEMA;
+      form.computeLabel = (s) => REMOTE_EDITOR_LABELS[s.name] || s.name;
+      form.addEventListener('value-changed', (e) => this._emit(e.detail.value));
+      this.appendChild(form);
+      this._form = form;
+      return;
+    }
+
+    this.appendChild(buildFallbackEditor(
+      REMOTE_EDITOR_SCHEMA, REMOTE_EDITOR_LABELS, () => this._config,
+      (cfg) => this._emit(cfg),
+    ));
+  }
+}
+
+// Shared by the fallback path: renders one row per schema entry.
+// `getConfig` is a function, not an object: _emit() replaces this._config on
+// every change, so a captured object would go stale after the first edit.
+function buildFallbackEditor(schema, labels, getConfig, onChange) {
+  const config = getConfig();
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px 0';
+  schema.forEach((item) => {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px';
+    const isBool = !!item.selector.boolean;
+    const input = document.createElement(item.selector.select ? 'select' : 'input');
+    if (item.selector.select) {
+      item.selector.select.options.forEach((o) => {
+        const opt = document.createElement('option');
+        opt.value = typeof o === 'string' ? o : o.value;
+        opt.textContent = typeof o === 'string' ? o : o.label;
+        input.appendChild(opt);
+      });
+      input.value = config[item.name] ?? '';
+    } else if (isBool) {
+      input.type = 'checkbox';
+      input.checked = config[item.name] === true;
+    } else {
+      input.type = item.selector.number ? 'number' : 'text';
+      if (item.selector.number) {
+        if (item.selector.number.step) input.step = item.selector.number.step;
+      }
+      input.value = config[item.name] ?? '';
+      input.style.flex = '1';
+    }
+    const text = document.createElement('span');
+    text.textContent = (labels[item.name] || item.name) + (item.required ? ' *' : '');
+    text.style.cssText = isBool ? '' : 'min-width:180px';
+    if (isBool) { row.appendChild(input); row.appendChild(text); }
+    else { row.appendChild(text); row.appendChild(input); }
+
+    input.addEventListener('change', () => {
+      const next = { ...getConfig() };
+      if (isBool) next[item.name] = input.checked;
+      else if (input.value === '') delete next[item.name];       // keep the YAML clean
+      else next[item.name] = item.selector.number ? Number(input.value) : input.value;
+      onChange(next);
+    });
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+customElements.define('ble-remote-card-editor', BleRemoteCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({

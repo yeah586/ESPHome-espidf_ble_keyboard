@@ -953,12 +953,144 @@ class BleKeyboardCard extends HTMLElement {
     return this._config && this._config.show_fkeys !== false ? 6 : 5;
   }
 
+  // Enables the dashboard's visual editor; YAML editing is unaffected.
+  static getConfigElement() {
+    return document.createElement('ble-keyboard-card-editor');
+  }
+
+  static getStubConfig() {
+    return { device: 'bluetooth_keyboard' };
+  }
+
   static getStubConfig() {
     return { device: 'bluetooth_keyboard' };
   }
 }
 
 customElements.define('ble-keyboard-card', BleKeyboardCard);
+
+/* ── Visual editor ───────────────────────────────────────────────────────
+ * Prefers Home Assistant's own <ha-form> so the panel matches built-in cards,
+ * falling back to plain inputs if ha-form isn't registered.
+ *
+ * `host_names` is intentionally not exposed: it's a list, which has no good
+ * single-field control. It is preserved untouched when editing here.
+ * ---------------------------------------------------------------------- */
+
+const KB_EDITOR_SCHEMA = [
+  { name: 'device', required: true, selector: { text: {} } },
+  { name: 'name', selector: { text: {} } },
+  { name: 'layout', selector: { select: { options: [
+    { value: 'us', label: 'English (US)' },
+    { value: 'uk', label: 'English (UK)' },
+    { value: 'de', label: 'German' },
+    { value: 'be', label: 'Belgian' },
+  ], mode: 'dropdown' } } },
+  { name: 'show_fkeys', selector: { boolean: {} } },
+  { name: 'host_slots', selector: { number: { min: 0, max: 10, step: 1, mode: 'box' } } },
+  { name: 'active_host_entity', selector: { entity: { domain: 'sensor' } } },
+];
+
+const KB_EDITOR_LABELS = {
+  device: 'ESPHome device name',
+  name: 'Card title (optional)',
+  layout: 'Keyboard layout',
+  show_fkeys: 'Show function key row',
+  host_slots: 'Host switch buttons (0 = hide)',
+  active_host_entity: 'Active-host sensor (optional)',
+};
+
+class BleKeyboardCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = { layout: 'us', show_fkeys: true, host_slots: 0, ...config };
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (this._form) this._form.hass = hass;
+  }
+
+  _emit(config) {
+    this._config = config;
+    this.dispatchEvent(new CustomEvent('config-changed', {
+      detail: { config },
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
+  _render() {
+    if (this._rendered) {
+      if (this._form) this._form.data = this._config;
+      return;
+    }
+    this._rendered = true;
+
+    if (customElements.get('ha-form')) {
+      const form = document.createElement('ha-form');
+      form.hass = this._hass;
+      form.data = this._config;
+      form.schema = KB_EDITOR_SCHEMA;
+      form.computeLabel = (s) => KB_EDITOR_LABELS[s.name] || s.name;
+      form.addEventListener('value-changed', (e) => this._emit(e.detail.value));
+      this.appendChild(form);
+      this._form = form;
+      return;
+    }
+
+    this.appendChild(buildKbFallbackEditor(
+      KB_EDITOR_SCHEMA, KB_EDITOR_LABELS, () => this._config, (cfg) => this._emit(cfg),
+    ));
+  }
+}
+
+// `getConfig` is a function, not an object: _emit() replaces this._config on
+// every change, so a captured object would go stale after the first edit.
+function buildKbFallbackEditor(schema, labels, getConfig, onChange) {
+  const config = getConfig();
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;padding:8px 0';
+  schema.forEach((item) => {
+    const row = document.createElement('label');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px';
+    const isBool = !!item.selector.boolean;
+    const input = document.createElement(item.selector.select ? 'select' : 'input');
+    if (item.selector.select) {
+      item.selector.select.options.forEach((o) => {
+        const opt = document.createElement('option');
+        opt.value = o.value;
+        opt.textContent = o.label;
+        input.appendChild(opt);
+      });
+      input.value = config[item.name] ?? '';
+    } else if (isBool) {
+      input.type = 'checkbox';
+      input.checked = config[item.name] === true;
+    } else {
+      input.type = item.selector.number ? 'number' : 'text';
+      input.value = config[item.name] ?? '';
+      input.style.flex = '1';
+    }
+    const text = document.createElement('span');
+    text.textContent = (labels[item.name] || item.name) + (item.required ? ' *' : '');
+    text.style.cssText = isBool ? '' : 'min-width:180px';
+    if (isBool) { row.appendChild(input); row.appendChild(text); }
+    else { row.appendChild(text); row.appendChild(input); }
+
+    input.addEventListener('change', () => {
+      const next = { ...getConfig() };
+      if (isBool) next[item.name] = input.checked;
+      else if (input.value === '') delete next[item.name];
+      else next[item.name] = item.selector.number ? Number(input.value) : input.value;
+      onChange(next);
+    });
+    wrap.appendChild(row);
+  });
+  return wrap;
+}
+
+customElements.define('ble-keyboard-card-editor', BleKeyboardCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({

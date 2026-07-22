@@ -470,7 +470,7 @@ espidf_ble_keyboard:
 | `"fast_forward"` | Fast forward (`0x00B3`). |
 | `"remote_power"` | Remote Power key — HID consumer Power (`0x0030`). Distinct from `"power"` above, which is a System Power Down report. |
 | `"up"` / `"down"` / `"left"` / `"right"` | D-pad navigation — HID Menu Up / Down / Left / Right (`0x0042`–`0x0045`). |
-| `"ok"` | D-pad select — HID Menu Pick (`0x0041`). |
+| `"ok"` | D-pad select — keyboard **Enter** (`0x28`). Enter is accepted by far more hosts than HID Menu Pick; if a host needs Menu Pick instead, override it per host with `"consumer:0x0041"`. |
 | `"home"` | AC Home (`0x0223`). |
 | `"back"` | AC Back (`0x0224`). |
 | `"search"` | AC Search (`0x0221`). |
@@ -770,6 +770,14 @@ espidf_ble_keyboard:
 
 The replacement can be any action string, including a multi-step chain: `record: "combo:0x0C:0x15 | delay:500 | string:recording"`.
 
+**A second real case — the OK button.** Hosts disagree about how "select" arrives. `ok` sends keyboard Enter, which most hosts accept, but some set-top boxes want HID Menu Pick instead, and a few Samsung/Tizen inputs respond to Space. The symptom is distinctive: the D-pad arrows navigate perfectly while OK does nothing, because the arrows and OK use different HID pages. Fix it on the host that needs it:
+
+```yaml
+    - slot: 2                            # set-top box that wants Menu Pick
+      actions:
+        ok: "consumer:0x0041"            # or "combo:0:44" for Space
+```
+
 **Rules and limits:**
 
 - **Every button on both remotes is remappable.** All of them — D-pad, Power, Channel, Rewind/FF, the colour keys and app launchers — fire named actions for exactly this reason. The one exception is the number pad, which types digits rather than sending a fixed HID code.
@@ -873,6 +881,8 @@ api:
    - Type: **JavaScript Module**
 
 ### 3. Add to a dashboard
+
+Add it from the dashboard UI (**Add card** → search for the card) and fill in the fields — the card has a **visual editor**, so no YAML is required. To edit as YAML instead, use the card's three-dot menu → **Edit** → **Show code editor**:
 
 ```yaml
 type: custom:ble-mouse-card
@@ -1243,6 +1253,8 @@ api:
 
 ### 3. Add to a dashboard
 
+Add it from the dashboard UI (**Add card** → search for the card) and fill in the fields — the card has a **visual editor**, so no YAML is required. To edit as YAML instead, use the card's three-dot menu → **Edit** → **Show code editor**:
+
 ```yaml
 type: custom:ble-keyboard-card
 device: bluetooth_keyboard    # your ESPHome device name (underscored)
@@ -1340,6 +1352,8 @@ api:
    - Type: **JavaScript Module**
 
 ### 3. Add to a dashboard
+
+Add it from the dashboard UI (**Add card** → search for the card) and fill in the fields — the card has a **visual editor**, so no YAML is required. To edit as YAML instead, use the card's three-dot menu → **Edit** → **Show code editor**:
 
 ```yaml
 type: custom:ble-remote-card

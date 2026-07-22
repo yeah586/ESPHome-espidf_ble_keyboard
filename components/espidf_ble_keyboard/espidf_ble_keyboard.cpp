@@ -1951,7 +1951,7 @@ static const NamedConsumer NAMED_CONSUMERS[] = {
     {"remote_power", 0x0030}, {"search", 0x0221}, {"info", 0x0209},
     {"home", 0x0223},         {"back", 0x0224},
     {"up", 0x0042},           {"down", 0x0043},   {"left", 0x0044},
-    {"right", 0x0045},        {"ok", 0x0041},
+    {"right", 0x0045},
     {"rewind", 0x00B4},       {"fast_forward", 0x00B3},
     {"app_explorer", 0x0194}, {"app_browser", 0x0223},
     {"app_email", 0x018A},    {"app_calc", 0x0192},
@@ -1963,6 +1963,12 @@ struct NamedCombo {
     uint8_t keycode;
 };
 static const NamedCombo NAMED_COMBOS[] = {
+    // OK sends keyboard Enter, not Consumer Menu Pick (0x0041). Far more hosts
+    // accept Enter: TVs and smart monitors commonly implement the Menu
+    // Up/Down/Left/Right usages but ignore Menu Pick, leaving OK dead while the
+    // D-pad works (seen on a Samsung smart monitor). A host that does want Menu
+    // Pick gets it back with a per-host override: ok -> consumer:0x0041.
+    {"ok", 0, 0x28},            // Enter
     {"channel_up", 0, 0x4B},    // Page Up
     {"channel_down", 0, 0x4E},  // Page Down
     {"color_red", 0, 0x3A},     // F1
