@@ -465,7 +465,7 @@ espidf_ble_keyboard:
 | `"next_track"` | Skip to next track. |
 | `"prev_track"` | Previous track. |
 | `"stop"` | Stop media playback. |
-| `"record"` | Start / stop recording (HID Record, `0x00B2`). Works on TV / DVR hosts; **Windows ignores it** — remap it per host with [`actions:`](#per-host-action-overrides), e.g. `"combo:0x0C:0x15"` for Game Bar. |
+| `"record"` | Start / stop recording (HID Record, `0x00B2`). Works on TV / DVR hosts; **Windows ignores it** — remap it per host with [`actions:`](#host-actions-per-host-overrides), e.g. `"combo:0x0C:0x15"` for Game Bar. |
 | `"rewind"` | Rewind (`0x00B4`). |
 | `"fast_forward"` | Fast forward (`0x00B3`). |
 | `"remote_power"` | Remote Power key — HID consumer Power (`0x0030`). Distinct from `"power"` above, which is a System Power Down report. |
@@ -751,7 +751,7 @@ When `web_control: true` is enabled, a full control page is available at `http:/
 
 <img src="docs/web_server.png" width="427" alt="Web Control Page">
 
-### Per-Host Action Overrides
+### Host Actions (Per-Host Overrides)
 
 Paired hosts rarely agree on what a key should do. The clearest example is **Record**: the `record` action sends HID consumer usage `0x00B2`, which an Android TV box or DVR handles natively — but **Windows ignores it completely**. Windows routes Play/Pause/Next/Prev through SystemMediaTransportControls (which is why media keys work on a YouTube tab) and volume straight to the audio endpoint, but nothing subscribes to Record. On a PC the working route is a key combo: Game Bar's `Win+Alt+R`, or whatever global hotkey you bind in OBS or Audacity.
 
@@ -788,6 +788,10 @@ The replacement can be any action string, including a multi-step chain: `record:
 - Overrides apply everywhere the named action is used — remote buttons, macros, YAML `button` actions, and the `run_action` HA service — not just the remote.
 
 **Editing without a reflash:** the web UI has a **Host Actions** card. Pick a host slot, then add or edit overrides for it; they persist to NVS and win over the YAML value. The action-name box offers every overridable name as you type, and the replacement box has the same preset dropdown as the macro editor, so neither has to be typed from memory. Rows tagged `YAML` come from your config and are read-only — set an override of the same name to shadow one, and delete that override to fall back. You can edit a slot other than the one currently active.
+
+<img src="docs/host_actions.png" width="420" alt="Host Actions card in the web UI">
+
+The same card also hosts the [Backup & Restore](#backup-and-restore) buttons and the [Remote buttons](#removing-remote-buttons-per-host) hiding panel.
 
 ### Removing Remote Buttons Per Host
 
@@ -1182,8 +1186,8 @@ In Home Assistant, the sensor value will be a URL like `http://192.168.1.100/ble
 - **Mouse acceleration** — slow movements are precise, fast swipes cover more ground (up to 4x)
 - **Mouse buttons** — Left, Middle, Right click; long-press a button to hold it for dragging (drag the touchpad or run `mouse_goto` while held), tap the held button to release
 - **Scroll controls** — buttons + mouse wheel on the touchpad
-- **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat, media transport including Record, red/green/yellow/blue colour keys (F1–F4), and app launchers (Explorer, Browser, Email, Calc, Search). Every button is a named action, so any of them can be remapped per host — see [Per-host action overrides](#per-host-action-overrides)
-- **Host Actions** — remap a named action per host slot (e.g. Record → Game Bar on a PC, HID Record on a TV), saved on the device — see [Per-host action overrides](#per-host-action-overrides)
+- **Remote control** — D-pad navigation (Up/Down/Left/Right/Enter), Power, Home, Back, Search, Volume +/-, Mute with hold-to-repeat, media transport including Record, red/green/yellow/blue colour keys (F1–F4), and app launchers (Explorer, Browser, Email, Calc, Search). Every button is a named action, so any of them can be remapped per host — see [Per-host action overrides](#host-actions-per-host-overrides)
+- **Host Actions** — remap a named action per host slot (e.g. Record → Game Bar on a PC, HID Record on a TV), saved on the device — see [Per-host action overrides](#host-actions-per-host-overrides)
 - **Backup & Restore** — download every runtime setting as a JSON file and re-apply it later or on another board — see [Backup and restore](#backup-and-restore)
 - **Remove buttons per host** — untick the remote buttons a host doesn't need; they disappear for that host only — see [Removing remote buttons per host](#removing-remote-buttons-per-host)
 - **Section toggles** — show/hide Keyboard, Mouse, Remote, and Buttons sections individually (state saved in browser)
@@ -1366,7 +1370,7 @@ A custom Lovelace card that provides a modern media remote control with power, n
 
 Easiest: set `api_services: true` on the component — it auto-registers all the services this card needs (see [Home Assistant services](#home-assistant-services)) and you can skip to step 2.
 
-Every button on this card fires a **named action** through `run_action`, so any of them can be remapped per host — see [Per-host action overrides](#per-host-action-overrides). `send_string` is only used by the optional number pad. To define the two services manually instead (alongside any existing keyboard/mouse services):
+Every button on this card fires a **named action** through `run_action`, so any of them can be remapped per host — see [Per-host action overrides](#host-actions-per-host-overrides). `send_string` is only used by the optional number pad. To define the two services manually instead (alongside any existing keyboard/mouse services):
 
 ```yaml
 api:
